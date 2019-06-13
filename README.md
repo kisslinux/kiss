@@ -2,8 +2,6 @@
 
 Tiny package manager for KISS Linux.
 
-**NOTE:** I am in the process of writing usage documentation.
-
 
 ## Table of Contents
 
