@@ -214,7 +214,8 @@ main() {
              "${mak_dir:=$cac_dir/build}" \
              "${bin_dir:=$cac_dir/bin}" \
              "${pkg_db:=${pkg_dir:=$cac_dir/pkg}/var/db/${0##*/}}" \
-             "${sys_db:=${sys_dir:=$KISS_ROOT}/var/db/${0##*/}}"
+             "${sys_db:=${sys_dir:=$KISS_ROOT}/var/db/${0##*/}}" ||
+             die "Couldn't create directories."
 
     args "$@"
 }
