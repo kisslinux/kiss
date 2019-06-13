@@ -1,1 +1,2 @@
-script: shellcheck kiss
+language: bash
+script:   shellcheck kiss
