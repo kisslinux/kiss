@@ -197,7 +197,7 @@ args() {
         *)  log "${0##*/} [b|c|i|l|r|u] [pkg]" \
                 "build:     Build a package." \
                 "checksum:  Generate checksums." \
-                "install:   Install a package (Runs build when needed)." \
+                "install:   Install a package (Runs build if needed)." \
                 "list:      List packages." \
                 "remove:    Remove a package." \
                 "update:    Check for updates."
