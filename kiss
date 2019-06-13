@@ -18,8 +18,21 @@ source_type() {
     [ -z "${1##*://*}" ]       && return 5
 }
 
+pkg_search() {
+    set -f
+    # shellcheck disable=2086,2046
+    set -- "$1" $(IFS=: find $KISS_PATH -maxdepth 1 -name "$1")
+    set +f
+
+    [ -z "$2" ] && die "Package '$1' not in any repository."
+
+    rep_dir=${2%/$1}
+}
+
 pkg_setup() {
-    cd "$rep_dir/$1" || die "Package '$1' not in repository."
+    pkg_search "$1"
+
+    cd "$rep_dir/$1" || die "'$rep_dir/$1' not accessible"
     [ -f sources ]   || die "Sources file not found."
     [ -x build ]     || die "Build file not found or not executable."
 
@@ -101,8 +114,6 @@ pkg_strip() {
         esac
 
         strip "$strip_opts" "$binary"
-        echo "${binary##*/}: $(stat -c %f "$binary"): $strip_opts: $(file -bi "$binary")"
-        sleep 1
     done
 }
 
@@ -183,7 +194,7 @@ args() {
         r*) pkg_remove || die "Package '$name' not installed" ;;
         u*) pkg_updates ;;
 
-        *)  log "$0 [b|c|i|l|r|u] [pkg]" \
+        *)  log "${0##*/} [b|c|i|l|r|u] [pkg]" \
                 "build:     Build a package." \
                 "checksum:  Generate checksums." \
                 "install:   Install a package (Runs build when needed)." \
@@ -198,13 +209,12 @@ main() {
 
     [ -z "$KISS_PATH" ] && die "Set \$KISS_PATH to a repository location."
 
-    # mkdir -p "${src_dir:=$PWD/sources}" \
-    #          "${mak_dir:=$PWD/build}" \
-    #          "${pkg_db:=${pkg_dir:=$PWD/pkg}/var/db/$0}" \
-    #          "${sys_db:=${sys_dir:=$KISS_ROOT}/var/db/$0}" \
-    #          "${bin_dir:=$PWD/bin}" \
-    #          "${rep_dir:=$PWD/repo}" ||
-    #          die "Couldn't create directories at $PWD."
+    mkdir -p "${cac_dir:=${XDG_CACHE_HOME:=$HOME/.cache}/${0##*/}}" \
+             "${src_dir:=$cac_dir/sources}" \
+             "${mak_dir:=$cac_dir/build}" \
+             "${bin_dir:=$cac_dir/bin}" \
+             "${pkg_db:=${pkg_dir:=$cac_dir/pkg}/var/db/${0##*/}}" \
+             "${sys_db:=${sys_dir:=$KISS_ROOT}/var/db/${0##*/}}"
 
     args "$@"
 }
