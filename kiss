@@ -1,0 +1,210 @@
+#!/bin/sh
+#
+# kiss - package manager for kiss linux.
+
+die() {
+    printf '\033[31mERROR>\033[m %s\n' "$@" >&2
+    exit 1
+}
+
+log() {
+    printf '\033[32m=>\033[m %s\n' "$@"
+}
+
+source_type() {
+    [ -f "$1" ]                && return 2
+    [ -f "$src_dir/${1##*/}" ] && return 3
+    [ -z "${1##git:*}" ]       && return 4
+    [ -z "${1##*://*}" ]       && return 5
+}
+
+pkg_setup() {
+    cd "$rep_dir/$1" || die "Package '$1' not in repository."
+    [ -f sources ]   || die "Sources file not found."
+    [ -x build ]     || die "Build file not found or not executable."
+
+    read -r ver rel < version || die "Version file not found."
+    pkg=${name:=$1}\#$ver-$rel.tar.gz
+}
+
+pkg_depends() {
+    while read -r dep; do
+        pkg_list "$dep" || missing="$missing $dep"
+    done 2>/dev/null < depends
+
+    [ -n "$missing" ] && die "Missing dependencies:$missing"
+}
+
+pkg_sources() {
+    while read -r src _; do
+        case $(source_type "$src"; echo $?) in
+            4)   git clone "${src##git:}" "$mak_dir" ;;
+            5)   wget -P "$src_dir" "$src" || die "Failed to download $src." ;;
+            0|1) die "Source file '$src' not found." ;;
+        esac
+    done < sources
+}
+
+pkg_checksum() {
+    while read -r src _; do
+        case $(source_type "$src"; echo $?) in
+            2) src_path=$src ;;
+            3) src_path=$src_dir/${src##*/} ;;
+            4) continue
+        esac
+
+        (cd "${src_path%/*}" >/dev/null; sha256sum "${src##*/}") ||
+            die "Failed to generate checksums."
+    done < sources > "${1-checksums}"
+}
+
+pkg_verify() {
+    pkg_checksum /dev/stdout | diff checksums - ||
+        die "Checksum mismatch, run '$0 checksum $name' to update checksums."
+}
+
+pkg_extract() {
+    while read -r src dest; do
+        [ "$dest" ] && mkdir -p "$mak_dir/$dest"
+
+        case $(source_type "$src"; echo $?)-$src in
+            2-*) cp -f "$src" "$mak_dir/$dest" ;;
+
+            3-*.tar*)
+               tar xf "$src_dir/${src##*/}" -C "$mak_dir/$dest" \
+                   --strip-components 1 || die "Couldn't extract ${src##*/}" ;;
+
+            [01]-*) die "${src##*/} not found."
+        esac
+    done < sources
+}
+
+pkg_build() {
+    (cd "$mak_dir"; "$OLDPWD/build" "$pkg_dir") || die "Build failed."
+    cp -Rf "$rep_dir/$name" "$pkg_db"
+    log "Sucessfully built $pkg." 2> "$pkg_db/$name/manifest"
+}
+
+pkg_strip() {
+    log "Stripping unneeded symbols from binaries and libraries."
+
+    find "$pkg_dir" -type f | while read -r binary; do
+        case $(file -bi "$binary") in
+            application/x-sharedlib*|application/x-pie-executable*)
+                strip_opts=--strip-unneeded
+            ;;
+
+            application/x-archive*)    strip_opts=--strip-debug ;;
+            application/x-executable*) strip_opts=--strip-all ;;
+
+            *) continue ;;
+        esac
+
+        strip "$strip_opts" "$binary"
+        echo "${binary##*/}: $(stat -c %f "$binary"): $strip_opts: $(file -bi "$binary")"
+        sleep 1
+    done
+}
+
+pkg_manifest() {
+    (cd "$pkg_dir" && find ./*) | sed ss.ss | tac |
+        tee manifest > "$pkg_db/$name/manifest"
+}
+
+pkg_tar() {
+    tar zpcf "$bin_dir/$pkg" -C "$pkg_dir" . || die "Failed to create package."
+    log "Use '$0 install $name' to install the package."
+}
+
+pkg_install() {
+    [ -f "$bin_dir/$pkg" ] || args b "$name"
+
+    pkg_remove "$name"
+    tar pxvf "$bin_dir/$pkg" -k -C "$sys_dir/" 2>/dev/null
+
+    "$sys_db/$name/post-install" 2>/dev/null
+
+    log "Installed ${pkg%.tar.gz}"
+}
+
+pkg_remove() {
+    pkg_list "$name" || return 1
+
+    while read -r file; do
+        [ "${file%/*}" = "/etc" ] && continue
+
+        if [ -d "$sys_dir$file" ]; then
+            rmdir "$sys_dir$file" 2>/dev/null || continue
+        else
+            rm -f -- "$sys_dir$file" || log "Failed to remove $file."
+        fi && log "Removed $file"
+    done < "$sys_db/$name/manifest"
+}
+
+pkg_updates() {
+    for item in "$sys_db/"*; do
+        read -r db_ver db_rel < "$item/version"
+        read -r re_ver re_rel < "$rep_dir/${item##*/}/version"
+
+        [ "$db_ver-$db_rel" != "$re_ver-$re_rel" ] &&
+            printf '%s\n' "${item##*/} $re_ver-$re_rel"
+    done
+}
+
+pkg_list() {
+    [ "$1" ] && { [ -d "$sys_db/$1" ]; return "$?"; }
+
+    for item in "$sys_db/"*; do
+        read -r version release 2>/dev/null < "$item/version" &&
+            printf '%s\n' "${item##*/} $version-$release"
+    done
+}
+
+args() {
+    case $1 in b*|c*|i*|r*) pkg_setup "${2-null}"; esac
+    case $1 in
+        b*) [ -f checksums ] || die "Checksums missing, run '$0 checksum $name'"
+
+            pkg_depends
+            pkg_sources
+            pkg_verify
+            pkg_extract
+            pkg_build
+            [ -f nostrip ] || pkg_strip
+            pkg_manifest
+            pkg_tar ;;
+
+        c*) pkg_sources
+            pkg_checksum
+            log "Generated checksums." ;;
+
+        i*) pkg_install ;;
+        l*) pkg_list "$2" ;;
+        r*) pkg_remove || die "Package '$name' not installed" ;;
+        u*) pkg_updates ;;
+
+        *)  log "$0 [b|c|i|l|r|u] [pkg]" \
+                "build:     Build a package." \
+                "checksum:  Generate checksums." \
+                "install:   Install a package (Runs build when needed)." \
+                "list:      List packages." \
+                "remove:    Remove a package." \
+                "update:    Check for updates."
+    esac
+}
+
+main() {
+    trap 'rm -rf -- "$mak_dir" "$pkg_dir"' EXIT INT
+
+    mkdir -p "${src_dir:=$PWD/sources}" \
+             "${mak_dir:=$PWD/build}" \
+             "${pkg_db:=${pkg_dir:=$PWD/pkg}/var/db/$0}" \
+             "${sys_db:=${sys_dir:=$KISS_ROOT}/var/db/$0}" \
+             "${bin_dir:=$PWD/bin}" \
+             "${rep_dir:=$PWD/repo}" ||
+             die "Couldn't create directories at $PWD."
+
+    args "$@"
+}
+
+main "$@"
