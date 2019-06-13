@@ -1,7 +1,1 @@
-language: bash
-
-os:
-    - linux
-
-script:
-    - shellcheck kiss
+script: shellcheck kiss
