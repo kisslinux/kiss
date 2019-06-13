@@ -12,8 +12,6 @@ See: <https://github.com/kissx/packages>
 
 ## Getting started with `kiss`
 
-Kiss is a simple package manager written in POSIX `sh`.
-
 Kiss has 6 different "operators".
 
 - `build`: Build a package.
