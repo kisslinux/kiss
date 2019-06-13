@@ -196,13 +196,15 @@ args() {
 main() {
     trap 'rm -rf -- "$mak_dir" "$pkg_dir"' EXIT INT
 
-    mkdir -p "${src_dir:=$PWD/sources}" \
-             "${mak_dir:=$PWD/build}" \
-             "${pkg_db:=${pkg_dir:=$PWD/pkg}/var/db/$0}" \
-             "${sys_db:=${sys_dir:=$KISS_ROOT}/var/db/$0}" \
-             "${bin_dir:=$PWD/bin}" \
-             "${rep_dir:=$PWD/repo}" ||
-             die "Couldn't create directories at $PWD."
+    [ -z "$KISS_PATH" ] && die "Set \$KISS_PATH to a repository location."
+
+    # mkdir -p "${src_dir:=$PWD/sources}" \
+    #          "${mak_dir:=$PWD/build}" \
+    #          "${pkg_db:=${pkg_dir:=$PWD/pkg}/var/db/$0}" \
+    #          "${sys_db:=${sys_dir:=$KISS_ROOT}/var/db/$0}" \
+    #          "${bin_dir:=$PWD/bin}" \
+    #          "${rep_dir:=$PWD/repo}" ||
+    #          die "Couldn't create directories at $PWD."
 
     args "$@"
 }
