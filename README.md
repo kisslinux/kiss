@@ -5,12 +5,59 @@ Tiny package manager for KISS Linux.
 **NOTE:** I am in the process of writing usage documentation.
 
 
+## Table of Contents
+
+<!-- vim-markdown-toc GFM -->
+
+* [Package format](#package-format)
+* [Getting started](#getting-started)
+* [Usage](#usage)
+* [How does each operator work?](#how-does-each-operator-work)
+    * [`kiss build pkg`](#kiss-build-pkg)
+    * [`kiss checksum pkg`](#kiss-checksum-pkg)
+    * [`kiss install pkg`](#kiss-install-pkg)
+    * [`kiss remove pkg`](#kiss-remove-pkg)
+    * [`kiss list` or `kiss list pkg`](#kiss-list-or-kiss-list-pkg)
+    * [`kiss update`](#kiss-update)
+
+<!-- vim-markdown-toc -->
+
+
 ## Package format
 
 See: <https://github.com/kissx/packages>
 
 
-## Getting started with `kiss`
+## Getting started
+
+Add these to your `shellrc`.
+
+```sh
+# The location to install packages (Optional).
+# Default: /
+export KISS_ROOT=~/.kiss
+
+# Repositories to use (Required).
+# Colon separated like '$PATH'.
+# Repositories will be search in order.
+# Default:
+export KISS_PATH=~/projects/kiss-new/repo
+```
+
+## Usage
+
+```sh
+➜ kiss
+=> kiss [b|c|i|l|r|u] [pkg]
+=> build:     Build a package.
+=> checksum:  Generate checksums.
+=> install:   Install a package (Runs build if needed).
+=> list:      List packages.
+=> remove:    Remove a package.
+=> update:    Check for updates.
+```
+
+## How does each operator work?
 
 Kiss has 6 different "operators".
 
