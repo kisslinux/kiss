@@ -218,7 +218,11 @@ args() {
 main() {
     trap 'rm -rf -- "$mak_dir" "$pkg_dir"' EXIT INT
 
-    [ -z "$KISS_PATH" ] && die "Set \$KISS_PATH to a repository location."
+    [ -z "$KISS_PATH" ] &&
+        die "Set \$KISS_PATH to a repository location."
+
+    [ -z "$KISS_ROOT" ] && [ "$(id -u)" != 0 ] &&
+        die "\$KISS_ROOT is set to '/' so you must be root."
 
     mkdir -p "${cac_dir:=${XDG_CACHE_HOME:=$HOME/.cache}/${0##*/}}" \
              "${src_dir:=$cac_dir/sources}" \
