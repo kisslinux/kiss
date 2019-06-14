@@ -3,7 +3,7 @@
 # kiss - package manager for kiss linux.
 
 die() {
-    printf '\033[31mERROR>\033[m %s\n' "$@" >&2
+    printf '\033[31m!>\033[m %s\n' "$@" >&2
     exit 1
 }
 
@@ -12,10 +12,10 @@ log() {
 }
 
 source_type() {
-    [ -f "$1" ]                && return 2
-    [ -f "$src_dir/${1##*/}" ] && return 3
-    [ -z "${1##git:*}" ]       && return 4
-    [ -z "${1##*://*}" ]       && return 5
+    [ -f "$1" ]                && return 2  # Local file.
+    [ -f "$src_dir/${1##*/}" ] && return 3  # Cached downloaded file.
+    [ -z "${1##git:*}" ]       && return 4  # Git repository.
+    [ -z "${1##*://*}" ]       && return 5  # Remote file.
 }
 
 pkg_search() {
