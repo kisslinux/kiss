@@ -52,6 +52,18 @@ pkg_depends() {
     done 2>/dev/null < depends
 }
 
+pkg_makedepends() {
+    while read -r dep; do
+        pkg_list "$dep" ||
+            case $missing in
+                *" $dep,"*) ;;
+                *) missing="$missing $dep,"
+                   pkg_setup "$dep"
+                   pkg_makedepends ;;
+            esac
+    done 2>/dev/null < makedepends
+}
+
 pkg_sources() {
     while read -r src _; do
         case $(source_type "$src"; echo $?) in
@@ -185,6 +197,9 @@ args() {
             pkg_depends
 
             [ -n "$missing" ] && die "Missing dependencies:${missing%,}"
+
+            pkg_makedepends
+            [ -n "$missing" ] && die "Missing makedependencies:${missing%,}"
 
             pkg_sources
             pkg_verify
