@@ -57,15 +57,6 @@ export KISS_PATH=~/projects/kiss-new/repo
 
 ## How does each operator work?
 
-Kiss has 6 different "operators".
-
-- `build`: Build a package.
-- `checksum`: Generate checksums for a package.
-- `install`: Install a built package.
-- `remove`: Remove an installed package.
-- `list`: List installed packages.
-- `update`: List packages with available updates.
-
 ### `kiss build pkg`
 
 Kiss's `build` operator handles a package from its source code to the installable `.tar.gz` file. Sources are downloaded, checksums are verified, dependencies are checked and the package is compiled then packaged.
