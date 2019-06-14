@@ -154,6 +154,8 @@ pkg_remove() {
 
 pkg_updates() {
     for item in "$sys_db/"*; do
+        pkg_search "${item##*/}"
+
         read -r db_ver db_rel < "$item/version"
         read -r re_ver re_rel < "$rep_dir/${item##*/}/version"
 
