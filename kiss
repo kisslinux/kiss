@@ -42,10 +42,15 @@ pkg_setup() {
 
 pkg_depends() {
     while read -r dep; do
-        pkg_list "$dep" || missing="$missing $dep"
+        pkg_list "$dep" || {
+            case $missing in
+                *" $dep,"*) ;;
+                *) missing="$missing $dep,"
+                   pkg_setup "$dep"
+                   pkg_depends ;;
+            esac
+        }
     done 2>/dev/null < depends
-
-    [ -n "$missing" ] && die "Missing dependencies:$missing"
 }
 
 pkg_sources() {
@@ -179,11 +184,16 @@ args() {
         b*) [ -f checksums ] || die "Checksums missing, run '$0 checksum $name'"
 
             pkg_depends
+
+            [ -n "$missing" ] && die "Missing dependencies:${missing%,}"
+
             pkg_sources
             pkg_verify
             pkg_extract
             pkg_build
+
             [ -f nostrip ] || pkg_strip
+
             pkg_manifest
             pkg_tar ;;
 
