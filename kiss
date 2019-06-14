@@ -200,7 +200,9 @@ args() {
             pkg_checksum
             log "Generated checksums." ;;
 
-        i*) pkg_install ;;
+        i*) pkg_depends
+            pkg_install ;;
+
         l*) pkg_list "$2" ;;
         r*) pkg_remove || die "Package '$name' not installed" ;;
         u*) pkg_updates ;;
