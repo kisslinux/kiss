@@ -42,14 +42,13 @@ pkg_setup() {
 
 pkg_depends() {
     while read -r dep; do
-        pkg_list "$dep" || {
+        pkg_list "$dep" ||
             case $missing in
                 *" $dep,"*) ;;
                 *) missing="$missing $dep,"
                    pkg_setup "$dep"
                    pkg_depends ;;
             esac
-        }
     done 2>/dev/null < depends
 }
 
