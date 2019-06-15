@@ -41,14 +41,17 @@ pkg_setup() {
 }
 
 pkg_depends() {
-    while read -r dep; do
-        pkg_list "$dep" ||
+    while read -r dep opt; do
+        pkg_list "$dep" || {
+            [ "$1" = install ] && [ "$opt" = make ] && continue
+
             case $missing in
-                *" $dep,"*) ;;
-                *) missing="$missing $dep,"
+                *" $dep${opt:+ ($opt)},"*) ;;
+                *) missing="$missing $dep${opt:+ ($opt)},"
                    pkg_setup "$dep"
                    pkg_depends ;;
             esac
+        }
     done 2>/dev/null < depends
 }
 
@@ -200,7 +203,7 @@ args() {
             pkg_checksum
             log "Generated checksums." ;;
 
-        i*) pkg_depends
+        i*) pkg_depends install
             pkg_install ;;
 
         l*) pkg_list "$2" ;;
