@@ -43,7 +43,7 @@ pkg_setup() {
 pkg_depends() {
     while read -r dep opt; do
         pkg_list "$dep" || {
-            [ "$1" = install ] && [ "$opt" = make ] && return
+            [ "$1" = install ] && [ "$opt" = make ] && continue
 
             case $missing in
                 *" $dep${opt:+ ($opt)},"*) ;;
