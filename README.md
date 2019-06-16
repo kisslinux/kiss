@@ -37,9 +37,9 @@ Other utilities:
 
 - `file`
 - `git` (For `git` packages.)
-- `sha256sum`
-- `tar`
-- `wget`
+- `sha256sum` (Included in default `busybox`)
+- `tar` (Included in default `busybox`)
+- `wget`(Included in default `busybox`)
 
 ## Getting started
 
