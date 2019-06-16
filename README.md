@@ -8,6 +8,7 @@ Tiny package manager for KISS Linux.
 <!-- vim-markdown-toc GFM -->
 
 * [Package format](#package-format)
+* [Dependencies](#dependencies)
 * [Getting started](#getting-started)
 * [Usage](#usage)
 * [How does each operator work?](#how-does-each-operator-work)
@@ -25,6 +26,26 @@ Tiny package manager for KISS Linux.
 
 See: <https://github.com/kissx/packages>
 
+
+## Dependencies
+
+Full list of dependencies.
+
+- `cp`
+- `diff`
+- `file`
+- `find`
+- `git` (For `git` packages.)
+- `mkdir`
+- `rm`
+- `rmdir`
+- `sed`
+- `sh`
+- `sha256sum`
+- `tac`
+- `tar`
+- `tee`
+- `wget`
 
 ## Getting started
 
