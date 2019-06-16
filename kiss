@@ -167,6 +167,9 @@ pkg_remove() {
             "$cac_dir/rm" -f -- "$sys_dir$file" || log "Failed to remove $file."
         fi && log "Removed $file"
     done < "$sys_db/$name/manifest"
+
+    # Use the backup of 'rm' to remove 'rmdir' and itself.
+    "$cac_dir/rm" "$cac_dir/rmdir" "$cac_dir/rm"
 }
 
 pkg_updates() {
