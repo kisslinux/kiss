@@ -154,7 +154,7 @@ pkg_remove() {
     pkg_list "$name" || return 1
 
     # Create a backup of 'rm' and 'rmdir' so they aren't
-    # removed during package installation.
+    # removed during package removal.
     cp "$(command -v rm)"    "$cac_dir"
     cp "$(command -v rmdir)" "$cac_dir"
 
