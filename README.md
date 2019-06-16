@@ -31,6 +31,7 @@ See: <https://github.com/kissx/packages>
 
 Full list of dependencies.
 
+- `cat`
 - `cp`
 - `file`
 - `find`
