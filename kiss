@@ -137,8 +137,13 @@ pkg_tar() {
 pkg_install() {
     [ -f "$bin_dir/$pkg" ] || args b "$name"
 
+    # Create a backup of 'tar' so it isn't removed during
+    # package installation.
+    cp "$(command -v tar)" "$cac_dir"
+
     pkg_remove "$name"
-    tar pxvf "$bin_dir/$pkg" -k -C "$sys_dir/" 2>/dev/null
+    "$cac_dir/tar" kpxvf "$bin_dir/$pkg" -C "$sys_dir/"
+    rm "$cac_dir/tar"
 
     "$sys_db/$name/post-install" 2>/dev/null
 
@@ -148,13 +153,18 @@ pkg_install() {
 pkg_remove() {
     pkg_list "$name" || return 1
 
+    # Create a backup of 'rm' and 'rmdir' so they aren't
+    # removed during package installation.
+    cp "$(command -v rm)"    "$cac_dir"
+    cp "$(command -v rmdir)" "$cac_dir"
+
     while read -r file; do
         [ "${file%/*}" = /etc ] && continue
 
         if [ -d "$sys_dir$file" ]; then
-            rmdir "$sys_dir$file" 2>/dev/null || continue
+            "$cac_dir/rmdir" "$sys_dir$file" 2>/dev/null || continue
         else
-            rm -f -- "$sys_dir$file" || log "Failed to remove $file."
+            "$cac_dir/rm" -f -- "$sys_dir$file" || log "Failed to remove $file."
         fi && log "Removed $file"
     done < "$sys_db/$name/manifest"
 }
