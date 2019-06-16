@@ -31,7 +31,7 @@ See: <https://github.com/kissx/packages>
 
 POSIX `coreutils`:
 
-- `cat`, `cp`, `find`, `mkdir`, `sh`, `rm`, `rmdir`, `sed`, `tee`
+- `cat`, `command`, `cp`, `find`, `mkdir`, `sh`, `rm`, `rmdir`, `sed`, `tee`
 
 Other utilities:
 
