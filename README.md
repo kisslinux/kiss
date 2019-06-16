@@ -32,7 +32,6 @@ See: <https://github.com/kissx/packages>
 Full list of dependencies.
 
 - `cp`
-- `diff`
 - `file`
 - `find`
 - `git` (For `git` packages.)

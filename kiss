@@ -79,7 +79,7 @@ pkg_checksum() {
 }
 
 pkg_verify() {
-    pkg_checksum /dev/stdout | diff checksums - ||
+    [ "$(pkg_checksum /dev/stdout)" = "$(cat checksums)" ] ||
         die "Checksum mismatch, run '$0 checksum $name' to update checksums."
 }
 
