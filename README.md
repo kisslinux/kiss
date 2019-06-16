@@ -41,7 +41,6 @@ Full list of dependencies.
 - `sed`
 - `sh`
 - `sha256sum`
-- `tac`
 - `tar`
 - `tee`
 - `wget`
