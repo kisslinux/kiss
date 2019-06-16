@@ -29,21 +29,16 @@ See: <https://github.com/kissx/packages>
 
 ## Dependencies
 
-Full list of dependencies.
+POSIX coreutils:
 
-- `cat`
-- `cp`
+- `cat`, `cp`, `find`, `mkdir`, `sh`, `rm`, `rmdir`, `sed`, `tee`
+
+Other utilities:
+
 - `file`
-- `find`
 - `git` (For `git` packages.)
-- `mkdir`
-- `rm`
-- `rmdir`
-- `sed`
-- `sh`
 - `sha256sum`
 - `tar`
-- `tee`
 - `wget`
 
 ## Getting started
