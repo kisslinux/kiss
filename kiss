@@ -149,7 +149,7 @@ pkg_remove() {
     pkg_list "$name" || return 1
 
     while read -r file; do
-        [ "${file%/*}" = "/etc" ] && continue
+        [ "${file%/*}" = /etc ] && continue
 
         if [ -d "$sys_dir$file" ]; then
             rmdir "$sys_dir$file" 2>/dev/null || continue
