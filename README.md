@@ -29,7 +29,7 @@ See: <https://github.com/kissx/packages>
 
 ## Dependencies
 
-POSIX coreutils:
+POSIX `coreutils`:
 
 - `cat`, `cp`, `find`, `mkdir`, `sh`, `rm`, `rmdir`, `sed`, `tee`
 
