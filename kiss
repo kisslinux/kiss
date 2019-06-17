@@ -80,7 +80,7 @@ pkg_checksum() {
 
 pkg_verify() {
     [ "$(pkg_checksum /dev/stdout)" = "$(cat checksums)" ] ||
-        die "Checksum mismatch, run '$0 checksum $name' to update checksums."
+        die "Checksum mismatch, run '$kiss checksum $name'."
 }
 
 pkg_extract() {
@@ -131,7 +131,7 @@ pkg_manifest() {
 
 pkg_tar() {
     tar zpcf "$bin_dir/$pkg" -C "$pkg_dir" . || die "Failed to create package."
-    log "Use '$0 install $name' to install the package."
+    log "Use '$kiss install $name' to install the package."
 }
 
 pkg_install() {
@@ -196,7 +196,8 @@ pkg_list() {
 args() {
     case $1 in b*|c*|i*|r*) pkg_setup "${2-null}"; esac
     case $1 in
-        b*) [ -f checksums ] || die "Checksums missing, run '$0 checksum $name'"
+        b*) [ -f checksums ] ||
+                die "Checksums missing, run '$kiss checksum $name'"
 
             pkg_depends
 
@@ -223,7 +224,7 @@ args() {
         r*) pkg_remove || die "Package '$name' not installed" ;;
         u*) pkg_updates ;;
 
-        *)  log "${0##*/} [b|c|i|l|r|u] [pkg]" \
+        *)  log "$kiss [b|c|i|l|r|u] [pkg]" \
                 "build:     Build a package." \
                 "checksum:  Generate checksums." \
                 "install:   Install a package (Runs build if needed)." \
@@ -235,6 +236,7 @@ args() {
 
 main() {
     trap 'rm -rf -- "$mak_dir" "$pkg_dir"' EXIT INT
+    kiss=${0##*/}
 
     [ -z "$KISS_PATH" ] &&
         die "Set \$KISS_PATH to a repository location."
@@ -242,12 +244,12 @@ main() {
     [ -z "$KISS_ROOT" ] && [ "$(id -u)" != 0 ] &&
         die "\$KISS_ROOT is set to '/' so you need to be root."
 
-    mkdir -p "${cac_dir:=${XDG_CACHE_HOME:=$HOME/.cache}/${0##*/}}" \
+    mkdir -p "${cac_dir:=${XDG_CACHE_HOME:=$HOME/.cache}/$kiss}" \
              "${src_dir:=$cac_dir/sources}" \
              "${mak_dir:=$cac_dir/build}" \
              "${bin_dir:=$cac_dir/bin}" \
-             "${pkg_db:=${pkg_dir:=$cac_dir/pkg}/var/db/${0##*/}}" \
-             "${sys_db:=${sys_dir:=$KISS_ROOT}/var/db/${0##*/}}" ||
+             "${pkg_db:=${pkg_dir:=$cac_dir/pkg}/var/db/$kiss}" \
+             "${sys_db:=${sys_dir:=$KISS_ROOT}/var/db/$kiss}" ||
              die "Couldn't create directories."
 
     args "$@"
