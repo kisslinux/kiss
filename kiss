@@ -167,10 +167,8 @@ pkg_install() {
 
     log "Removing previous version of package if it exists."
     pkg_remove "$name"
-
+    
     "$cac_dir/tar" kpxf "$bin_dir/$pkg" -C "$sys_dir/"
-    rm "$cac_dir/tar"
-
     "$sys_db/$name/post-install" 2>/dev/null
 
     log "Installed ${pkg%.tar.gz}"
@@ -261,7 +259,7 @@ args() {
 }
 
 main() {
-    trap 'rm -rf -- "$mak_dir" "$pkg_dir"' EXIT INT
+    trap 'rm -rf -- "$mak_dir" "$pkg_dir" "$cac_dir/tar"' EXIT INT
     kiss=${0##*/}
 
     [ -z "$KISS_PATH" ] &&
