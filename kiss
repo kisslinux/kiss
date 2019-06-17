@@ -47,8 +47,8 @@ pkg_depends() {
             [ "$1" = install ] && [ "$opt" = make ] && continue
 
             case $missing in
-                *" $dep "*,) ;;
-                *) missing="$missing $dep${opt:+ ($opt)},"
+                *" $dep,"*) ;;
+                *) missing="$missing $dep,"
                    pkg_setup "$dep"
                    pkg_depends ;;
             esac
