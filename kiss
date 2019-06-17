@@ -143,7 +143,6 @@ pkg_install() {
 
     pkg_remove "$name"
     "$cac_dir/tar" kpxvf "$bin_dir/$pkg" -C "$sys_dir/"
-    rm "$cac_dir/tar"
 
     "$sys_db/$name/post-install" 2>/dev/null
 
@@ -235,7 +234,7 @@ args() {
 }
 
 main() {
-    trap 'rm -rf -- "$mak_dir" "$pkg_dir"' EXIT INT
+    trap 'rm -rf -- "$mak_dir" "$pkg_dir" "$cac_dir/tar"' EXIT INT
     kiss=${0##*/}
 
     [ -z "$KISS_PATH" ] &&
