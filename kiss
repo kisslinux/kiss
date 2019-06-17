@@ -126,7 +126,7 @@ pkg_strip() {
 
 pkg_manifest() {
     (cd "$pkg_dir" && find ./*) | sed -e ss.ss -e '1!G;h;$!d' |
-        tee manifest > "$pkg_db/$name/manifest"
+        sort | tee manifest > "$pkg_db/$name/manifest"
 }
 
 pkg_tar() {
