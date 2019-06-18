@@ -173,7 +173,7 @@ pkg_install() {
     log "Removing previous version of package if it exists."
     pkg_remove "$name"
 
-    "$cac_dir/tar" kpxf "$bin_dir/$pkg" -C "$sys_dir/"
+    "$cac_dir/tar" kpxf "$bin_dir/$pkg" -C "$sys_dir/" 2>/dev/null
     "$sys_db/$name/post-install" 2>/dev/null
 
     log "Installed ${pkg%.tar.gz}"
