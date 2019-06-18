@@ -19,6 +19,10 @@ source_type() {
     [ -z "${1##*://*}" ]       && return 5  # Remote file.
 }
 
+pkg_clean() {
+    rm -rf -- "$mak_dir" "$pkg_dir" "$cac_dir/manifest" "$cac_dir/tar"
+}
+
 pkg_search() {
     set -f
     # shellcheck disable=2086,2046
@@ -126,8 +130,10 @@ pkg_strip() {
 }
 
 pkg_manifest() {
-    (cd "$pkg_dir" && find ./*) | sed -e ss.ss -e '1!G;h;$!d' |
-        sort | tee manifest > "$pkg_db/$name/manifest"
+    # Store the file and directory list of the package.
+    # Directories have a trailing '/' and the list is sorted in reverse.
+    (cd "$pkg_dir" && find ./* -type d -exec printf '%s/\n' {} + -or -print) |
+        sort -r | sed -e ss.ss | tee manifest > "$pkg_db/$name/manifest"
 }
 
 pkg_tar() {
@@ -135,16 +141,39 @@ pkg_tar() {
     log "Use '$kiss install $name' to install the package."
 }
 
+pkg_conflicts() {
+    log "Checking for package conflicts."
+
+    # Extract manifest from tarball and strip directories.
+    tar xf "$bin_dir/$pkg" "./var/db/$kiss/$name/manifest" -O |
+    while read -r line; do
+        [ "${line%%*/}" ] && printf '%s\n' "$line" >> "$cac_dir/manifest"
+    done
+
+    # Compare extracted manifest to all installed manifests.
+    # If there are matching lines (files) there's a package
+    # conflict.
+    for db in "$sys_db"/*; do
+        [ "$name" = "${db##*/}" ] && continue
+
+        grep -Fxf "$cac_dir/manifest" "$db/manifest" &&
+            die "Package '$name' conflicts with '${db##*/}'."
+    done
+}
+
 pkg_install() {
     [ -f "$bin_dir/$pkg" ] || args b "$name"
+
+    pkg_conflicts
 
     # Create a backup of 'tar' so it isn't removed during
     # package installation.
     cp "$(command -v tar)" "$cac_dir"
 
+    log "Removing previous version of package if it exists."
     pkg_remove "$name"
-    "$cac_dir/tar" kpxvf "$bin_dir/$pkg" -C "$sys_dir/" 2>/dev/null
 
+    "$cac_dir/tar" kpxf "$bin_dir/$pkg" -C "$sys_dir/"
     "$sys_db/$name/post-install" 2>/dev/null
 
     log "Installed ${pkg%.tar.gz}"
@@ -235,7 +264,7 @@ args() {
 }
 
 main() {
-    trap 'rm -rf -- "$mak_dir" "$pkg_dir" "$cac_dir/tar"' EXIT INT
+    trap pkg_clean EXIT INT
     kiss=${0##*/}
 
     [ -z "$KISS_PATH" ] &&
