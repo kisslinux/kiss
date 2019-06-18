@@ -171,7 +171,7 @@ pkg_install() {
     cp "$(command -v tar)" "$cac_dir"
 
     log "Removing previous version of package if it exists."
-    pkg_remove "$name"
+    pkg_remove
 
     "$cac_dir/tar" kpxf "$bin_dir/$pkg" -C "$sys_dir/" 2>/dev/null
     "$sys_db/$name/post-install" 2>/dev/null
@@ -180,7 +180,7 @@ pkg_install() {
 }
 
 pkg_remove() {
-    pkg_list "$name" || return 1
+    pkg_list "${1:-${name-null}}" || return 1
 
     # Create a backup of 'rm' and 'rmdir' so they aren't
     # removed during package removal.
@@ -195,7 +195,7 @@ pkg_remove() {
         else
             "$cac_dir/rm" -f -- "$sys_dir$file" || log "Failed to remove $file."
         fi && log "Removed $file"
-    done < "$sys_db/$name/manifest"
+    done < "$sys_db/${1:-$name}/manifest"
 
     # Use the backup of 'rm' to remove 'rmdir' and itself.
     "$cac_dir/rm" "$cac_dir/rmdir" "$cac_dir/rm"
@@ -223,7 +223,7 @@ pkg_list() {
 }
 
 args() {
-    case $1 in b*|c*|i*|r*) pkg_setup "${2-null}"; esac
+    case $1 in b*|c*|i*) pkg_setup "${2-null}"; esac
     case $1 in
         b*) [ -f checksums ] ||
                 die "Checksums missing, run '$kiss checksum $name'"
@@ -250,7 +250,7 @@ args() {
             pkg_install ;;
 
         l*) pkg_list "$2" ;;
-        r*) pkg_remove || die "Package '$name' not installed" ;;
+        r*) pkg_remove "${2-null}" || die "Package '${2-null}' not installed." ;;
         u*) pkg_updates ;;
 
         *)  log "$kiss [b|c|i|l|r|u] [pkg]" \
