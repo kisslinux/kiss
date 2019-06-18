@@ -131,9 +131,8 @@ pkg_strip() {
 pkg_manifest() {
     # Store the file and directory list of the package.
     # Directories have a trailing '/' and the list is sorted in reverse.
-    (cd "$pkg_dir" && {
-        find ./* -type d -print | sed 's!$!/!'; find . \! -type d
-    }) | sort -r | sed -e ss.ss | tee manifest > "$pkg_db/$name/manifest"
+    (cd "$pkg_dir" && find ./* -type d -exec printf '%s/\n' {} + -or -print) |
+        sort -r | sed -e ss.ss | tee manifest > "$pkg_db/$name/manifest"
 }
 
 pkg_tar() {
