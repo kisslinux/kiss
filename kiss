@@ -18,6 +18,10 @@ source_type() {
     [ -z "${1##*://*}" ]       && return 5  # Remote file.
 }
 
+pkg_clean() {
+    rm -rf -- "$mak_dir" "$pkg_dir" "$cac_dir/manifest" "$cac_dir/tar"
+}
+
 pkg_search() {
     set -f
     # shellcheck disable=2086,2046
@@ -170,8 +174,6 @@ pkg_install() {
     pkg_remove "$name"
 
     "$cac_dir/tar" kpxf "$bin_dir/$pkg" -C "$sys_dir/"
-    rm "$cac_dir/tar"
-
     "$sys_db/$name/post-install" 2>/dev/null
 
     log "Installed ${pkg%.tar.gz}"
@@ -262,7 +264,7 @@ args() {
 }
 
 main() {
-    trap 'rm -rf -- "$mak_dir" "$pkg_dir" "$cac_dir/manifest"' EXIT INT
+    trap pkg_clean EXIT INT
     kiss=${0##*/}
 
     [ -z "$KISS_PATH" ] &&
