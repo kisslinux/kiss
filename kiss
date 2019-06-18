@@ -125,8 +125,11 @@ pkg_strip() {
 }
 
 pkg_manifest() {
-    (cd "$pkg_dir" && find ./*) | sed -e ss.ss -e '1!G;h;$!d' |
-        tee manifest > "$pkg_db/$name/manifest"
+    # Store the file and directory list of the package.
+    # Directories have a trailing '/' and the list is sorted in reverse.
+    (cd "$pkg_dir" && {
+        find ./* -type d -print | sed 's!$!/!'; find . \! -type d
+    }) | sort -r | sed -e ss.ss | tee manifest > "$pkg_db/$name/manifest"
 }
 
 pkg_tar() {
@@ -139,9 +142,9 @@ pkg_conflicts() {
 
     # Extract manifest from tarball and strip directories.
     tar xf "$bin_dir/$pkg" "./var/db/$kiss/$name/manifest" -O |
-        while read -r line; do
-            [ -f "$line" ] && printf '%s\n' "$line" >> "$cac_dir/manifest"
-        done
+    while read -r line; do
+        [ "${line%%*/}" ] && printf '%s\n' "$line" >> "$cac_dir/manifest"
+    done
 
     # Compare extracted manifest to all installed manifests.
     # If there are matching lines (files) there's a package
@@ -152,8 +155,6 @@ pkg_conflicts() {
         grep -Fxf "$cac_dir/manifest" "$db/manifest" &&
             die "Package '$name' conflicts with '${db##*/}'."
     done
-
-    rm "$cac_dir/manifest"
 }
 
 pkg_install() {
@@ -261,7 +262,7 @@ args() {
 }
 
 main() {
-    trap 'rm -rf -- "$mak_dir" "$pkg_dir"' EXIT INT
+    trap 'rm -rf -- "$mak_dir" "$pkg_dir" "$cac_dir/manifest"' EXIT INT
     kiss=${0##*/}
 
     [ -z "$KISS_PATH" ] &&
