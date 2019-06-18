@@ -275,9 +275,9 @@ main() {
 
     mkdir -p "${cac_dir:=${XDG_CACHE_HOME:=$HOME/.cache}/$kiss}" \
              "${src_dir:=$cac_dir/sources}" \
-             "${mak_dir:=$cac_dir/build}" \
+             "${mak_dir:=$cac_dir/build-$$}" \
              "${bin_dir:=$cac_dir/bin}" \
-             "${pkg_db:=${pkg_dir:=$cac_dir/pkg}/var/db/$kiss}" \
+             "${pkg_db:=${pkg_dir:=$cac_dir/pkg-$$}/var/db/$kiss}" \
              "${sys_db:=${sys_dir:=$KISS_ROOT}/var/db/$kiss}" ||
              die "Couldn't create directories."
 
