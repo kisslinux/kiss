@@ -20,7 +20,8 @@ source_type() {
 }
 
 pkg_clean() {
-    rm -rf -- "$mak_dir" "$pkg_dir" "$cac_dir/manifest" "$cac_dir/tar"
+    rm -rf -- "$mak_dir" "$pkg_dir" \
+              "$cac_dir/manifest" "$cac_dir/tar" "$cac_dir/checksums"
 }
 
 pkg_search() {
@@ -84,8 +85,10 @@ pkg_checksum() {
 }
 
 pkg_verify() {
-    [ "$(pkg_checksum /dev/stdout)" = "$(cat checksums)" ] ||
-        die "Checksum mismatch, run '$kiss checksum $name'."
+    pkg_checksum "$cac_dir/checksums"
+
+    cmp -s "$cac_dir/checksums" checksums ||
+        die "checksum mismatch, run '$kiss checksum $name'."
 }
 
 pkg_extract() {
