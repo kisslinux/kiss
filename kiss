@@ -46,7 +46,7 @@ pkg_setup() {
 }
 
 pkg_depends() {
-    while read -r dep opt; do
+    [ -f depends ] && while read -r dep opt; do
         pkg_list "$dep" || {
             [ "$1" = install ] && [ "$opt" = make ] && continue
 
@@ -57,7 +57,7 @@ pkg_depends() {
                    pkg_depends ;;
             esac
         }
-    done 2>/dev/null < depends
+    done < depends
 }
 
 pkg_sources() {
