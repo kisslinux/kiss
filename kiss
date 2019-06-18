@@ -12,6 +12,7 @@ log() {
 }
 
 source_type() {
+    [ -z "$1" ]                && return 1  # No file.
     [ -f "$1" ]                && return 2  # Local file.
     [ -f "$src_dir/${1##*/}" ] && return 3  # Cached downloaded file.
     [ -z "${1##git:*}" ]       && return 4  # Git repository.
@@ -50,8 +51,8 @@ pkg_depends() {
             [ "$1" = install ] && [ "$opt" = make ] && continue
 
             case $missing in
-                *" $dep${opt:+ ($opt)},"*) ;;
-                *) missing="$missing $dep${opt:+ ($opt)},"
+                *" $dep,"*) ;;
+                *) missing="$missing $dep,"
                    pkg_setup "$dep"
                    pkg_depends ;;
             esac
