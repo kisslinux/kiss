@@ -21,7 +21,7 @@ source_type() {
 
 pkg_clean() {
     rm -rf -- "$mak_dir" "$pkg_dir" \
-              "$cac_dir/manifest" "$cac_dir/tar" "$cac_dir/checksums"
+              "$cac_dir/manifest-$$" "$cac_dir/tar" "$cac_dir/checksums-$$"
 }
 
 pkg_search() {
@@ -85,9 +85,9 @@ pkg_checksum() {
 }
 
 pkg_verify() {
-    pkg_checksum "$cac_dir/checksums"
+    pkg_checksum "$cac_dir/checksums-$$"
 
-    cmp -s "$cac_dir/checksums" checksums ||
+    cmp -s "$cac_dir/checksums-$$" checksums ||
         die "checksum mismatch, run '$kiss checksum $name'."
 }
 
@@ -150,7 +150,7 @@ pkg_conflicts() {
     # Extract manifest from tarball and strip directories.
     tar xf "$bin_dir/$pkg" "./var/db/$kiss/$name/manifest" -O |
     while read -r line; do
-        [ "${line%%*/}" ] && printf '%s\n' "$line" >> "$cac_dir/manifest"
+        [ "${line%%*/}" ] && printf '%s\n' "$line" >> "$cac_dir/manifest-$$"
     done
 
     # Compare extracted manifest to all installed manifests.
@@ -159,7 +159,7 @@ pkg_conflicts() {
     for db in "$sys_db"/*; do
         [ "$name" = "${db##*/}" ] && continue
 
-        grep -Fxf "$cac_dir/manifest" "$db/manifest" &&
+        grep -Fxf "$cac_dir/manifest-$$" "$db/manifest" &&
             die "Package '$name' conflicts with '${db##*/}'."
     done
 }
