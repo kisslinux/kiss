@@ -133,6 +133,16 @@ pkg_strip() {
     done
 }
 
+pkg_man_compress() {
+    log "Compressing man pages."
+
+    find "$pkg_dir/usr/share/man" -type f -exec gzip -9 {} \;
+
+    find "$pkg_dir/usr/share/man" -type l | while read -r man; do
+        ln -s "$(readlink "$man").gz" "$man.gz" && rm -f "$man"
+    done
+}
+
 pkg_manifest() {
     # Store the file and directory list of the package.
     # Directories have a trailing '/' and the list is sorted in reverse.
@@ -242,6 +252,7 @@ args() {
             pkg_build
 
             [ -f nostrip ] || pkg_strip
+            pkg_man_compress
 
             pkg_manifest
             pkg_tar ;;
