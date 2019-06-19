@@ -41,6 +41,7 @@ pkg_setup() {
     cd "$rep_dir/$1" || die "'$rep_dir/$1' not accessible"
     [ -f sources ]   || die "Sources file not found."
     [ -x build ]     || die "Build file not found or not executable."
+    [ -f licenses ]  || die "License file not found or empty."
 
     read -r ver rel < version || die "Version file not found."
     pkg=${name:=$1}\#$ver-$rel.tar.gz
