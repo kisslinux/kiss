@@ -88,7 +88,7 @@ pkg_verify() {
     pkg_checksum "$cac_dir/checksums-$$"
 
     cmp -s "$cac_dir/checksums-$$" checksums ||
-        die "checksum mismatch, run '$kiss checksum $name'."
+        die "Checksum mismatch, run '$kiss checksum $name'."
 }
 
 pkg_extract() {
