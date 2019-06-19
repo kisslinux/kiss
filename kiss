@@ -159,7 +159,7 @@ pkg_conflicts() {
     for db in "$sys_db"/*; do
         [ "$name" = "${db##*/}" ] && continue
 
-        grep -Fxf "$cac_dir/manifest-$$" "$db/manifest" &&
+        grep -Fxf "$cac_dir/manifest-$$" "$db/manifest" 2>/dev/null &&
             die "Package '$name' conflicts with '${db##*/}'."
     done
 }
