@@ -129,7 +129,7 @@ pkg_strip() {
             *) continue ;;
         esac
 
-        strip "$strip_opts" "$binary"
+        strip "$strip_opts" "$binary" 2>/dev/null
     done
 }
 
