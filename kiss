@@ -231,7 +231,12 @@ args() {
         i*|r*) die "No write permissions to \$KISS_ROOT."
     esac
 
-    case $1 in b*|c*|i*) pkg_setup "${2-null}"; src_dir=$src_dir/$name; esac
+    case $1 in b*|c*|i*)
+        pkg_setup "${2-null}"
+        src_dir=$src_dir/$name
+        mkdir -p "$src_dir"
+    esac
+
     case $1 in
         b*) [ -f checksums ] ||
                 die "Checksums missing, run '$kiss checksum $name'"
