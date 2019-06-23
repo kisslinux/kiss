@@ -33,7 +33,6 @@ pkg_search() {
     [ -z "$2" ] && die "Package '$1' not in any repository."
 
     rep_dir=${2%/$1}
-    log "Found '$1' in '$rep_dir'"
 }
 
 pkg_setup() {
