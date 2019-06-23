@@ -27,12 +27,13 @@ pkg_clean() {
 pkg_search() {
     set -f
     # shellcheck disable=2086,2046
-    set -- "$1" $(IFS=: find $KISS_PATH -maxdepth 1 -name "$1")
+    set -- "$1" $(IFS=:; find $KISS_PATH -maxdepth 1 -name "$1")
     set +f
 
     [ -z "$2" ] && die "Package '$1' not in any repository."
 
     rep_dir=${2%/$1}
+    log "Found '$1' in '$rep_dir'"
 }
 
 pkg_setup() {
