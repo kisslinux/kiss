@@ -99,7 +99,7 @@ pkg_extract() {
         case $(source_type "$src"; echo $?)-$src in
             2-*) cp -f "$src" "$mak_dir/$dest" ;;
 
-            3-*.tar*)
+            3-*.tar*|3-*.tgz)
                tar xf "$src_dir/${src##*/}" -C "$mak_dir/$dest" \
                    --strip-components 1 || die "Couldn't extract ${src##*/}" ;;
 
