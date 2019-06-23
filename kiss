@@ -228,6 +228,10 @@ pkg_list() {
 }
 
 args() {
+    [ -w "$KISS_ROOT" ] || case $1 in
+        i*|r*) die "No write permissions to \$KISS_ROOT."
+    esac
+
     case $1 in b*|c*|i*) pkg_setup "${2-null}"; esac
     case $1 in
         b*) [ -f checksums ] ||
@@ -271,19 +275,15 @@ args() {
 main() {
     trap pkg_clean EXIT INT
     kiss=${0##*/}
+    sys_db=${sys_dir:=$KISS_ROOT}/var/db/$kiss
 
-    [ -z "$KISS_PATH" ] &&
-        die "Set \$KISS_PATH to a repository location."
-
-    [ -z "$KISS_ROOT" ] && [ "$(id -u)" != 0 ] &&
-        die "\$KISS_ROOT is set to '/' so you need to be root."
+    [ -z "$KISS_PATH" ] && die "Set \$KISS_PATH to a repository location."
 
     mkdir -p "${cac_dir:=${XDG_CACHE_HOME:=$HOME/.cache}/$kiss}" \
              "${src_dir:=$cac_dir/sources}" \
              "${mak_dir:=$cac_dir/build-$$}" \
              "${bin_dir:=$cac_dir/bin}" \
-             "${pkg_db:=${pkg_dir:=$cac_dir/pkg-$$}/var/db/$kiss}" \
-             "${sys_db:=${sys_dir:=$KISS_ROOT}/var/db/$kiss}" ||
+             "${pkg_db:=${pkg_dir:=$cac_dir/pkg-$$}/var/db/$kiss}" ||
              die "Couldn't create directories."
 
     args "$@"
