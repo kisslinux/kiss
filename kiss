@@ -227,7 +227,7 @@ pkg_list() {
 }
 
 args() {
-    [ -w "$KISS_ROOT" ] || case $1 in
+    [ -w "$KISS_ROOT/" ] || case $1 in
         i*|r*) die "No write permissions to \$KISS_ROOT."
     esac
 
