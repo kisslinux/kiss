@@ -265,7 +265,7 @@ args() {
         l*) pkg_list "$2" ;;
         r*) pkg_remove "${2-null}" || die "Package '${2-null}' not installed." ;;
         u*) pkg_updates ;;
-        v*) log "$kiss 0.1.4" ;;
+        v*) log "$kiss 0.1.5" ;;
 
         *)  log "$kiss [b|c|i|l|r|u] [pkg]" \
                 "build:     Build a package." \
