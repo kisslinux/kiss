@@ -64,6 +64,7 @@ pkg_depends() {
 
 pkg_sources() {
     src_dir=$cac_dir/sources/$name
+    mkdir -p "$src_dir"
 
     while read -r src _; do
         case $(source_type "$src"; echo $?) in
@@ -262,7 +263,7 @@ args() {
         l*) pkg_list "$2" ;;
         r*) pkg_remove "${2-null}" || die "Package '${2-null}' not installed." ;;
         u*) pkg_updates ;;
-        v*) log "$kiss 0.1.7" ;;
+        v*) log "$kiss 0.1.8" ;;
 
         *)  log "$kiss [b|c|i|l|r|u] [pkg]" \
                 "build:     Build a package." \
@@ -282,7 +283,6 @@ main() {
     [ -z "$KISS_PATH" ] && die "Set \$KISS_PATH to a repository location."
 
     mkdir -p "${cac_dir:=${XDG_CACHE_HOME:=$HOME/.cache}/$kiss}" \
-             "${src_dir:=$cac_dir/sources}" \
              "${mak_dir:=$cac_dir/build-$$}" \
              "${bin_dir:=$cac_dir/bin}" \
              "${pkg_db:=${pkg_dir:=$cac_dir/pkg-$$}/var/db/$kiss}" ||
