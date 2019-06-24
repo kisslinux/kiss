@@ -63,6 +63,8 @@ pkg_depends() {
 }
 
 pkg_sources() {
+    src_dir=$cac_dir/sources/$name
+
     while read -r src _; do
         case $(source_type "$src"; echo $?) in
             4)   git clone "${src##git:}" "$mak_dir" ;;
@@ -231,7 +233,7 @@ args() {
         i*|r*) die "No write permissions to \$KISS_ROOT."
     esac
 
-    case $1 in b*|c*|i*) pkg_setup "${2-null}"; src_dir=$src_dir/$name; esac
+    case $1 in b*|c*|i*) pkg_setup "${2-null}"; esac
     case $1 in
         b*) [ -f checksums ] ||
                 die "Checksums missing, run '$kiss checksum $name'"
