@@ -156,7 +156,7 @@ pkg_conflicts() {
     tar xf "$bin_dir/$pkg" -O "./var/db/$kiss/$name/manifest" |
     while read -r line; do
         [ "${line%%*/}" ] && printf '%s\n' "$line" >> "$cac_dir/manifest-$$"
-    done || die "Found file conflicts."
+    done
 
     # Compare extracted manifest to all installed manifests.
     # If there are matching lines (files) there's a package
