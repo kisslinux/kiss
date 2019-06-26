@@ -20,8 +20,9 @@ source_type() {
 }
 
 pkg_clean() {
-    rm -rf -- "$mak_dir" "$pkg_dir" \
-              "$cac_dir/manifest-$$" "$cac_dir/tar" "$cac_dir/checksums-$$"
+    rm -rf -- "$mak_dir" "$pkg_dir" "$tar_dir" \
+              "$cac_dir/manifest-$$" "$cac_dir/checksums-$$" \
+              "$cac_dir/mv" "$cac_dir/mkdir" "$cac_dir/find"
 }
 
 pkg_search() {
@@ -154,8 +155,13 @@ pkg_conflicts() {
     # Extract manifest from tarball and strip directories.
     tar xf "$bin_dir/$pkg" -O "./var/db/$kiss/$name/manifest" |
     while read -r line; do
-        [ "${line%%*/}" ] && printf '%s\n' "$line" >> "$cac_dir/manifest-$$"
-    done
+        [ "${line%%*/}" ] && {
+            printf '%s\n' "$line" >> "$cac_dir/manifest-$$"
+            continue
+        }
+
+        [ ! -f "$sys_dir$line" ] || die "Conflict: $line already exists."
+    done || die "Found file conflicts."
 
     # Compare extracted manifest to all installed manifests.
     # If there are matching lines (files) there's a package
@@ -173,14 +179,34 @@ pkg_install() {
 
     pkg_conflicts
 
-    # Create a backup of 'tar' so it isn't removed during
-    # package installation.
-    cp "$(command -v tar)" "$cac_dir"
+    # Create a backup of 'mv', 'mkdir' and 'find' so they aren't removed
+    # during package removal.
+    cp "$(command -v mv)"    "$cac_dir"
+    cp "$(command -v mkdir)" "$cac_dir"
+    cp "$(command -v find)"  "$cac_dir"
 
     log "Removing previous version of package if it exists."
     pkg_remove
 
-    "$cac_dir/tar" kpxf "$bin_dir/$pkg" -C "$sys_dir/" 2>/dev/null
+    tar pxf "$bin_dir/$pkg" -C "$tar_dir/"
+
+    cd "$tar_dir" || die "Aborting due to tar error."
+
+    find ./ -mindepth 1 -type d | while read -r dir; do
+        mkdir -p "$sys_dir/${dir#./}"
+    done
+
+    find ./ -mindepth 1 -not -type d | while read -r file; do
+        rpath=${file#.}
+
+        case $rpath in
+            /etc/*) [ -f "$sys_dir${rpath%/*}" ] || mv=1 ;;
+            *) mv=1 ;;
+        esac
+
+        [ "$mv" ] && mv "$file" "$sys_dir${rpath%/*}" ;mv=
+    done
+
     "$sys_db/$name/post-install" 2>/dev/null
 
     log "Installed ${pkg%.tar.gz}"
@@ -201,11 +227,13 @@ pkg_remove() {
             "$cac_dir/rmdir" "$sys_dir$file" 2>/dev/null || continue
         else
             "$cac_dir/rm" -f -- "$sys_dir$file" || log "Failed to remove $file."
-        fi && log "Removed $file"
+        fi
     done < "$sys_db/${1:-$name}/manifest"
 
     # Use the backup of 'rm' to remove 'rmdir' and itself.
     "$cac_dir/rm" "$cac_dir/rmdir" "$cac_dir/rm"
+
+    log "Removed ${pkg%.tar.gz}"
 }
 
 pkg_updates() {
@@ -285,6 +313,7 @@ main() {
     mkdir -p "${cac_dir:=${XDG_CACHE_HOME:=$HOME/.cache}/$kiss}" \
              "${mak_dir:=$cac_dir/build-$$}" \
              "${bin_dir:=$cac_dir/bin}" \
+             "${tar_dir:=$cac_dir/extract-$$}" \
              "${pkg_db:=${pkg_dir:=$cac_dir/pkg-$$}/var/db/$kiss}" ||
              die "Couldn't create directories."
 
