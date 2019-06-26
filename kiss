@@ -20,8 +20,8 @@ source_type() {
 }
 
 pkg_clean() {
-    rm -rf -- "$mak_dir" "$pkg_dir" \
-              "$cac_dir/manifest-$$" "$cac_dir/tar" "$cac_dir/checksums-$$"
+    rm -rf -- "$mak_dir" "$pkg_dir" "$tar_dir" \
+              "$cac_dir/manifest-$$" "$cac_dir/mv" "$cac_dir/checksums-$$"
 }
 
 pkg_search() {
@@ -102,7 +102,7 @@ pkg_extract() {
         case $(source_type "$src"; echo $?)-$src in
             2-*) cp -f "$src" "$mak_dir/$dest" ;;
 
-            3-*.tar*|3-*.tgz)
+            3-*.tar*|3-*.tgz|3-*.zip)
                tar xf "$src_dir/${src##*/}" -C "$mak_dir/$dest" \
                    --strip-components 1 || die "Couldn't extract ${src##*/}" ;;
 
@@ -173,14 +173,29 @@ pkg_install() {
 
     pkg_conflicts
 
-    # Create a backup of 'tar' so it isn't removed during
-    # package installation.
-    cp "$(command -v tar)" "$cac_dir"
+    tar pxf "$bin_dir/$pkg" -C "$tar_dir/"
+
+    # Create a backup of 'mv' so it isn't removed
+    # during package removal.
+    cp "$(command -v mv)" "$cac_dir"
 
     log "Removing previous version of package if it exists."
     pkg_remove
 
-    "$cac_dir/tar" kpxf "$bin_dir/$pkg" -C "$sys_dir/" 2>/dev/null
+    cd "$tar_dir" || die "$tar_dir is inaccessible."
+
+    find -- * -type d | while read -r dir; do
+        mkdir -p "$KISS_ROOT/$dir" || die "Failed to create $dir, aborting."
+    done
+
+    find -- * -not -type d | while read -r file; do
+        case $file in
+            etc/*) ;;
+            *) [ -f "$KISS_ROOT/$file" ] && die "error: $file exists."
+               mv "$file" "$KISS_ROOT" ;;
+        esac
+    done
+
     "$sys_db/$name/post-install" 2>/dev/null
 
     log "Installed ${pkg%.tar.gz}"
@@ -285,6 +300,7 @@ main() {
     mkdir -p "${cac_dir:=${XDG_CACHE_HOME:=$HOME/.cache}/$kiss}" \
              "${mak_dir:=$cac_dir/build-$$}" \
              "${bin_dir:=$cac_dir/bin}" \
+             "${tar_dir:=$cac_dir/extract-$$}" \
              "${pkg_db:=${pkg_dir:=$cac_dir/pkg-$$}/var/db/$kiss}" ||
              die "Couldn't create directories."
 
