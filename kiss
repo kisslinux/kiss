@@ -192,7 +192,8 @@ pkg_install() {
 
     cd "$tar_dir" || die "Aborting due to tar error."
 
-    find ./ -mindepth 1 -type d | while read -r dir; do
+    # Optimization: Only find the deepest directories.
+    find . -type d -links -3 -prune | while read -r dir; do
         mkdir -p "$sys_dir/${dir#./}"
     done
 
@@ -258,7 +259,7 @@ pkg_list() {
 }
 
 args() {
-    [ -w "$KISS_ROOT/" ] || case $1 in
+    [ -w "$sys_dir/" ] || case $1 in
         i*|r*) die "No write permissions to \$KISS_ROOT."
     esac
 
