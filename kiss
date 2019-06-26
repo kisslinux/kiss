@@ -21,7 +21,8 @@ source_type() {
 
 pkg_clean() {
     rm -rf -- "$mak_dir" "$pkg_dir" "$tar_dir" \
-              "$cac_dir/manifest-$$" "$cac_dir/mv" "$cac_dir/checksums-$$"
+              "$cac_dir/manifest-$$" "$cac_dir/mv" "$cac_dir/mkdir" \
+              "$cac_dir/checksums-$$"
 }
 
 pkg_search() {
@@ -175,9 +176,10 @@ pkg_install() {
 
     tar pxf "$bin_dir/$pkg" -C "$tar_dir/"
 
-    # Create a backup of 'mv' so it isn't removed
+    # Create a backup of 'mv' and 'mkdir' so they aren't removed
     # during package removal.
-    cp "$(command -v mv)" "$cac_dir"
+    cp "$(command -v mv)"    "$cac_dir"
+    cp "$(command -v mkdir)" "$cac_dir"
 
     log "Removing previous version of package if it exists."
     pkg_remove
