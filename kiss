@@ -199,12 +199,10 @@ pkg_install() {
     find ./ -mindepth 1 -not -type d | while read -r file; do
         rpath=${file#.}
 
-        case $rpath in
-            /etc/*) [ -f "$sys_dir${rpath%/*}/${file##*/}" ] || mv=1 ;;
-            *) mv=1 ;;
-        esac
+        [ -z "${rpath##/etc/*}" ] && [ -f "$sys_dir${rpath%/*}/${file##*/}" ] &&
+            return
 
-        [ "$mv" ] && mv "$file" "$sys_dir${rpath%/*}" ;mv=
+        mv "$file" "$sys_dir${rpath%/*}"
     done
 
     "$sys_db/$name/post-install" 2>/dev/null
@@ -233,7 +231,7 @@ pkg_remove() {
     # Use the backup of 'rm' to remove 'rmdir' and itself.
     "$cac_dir/rm" "$cac_dir/rmdir" "$cac_dir/rm"
 
-    log "Removed ${1:-name}."
+    log "Removed ${1:-$name}."
 }
 
 pkg_updates() {
