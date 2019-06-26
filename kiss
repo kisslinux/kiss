@@ -178,6 +178,7 @@ pkg_install() {
     [ -f "$bin_dir/$pkg" ] || args b "$name"
 
     pkg_conflicts
+    tar pxf "$bin_dir/$pkg" -C "$tar_dir/" || die "Failed to extract tarball."
 
     # Create a backup of 'mv', 'mkdir' and 'find' so they aren't removed
     # during package removal.
@@ -187,8 +188,6 @@ pkg_install() {
 
     log "Removing previous version of package if it exists."
     pkg_remove
-
-    tar pxf "$bin_dir/$pkg" -C "$tar_dir/"
 
     cd "$tar_dir" || die "Aborting due to tar error."
 
@@ -234,7 +233,7 @@ pkg_remove() {
     # Use the backup of 'rm' to remove 'rmdir' and itself.
     "$cac_dir/rm" "$cac_dir/rmdir" "$cac_dir/rm"
 
-    log "Removed ${pkg%.tar.gz}"
+    log "Removed ${1:-name}."
 }
 
 pkg_updates() {
