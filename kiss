@@ -200,7 +200,7 @@ pkg_install() {
         rpath=${file#.}
 
         case $rpath in
-            /etc/*) [ -f "$sys_dir${rpath%/*}" ] || mv=1 ;;
+            /etc/*) [ -f "$sys_dir${rpath%/*}/${file##*/}" ] || mv=1 ;;
             *) mv=1 ;;
         esac
 
@@ -221,7 +221,7 @@ pkg_remove() {
     cp "$(command -v rmdir)" "$cac_dir"
 
     while read -r file; do
-        [ "${file%/*}" = /etc ] && continue
+        [ "${file##/etc/*}" ] || continue
 
         if [ -d "$sys_dir$file" ]; then
             "$cac_dir/rmdir" "$sys_dir$file" 2>/dev/null || continue
