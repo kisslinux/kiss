@@ -141,7 +141,7 @@ pkg_manifest() {
     # Store the file and directory list of the package.
     # Directories have a trailing '/' and the list is sorted in reverse.
     (cd "$pkg_dir" && find ./* -type d -exec printf '%s/\n' {} + -or -print) |
-        sort -r | sed -e ss.ss | tee manifest > "$pkg_db/$name/manifest"
+        sort -r | sed -e ss.ss > "$pkg_db/$name/manifest"
 }
 
 pkg_tar() {
@@ -284,7 +284,7 @@ args() {
         l*) pkg_list "$2" ;;
         r*) pkg_remove "${2-null}" || die "Package '${2-null}' not installed." ;;
         u*) pkg_updates ;;
-        v*) log "$kiss 0.1.8" ;;
+        v*) log "$kiss 0.1.9" ;;
 
         *)  log "$kiss [b|c|i|l|r|u] [pkg]" \
                 "build:     Build a package." \
