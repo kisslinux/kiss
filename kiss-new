@@ -1,0 +1,92 @@
+#!/bin/sh -e
+#
+# This is a simple package manager written in POSIX 'sh' for
+# KISS Linux utlizing the core unix utilites where needed.
+#
+# The script runs with 'set -e' enabled. It will exit on any
+# non-zero return code. This ensures that no function continues
+# if it fails at any point.
+#
+# Keep in mind that this involves extra code in the case where
+# an error is optional or required.
+#
+# The code below conforms to shellcheck's rules. However, some
+# lint errors *are* disabled as they relate to unexpected
+# behavior (which we do expect).
+#
+# KISS is available under the MIT license.
+#
+# - Dylan Araps.
+
+die() {
+    # Print a message and exit with '1' (error).
+    printf '\033[31m!>\033[m %s\n' "$@" >&2
+    exit 1
+}
+
+log() {
+    # Print a message with a colorful arrow to distinguish
+    # from other output.
+    printf '\033[32m=>\033[m %s\n' "$@"
+}
+
+pkg_search() {
+    # Figure out which repository a package belongs to by
+    # searching for directories matching the package name
+    # in $KISS_PATH/*.
+    [ "$KISS_PATH" ] || \
+        die "\$KISS_PATH needs to be set." \
+            "Example: KISS_PATH=/packages/core:/packages/extra:/packages/xorg" \
+            "Repositories will be searched in the configured order." \
+            "The variable should work just like \$PATH."
+
+    # Disable globbing with 'set -f' to ensure that the unquoted
+    # variable doesn't expand into anything nasty.
+    # shellcheck disable=2086,2046
+    {
+        set -f
+        set -- "$1" $(IFS=:; find $KISS_PATH -maxdepth 1 -name "$1")
+        set +f
+    }
+
+    # A package may also not be found due to a repository not being
+    # readable by the current user. Either way, we need to die here.
+    [ -z "$2" ] && die "Package '$1' not in any repository."
+
+    printf '%s\n' "$2"
+}
+
+args() {
+    # Parse script arguments manually. POSIX 'sh' has no 'getopts'
+    # or equivalent built in.
+    [ "$1" ] || {
+        log "$kiss [b|c|i|l|r|u] [pkg]" \
+            "build:     Build a package." \
+            "checksum:  Generate checksums." \
+            "install:   Install a package (Runs build if needed)." \
+            "list:      List packages." \
+            "remove:    Remove a package." \
+            "update:    Check for updates."
+        exit
+    }
+
+    action=$1
+    shift
+
+    while [ "$1" ]; do
+        case $action in
+            b*)
+                pkg_search "$1"
+                shift
+            ;;
+        esac
+    done
+}
+
+main() {
+    kiss=${0##*/}
+
+    args "$@"
+}
+
+main "$@"

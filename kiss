@@ -3,15 +3,21 @@
 # kiss - package manager for kiss linux.
 
 die() {
+    # Print a message and exit with '1' (error).
     printf '\033[31m!>\033[m %s\n' "$@" >&2
     exit 1
 }
 
 log() {
+    # Print a message with a colorful arrow to distinguish
+    # from other output.
     printf '\033[32m=>\033[m %s\n' "$@"
 }
 
 source_type() {
+    # Figure out what kind of source we are dealing with.
+    # This removes the need to repeat these same tests
+    # in each function.
     [ -z "$1" ]                && return 1  # No file.
     [ -f "$1" ]                && return 2  # Local file.
     [ -f "$src_dir/${1##*/}" ] && return 3  # Cached downloaded file.
@@ -20,32 +26,44 @@ source_type() {
 }
 
 pkg_clean() {
+    # Clean up on exit or error. This removes everything related
+    # to the build.
     rm -rf -- "$mak_dir" "$pkg_dir" "$tar_dir" \
               "$cac_dir/manifest-$$" "$cac_dir/checksums-$$" \
               "$cac_dir/mv" "$cac_dir/mkdir" "$cac_dir/find"
 }
 
 pkg_search() {
-    set -f
+    # Figure out which repository a package belongs to by
+    # searching for directories matching the package name
+    # in $KISS_PATH.
+
+    # Disable globbing with 'set -f' to ensure that the unquoted
+    # variable doesn't expand to anything nasty.
     # shellcheck disable=2086,2046
-    set -- "$1" $(IFS=:; find $KISS_PATH -maxdepth 1 -name "$1")
-    set +f
+    {
+        set -f
+        set -- "$1" $(IFS=:; find $KISS_PATH -maxdepth 1 -name "$1")
+        set +f
+    }
 
     [ -z "$2" ] && die "Package '$1' not in any repository."
 
-    rep_dir=${2%/$1}
+    printf '%s\n' "$2"
 }
 
 pkg_setup() {
-    pkg_search "$1"
+    # Check that each mandatory file in the package entry exists.
+    pkg_location=$(pkg_search "$1")
 
-    cd "$rep_dir/$1" || die "'$rep_dir/$1' not accessible"
-    [ -f sources ]   || die "Sources file not found."
-    [ -x build ]     || die "Build file not found or not executable."
-    [ -f licenses ]  || die "License file not found or empty."
+    cd "$pkg_location" || die "'$pkg_location' not accessible"
+    [ -f sources ]     || die "Sources file not found."
+    [ -x build ]       || die "Build file not found or not executable."
+    [ -f licenses ]    || die "License file not found or empty."
 
-    read -r ver rel < version || die "Version file not found."
-    pkg=${name:=$1}\#$ver-$rel.tar.gz
+    read -r pkg_ver pkg_rel < version || die "Version file not found."
+    pkg_name=$1
+    pkg_tar=$name\#$ver-$rel.tar.gz
 }
 
 pkg_depends() {
