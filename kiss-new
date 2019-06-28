@@ -104,7 +104,7 @@ args() {
     # keystrokes once you memorize themand it also has the side-effect
     # of "correcting" spelling mistakes assuming the first letter is
     # right.
-    while [ "$1" ]; do
+    while [ "${1:-?}" ]; do
         case $1 in
             # Build the list of packages.
             b*)
