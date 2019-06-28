@@ -187,17 +187,17 @@ pkg_install() {
     cd "$tar_dir" || die "Aborting due to tar error."
 
     # Optimization: Only find the deepest directories.
-    find . -type d -links -3 -prune | while read -r dir; do
-        mkdir -p "$sys_dir/${dir#./}"
+    "$cac_dir/find" . -type d -links -3 -prune | while read -r dir; do
+        "$cac_dir/mkdir" -p "$sys_dir/${dir#./}"
     done
 
-    find ./ -mindepth 1 -not -type d | while read -r file; do
+    "$cac_dir/find" ./ -mindepth 1 -not -type d | while read -r file; do
         rpath=${file#.}
 
         [ -z "${rpath##/etc/*}" ] && [ -f "$sys_dir${rpath%/*}/${file##*/}" ] &&
             return
 
-        mv "$file" "$sys_dir${rpath%/*}"
+        "$cac_dir/mv" "$file" "$sys_dir${rpath%/*}"
     done
 
     "$sys_db/$name/post-install" 2>/dev/null
@@ -284,7 +284,7 @@ args() {
         l*) pkg_list "$2" ;;
         r*) pkg_remove "${2-null}" || die "Package '${2-null}' not installed." ;;
         u*) pkg_updates ;;
-        v*) log "$kiss 0.1.9" ;;
+        v*) log "$kiss 0.1.10" ;;
 
         *)  log "$kiss [b|c|i|l|r|u] [pkg]" \
                 "build:     Build a package." \
