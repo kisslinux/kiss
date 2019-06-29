@@ -41,10 +41,10 @@ pkg_lint() {
 
     cd "$pkg_location" || die "'$pkg_location' not accessible"
 
-    [ -f sources ]     || die "Sources file not found."
-    [ -x build ]       || die "Build file not found or not executable."
-    [ -f licenses ]    || die "License file not found or empty."
-    [ -f version ]     || die "Version file not found or empty."
+    [ -f sources ]  || die "Sources file not found."
+    [ -x build ]    || die "Build file not found or not executable."
+    [ -f licenses ] || die "License file not found or empty."
+    [ -f version ]  || die "Version file not found or empty."
 }
 
 pkg_search() {
@@ -208,20 +208,30 @@ setup_caching() {
         die "Couldn't create cache directory ($cac_dir)."
 
     # Build directory.
-    mkdir -p "${mak_dir:=$cac_dir/build-$$}" ||
+    mkdir -p "${mak_dir:=$cac_dir/build-$pid}" ||
         die "Couldn't create build directory ($mak_dir)."
 
-    # Binary directory.
-    mkdir -p "${bin_dir:=$cac_dir/bin}" ||
-        die "Couldn't create binary directory ($bin_dir)."
+    # Package directory.
+    mkdir -p "${pkg_dir:=$cac_dir/pkg-$pid}" ||
+        die "Couldn't create package directory ($pkg_dir)."
 
     # Tar directory.
-    mkdir -p "${tar_dir:=$cac_dir/extract-$$}" ||
+    mkdir -p "${tar_dir:=$cac_dir/extract-$pid}" ||
         die "Couldn't create tar directory ($tar_dir)."
 
     # Source directory.
     mkdir -p "${src_dir:=$cac_dir/sources}" ||
         die "Couldn't create source directory ($src_dir)."
+
+    # Binary directory.
+    mkdir -p "${bin_dir:=$cac_dir/bin}" ||
+        die "Couldn't create binary directory ($bin_dir)."
+}
+
+pkg_clean() {
+    # Clean up on exit or error. This removes everything related
+    # to the build.
+    rm -rf -- "$mak_dir" "$pkg_dir" "$tar_dir"
 }
 
 args() {
@@ -288,8 +298,11 @@ main() {
     # that it doesn't change beneath us.
     pid=$$
 
-    setup_caching
+    # Catch errors and ensure that build files and directories are cleaned
+    # up before we die. This occurs on 'Ctrl+C' as well as sucess and error.
+    trap pkg_clean EXIT INT
 
+    setup_caching
     args "$@"
 }
 
