@@ -91,11 +91,11 @@ pkg_list() {
     # packages. If no arguments are passed, list all. As we
     # loop over '$@', if there aren't any arguments we can
     # just set the directory contents to the argument list.
-    [ "$1" ] || set -- "$KISS_ROOT/var/db/$kiss/"*
+    [ "$1" ] || set -- "$KISS_ROOT/var/db/kiss/"*
 
     # If the 'glob' above failed, exit early as there are no
     # packages installed.
-    [ "$1" = "$KISS_ROOT/var/db/$kiss/"\* ] && return
+    [ "$1" = "$KISS_ROOT/var/db/kiss/"\* ] && return
 
     # Loop over each version file and warn if one doesn't exist.
     # Also warn if a package is missing its version file.
@@ -311,7 +311,7 @@ pkg_manifest() (
     # with a trailing forward slash '/'. The list is then reversed with
     # directories appearing *after* their contents.
     find . -type d -exec printf '%s/\n' {} + -or -print |
-    sort -r | sed -e ss.ss > "$pkg_dir/$1/var/db/$kiss/$1/manifest"
+    sort -r | sed -e ss.ss > "$pkg_dir/$1/var/db/kiss/$1/manifest"
 
     log "[$1]: Generated manifest."
 )
@@ -329,7 +329,7 @@ pkg_tar() {
     read -r version release < "$repo_dir/version"
 
     # Create a tarball from the contents of the built package.
-    tar zpcf "$bin_dir/$1-$version-$release.tar.gz" -C "$pkg_dir/$1" . ||
+    tar zpcf "$bin_dir/$1#$version-$release.tar.gz" -C "$pkg_dir/$1" . ||
         die "[$1]: Failed to create tarball."
 
     log "[$1]: Successfully created tarball."
@@ -400,7 +400,7 @@ pkg_build() {
 
         # Install built packages to a directory under the package name
         # to avod collisions with other packages.
-        mkdir -p "$pkg_dir/$pkg/var/db/$kiss"
+        mkdir -p "$pkg_dir/$pkg/var/db/kiss"
 
         # Move to the build directory and call the build script.
         (cd "$mak_dir/$pkg"; "$repo_dir/build" "$pkg_dir/$pkg") ||
@@ -408,13 +408,13 @@ pkg_build() {
 
         # Copy the repository files to the package directory.
         # This acts as the database entry.
-        cp -Rf "$repo_dir" "$pkg_dir/$pkg/var/db/$kiss/"
+        cp -Rf "$repo_dir" "$pkg_dir/$pkg/var/db/kiss/"
 
         log "[$pkg]: Sucessfully built package."
 
         # Create the manifest file early and make it empty.
         # This ensure that the manifest is added to the manifest...
-        : > "$pkg_dir/$pkg/var/db/$kiss/$pkg/manifest"
+        : > "$pkg_dir/$pkg/var/db/kiss/$pkg/manifest"
     done
 
     log "Stripping packages..."
@@ -478,13 +478,87 @@ pkg_checksums() {
     done
 }
 
+pkg_conflicts() {
+    # Check to see if a package conflicts with another.
+    # This function takes a path to a KISS tarball as an argument.
+
+    # Extract manifest from the tarball and only extract files entries.
+    tar xf "$1" -O "./var/db/kiss/$pkg_name/manifest" |
+    while read -r line; do
+        [ "${line%%*/}" ] && printf '%s\n' "$line" >> "$cac_dir/manifest-$pid"
+    done ||:
+
+    # Compare extracted manifest to all installed manifests.
+    # If there are matching lines (files) there is a package conflict.
+    for db in "$KISS_ROOT/var/db/kiss/"*; do
+        [ "$pkg_name" = "${db##*/}" ] && continue
+
+        grep -Fxf "$cac_dir/manifest-$pid" "$db/manifest" 2>/dev/null &&
+            die "Package '$pkg_name' conflicts with '${db##*/}'."
+    done
+
+    # Remove this temporary file as we no longer need it.
+    rm -f "$cac_dir/manifest-$pid"
+}
+
+pkg_install() {
+    # Install a built package tarball.
+
+    for pkg; do
+        # Install can also take the full path to a tarball.
+        # We don't need to check the repository if this is the case.
+        if [ -f "$pkg" ]; then
+            tar_name=$pkg
+
+        else
+            # Find the package's repository files. This needs to keep
+            # happening as we can't store this data in any kind of data
+            # structure.
+            repo_dir=$(pkg_search "$pkg")
+
+            # Read the version information to name the package.
+            read -r version release < "$repo_dir/version"
+
+            # Construct the name of the package tarball.
+            tar_name=$pkg\#$version-$release.tar.gz
+
+            [ -f "$bin_dir/$tar_name" ] ||
+                die "Package '$pkg' has not been built." \
+                    "Run '$kiss build $pkg'."
+
+            tar_file=$bin_dir/$tar_name
+        fi
+
+        # Figure out which package the tarball installs by checking for
+        # a database entry inside the tarball.
+        pkg_name=$(tar tf "$tar_file" | grep -x "\./var/db/kiss/.*/version")
+        pkg_name=${pkg_name%/*}
+        pkg_name=${pkg_name##*/}
+
+        pkg_conflicts "$tar_file"
+
+        tar pxf "$tar_file" -C "$tar_dir/" ||
+            die "[$pkg]: Failed to extract tarball."
+
+        # Create a backup of 'mv', 'mkdir' and 'find' so they aren't removed
+        # during package removal. This ensures that an upgrade to 'busybox' or
+        # your coreutils of choice doesn't break the package manager.
+        cp "$(command -v mv)"    "$cac_dir"
+        cp "$(command -v mkdir)" "$cac_dir"
+        cp "$(command -v find)"  "$cac_dir"
+
+        log "Removing previous version of package if it exists."
+        pkg_remove
+    done
+}
+
 setup_caching() {
     # Setup the host machine for the package manager. Create any
     # directories which need to exist and set variables for easy
     # access to them.
 
     # Main cache directory (~/.cache/kiss/) typically.
-    mkdir -p "${cac_dir:=${XDG_CACHE_HOME:=$HOME/.cache}/$kiss}" ||
+    mkdir -p "${cac_dir:=${XDG_CACHE_HOME:=$HOME/.cache}/kiss}" ||
         die "Couldn't create cache directory ($cac_dir)."
 
     # Build directory.
@@ -558,6 +632,7 @@ args() {
             shift
             [ "$1" ] || die "'kiss install' requires an argument."
             root_check
+            pkg_install "$@"
         ;;
 
         # Remove packages.
