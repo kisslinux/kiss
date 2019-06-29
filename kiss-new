@@ -150,8 +150,13 @@ pkg_sources() {
     done < "$repo_dir/sources"
 }
 
+pkg_build() {
+    # Build packages.
+    :
+}
+
 pkg_checksums() {
-    # Generate checksums for a package.
+    # Generate checksums for packages.
     # This also downloads any remote sources.
     for pkg; do pkg_lint    "$pkg"; done
     for pkg; do pkg_sources "$pkg"; done
@@ -234,6 +239,14 @@ pkg_clean() {
     rm -rf -- "$mak_dir" "$pkg_dir" "$tar_dir"
 }
 
+root_check() {
+    # Ensure that the user has write permissions to '$KISS_ROOT'.
+    # When this variable is empty, a value of '/' is assumed.
+    [ -w "$KISS_ROOT/" ] || \
+        die "No write permissions to '${KISS_ROOT:-/}'." \
+            "You may need to run '$kiss' as root."
+}
+
 args() {
     # Parse script arguments manually. POSIX 'sh' has no 'getopts'
     # or equivalent built in. This is rather easy to do in our case
@@ -249,6 +262,7 @@ args() {
         b*)
             shift
             [ "$1" ] || die "'kiss build' requires an argument."
+            pkg_build "$@"
         ;;
 
         # Generate checksums for packages.
@@ -256,6 +270,20 @@ args() {
             shift
             [ "$1" ] || die "'kiss checksum' requires an argument."
             pkg_checksums "$@"
+        ;;
+
+        # Install packages.
+        i*)
+            shift
+            [ "$1" ] || die "'kiss install' requires an argument."
+            root_check
+        ;;
+
+        # Remove packages.
+        r*)
+            shift
+            [ "$1" ] || die "'kiss remove' requires an argument."
+            root_check
         ;;
 
         # List installed packages.
