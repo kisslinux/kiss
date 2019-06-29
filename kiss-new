@@ -102,7 +102,7 @@ pkg_list() {
 
     # If the 'glob' above failed, exit early as there are no
     # packages installed.
-    [ "$1" = "$KISS_ROOT/var/db/kiss/"\* ] && return
+    [ "$1" = "$KISS_ROOT/var/db/kiss/"\* ] && return 1
 
     # Loop over each version file and warn if one doesn't exist.
     # Also warn if a package is missing its version file.
