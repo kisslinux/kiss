@@ -33,6 +33,20 @@ log() {
     printf '\033[32m=>\033[m %s\n' "$@"
 }
 
+pkg_lint() {
+    # Check that each mandatory file in the package entry exists.
+    log "[$1]: Checking repository files..."
+
+    pkg_location=$(pkg_search "$1")
+
+    cd "$pkg_location" || die "'$pkg_location' not accessible"
+
+    [ -f sources ]     || die "Sources file not found."
+    [ -x build ]       || die "Build file not found or not executable."
+    [ -f licenses ]    || die "License file not found or empty."
+    [ -f version ]     || die "Version file not found or empty."
+}
+
 pkg_search() {
     # Figure out which repository a package belongs to by
     # searching for directories matching the package name
@@ -94,6 +108,79 @@ pkg_list() {
     done
 }
 
+pkg_sources() {
+    # Download any remote package sources.
+    log "[$1]: Downloading sources..."
+
+    # Store each downloaded source in named after the package it
+    # belongs to. This avoid conflicts between two packages having a
+    # source of the same name.
+    mkdir -p "$src_dir/$1" && cd "$src_dir/$1"
+
+    # Find the package's repository files. This needs to keep
+    # happening as we can't store this data in any kind of data
+    # structure.
+    repo_dir=$(pkg_search "$1")
+
+    while read -r src _; do
+        case $src in
+            # Git repository.
+            git:*)
+                git clone "${src##git:}" "$mak_dir"
+            ;;
+
+            # Remote source.
+            *://*)
+                [ -f "${src##*/}" ] && {
+                    log "[$1]: Found cached source '${src##*/}'."
+                    continue
+                }
+
+                wget "$src" || die "[$1]: Failed to download $src."
+            ;;
+
+            # Local files (Any source that is non-remote is assumed to be local).
+            *)
+                [ -f "$repo_dir/$src" ] ||
+                    die "[$1]: No local file '$src'."
+
+                log "[$1]: Found local file '$src'."
+            ;;
+        esac
+    done < "$repo_dir/sources"
+}
+
+pkg_checksums() {
+    for pkg; do pkg_lint    "$pkg"; done
+    for pkg; do pkg_sources "$pkg"; done
+}
+
+setup_caching() {
+    # Setup the host machine for the package manager. Create any
+    # directories which need to exist and set variables for easy
+    # access to them.
+
+    # Main cache directory (~/.cache/kiss/) typically.
+    mkdir -p "${cac_dir:=${XDG_CACHE_HOME:=$HOME/.cache}/$kiss}" ||
+        die "Couldn't create cache directory ($cac_dir)."
+
+    # Build directory.
+    mkdir -p "${mak_dir:=$cac_dir/build-$$}" ||
+        die "Couldn't create build directory ($mak_dir)."
+
+    # Binary directory.
+    mkdir -p "${bin_dir:=$cac_dir/bin}" ||
+        die "Couldn't create binary directory ($bin_dir)."
+
+    # Tar directory.
+    mkdir -p "${tar_dir:=$cac_dir/extract-$$}" ||
+        die "Couldn't create tar directory ($tar_dir)."
+
+    # Source directory.
+    mkdir -p "${src_dir:=$cac_dir/sources}" ||
+        die "Couldn't create source directory ($src_dir)."
+}
+
 args() {
     # Parse script arguments manually. POSIX 'sh' has no 'getopts'
     # or equivalent built in. This is rather easy to do in our case
@@ -104,44 +191,61 @@ args() {
     # keystrokes once you memorize themand it also has the side-effect
     # of "correcting" spelling mistakes assuming the first letter is
     # right.
-    while [ "${1:-?}" ]; do
-        case $1 in
-            # Build the list of packages.
-            b*)
+    case $1 in
+        # Build the list of packages.
+        b*)
 
-            ;;
+        ;;
 
-            # List installed packages.
-            l*)
-                shift
-                pkg_list "$@"
-                exit
-            ;;
+        # Generate checksums for packages.
+        c*)
+            shift
+            [ "$1" ] || die "'kiss checksum' requires an argument."
+            pkg_checksums "$@"
+            exit
+        ;;
 
-            # Print version and exit.
-            v*)
-                log "$kiss 0.1.10"
-                exit
-            ;;
+        # List installed packages.
+        l*)
+            shift
+            pkg_list "$@"
+            exit
+        ;;
 
-            # Catch all invalid arguments as well as
-            # any help related flags (-h, --help, help).
-            *)
-                log "$kiss [b|c|i|l|r|u] [pkg]" \
-                    "build:     Build a package." \
-                    "checksum:  Generate checksums." \
-                    "install:   Install a package (Runs build if needed)." \
-                    "list:      List packages." \
-                    "remove:    Remove a package." \
-                    "update:    Check for updates."
-                exit
-            ;;
-        esac
-    done
+        # Print version and exit.
+        v*)
+            log "$kiss 0.1.10"
+            exit
+        ;;
+
+        # Catch all invalid arguments as well as
+        # any help related flags (-h, --help, help).
+        *)
+            log "$kiss [b|c|i|l|r|u] [pkg]" \
+                "build:     Build a package." \
+                "checksum:  Generate checksums." \
+                "install:   Install a package (Runs build if needed)." \
+                "list:      List packages." \
+                "remove:    Remove a package." \
+                "update:    Check for updates."
+            exit
+        ;;
+    esac
 }
 
 main() {
+    # Store the script name in a variable and use it everywhere
+    # in place of 'kiss'. This allows the script name to be changed
+    # easily.
     kiss=${0##*/}
+
+    # The PID of the current shell process is used to isolate directories
+    # to each specific KISS instance. This allows multiple package manager
+    # instances to be run at once. Store the value in another variable so
+    # that it doesn't change beneath us.
+    pid=$$
+
+    setup_caching
 
     args "$@"
 }
