@@ -380,6 +380,23 @@ pkg_build() {
     done
 
     log "Generated all manifests."
+    log "Creating package tarballs..."
+
+    for pkg; do
+        # Find the package's repository files. This needs to keep
+        # happening as we can't store this data in any kind of data
+        # structure.
+        repo_dir=$(pkg_search "$pkg")
+
+        # Read the version information to name the package.
+        read -r version release < "$repo_dir/version"
+
+        # Create a tarball from the contents of the built package.
+        tar zpcf "$bin_dir/$pkg-$version-$release.tar.gz" -C "$pkg_dir/$pkg" . ||
+            die "[$pkg]: Failed to create tarball."
+    done
+
+    log "Created all packages."
 }
 
 pkg_checksums() {
