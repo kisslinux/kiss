@@ -103,7 +103,7 @@ pkg_list() {
     # Also warn if a package is missing its version file.
     for pkg; do
         [ -d "$pkg" ] || {
-            log "Package '$pkg' is not installed."
+            log "Package '$pkg' is not installed." >&2
             return 1
         }
 
@@ -159,6 +159,32 @@ pkg_sources() {
     done < "$repo_dir/sources"
 }
 
+pkg_depends() {
+    # Resolve all dependencies and install them in the right order.
+    for pkg; do
+        # Find the package's repository files. This needs to keep
+        # happening as we can't store this data in any kind of data
+        # structure.
+        repo_dir=$(pkg_search "$pkg")
+
+        # Package doesn't depend on anything, skip it.
+        [ -f "$repo_dir/depends" ] || continue
+
+        while read -r dep _; do
+            pkg_list "$dep" >/dev/null || {
+                case $missing_deps in
+                    # Dependency is already in list, skip it.
+                    *" $dep "*) ;;
+
+                    *)
+                        missing_deps="$missing_deps $dep "
+                    ;;
+                esac
+            }
+        done < "$repo_dir/depends"
+    done
+}
+
 pkg_build() {
     # Build packages and turn them into packaged tarballs. This function
     # also checks checksums, downloads sources and ensure all dependencies
@@ -184,6 +210,8 @@ pkg_build() {
     # Die here as packages without checksums were found above.
     [ "$no_checkums" ] &&
         die "Run '$kiss checksum ${no_checkums% }' to generate checksums."
+
+    pkg_depends "$@"
 }
 
 pkg_checksums() {
