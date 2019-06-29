@@ -311,6 +311,28 @@ pkg_build() {
 
     for pkg; do pkg_extract "$pkg"; done
     log "Extracted all sources."
+
+    log "Building packages..."
+    for pkg; do
+        # Find the package's repository files. This needs to keep
+        # happening as we can't store this data in any kind of data
+        # structure.
+        repo_dir=$(pkg_search "$pkg")
+
+        # Move to the build directory and call the build script.
+        (cd "$mak_dir/$pkg"; "$repo_dir/build" "$pkg_dir") ||
+            die "[$pkg]: Build failed."
+
+        # Copy the repository files to the package directory.
+        # This acts as the database entry.
+        cp -Rf "$repo_dir" "$pkg_db"
+
+        log "[$pkg]: Sucessfully built package."
+
+        # Create the manifest file early and make it empty.
+        # This ensure that the manifest is added to the manifest...
+        : > "$pkg_db/$pkg/manifest"
+    done
 }
 
 pkg_checksums() {
@@ -375,7 +397,7 @@ setup_caching() {
         die "Couldn't create build directory ($mak_dir)."
 
     # Package directory.
-    mkdir -p "${pkg_dir:=$cac_dir/pkg-$pid}" ||
+    mkdir -p "${pkg_db:=${pkg_dir:=$cac_dir/pkg-$pid}/var/db/$kiss}" ||
         die "Couldn't create package directory ($pkg_dir)."
 
     # Tar directory.
