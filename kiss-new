@@ -162,6 +162,47 @@ pkg_sources() {
     done < "$repo_dir/sources"
 }
 
+pkg_extract() {
+    # Extract all source archives to the build diectory and copy over
+    # any local repository files.
+    log "[$1]: Extracting sources..."
+
+    # Store each downloaded source in named after the package it
+    # belongs to. This avoid conflicts between two packages having a
+    # source of the same name.
+    mkdir -p "$mak_dir/$1" && cd "$mak_dir/$1"
+
+    # Find the package's repository files. This needs to keep
+    # happening as we can't store this data in any kind of data
+    # structure.
+    repo_dir=$(pkg_search "$1")
+
+    while read -r src dest; do
+        mkdir -p "./$dest"
+
+        case $src in
+            # Do nothing as git repository was downloaded to the build
+            # diectory directly.
+            git:*) ;;
+
+            # Only 'tar' archives are currently supported for extaction.
+            # Any other filetypes are simply copied to '$mak_dir' which
+            # allows you to extract them manually.
+            *://*.tar*|*://*.tgz)
+                tar xf "$src_dir/$1/${src##*/}" -C "./$dest" \
+                    --strip-components 1 \
+                || die "[$1]: Couldn't extract ${src##*/}."
+            ;;
+
+            # Local files (Any source that is non-remote is assumed to be local).
+            *)
+                [ -f "$repo_dir/$src" ] || die "[$1]: Local file $src not found."
+                cp -f "$repo_dir/$src" "./$dest"
+            ;;
+        esac
+    done < "$repo_dir/sources"
+}
+
 pkg_depends() {
     # Resolve all dependencies and install them in the right order.
 
@@ -267,6 +308,9 @@ pkg_build() {
     [ "$mismatch" ] && die "Checksum mismatch with: ${mismatch% }"
 
     log "Verified all checksums."
+
+    for pkg; do pkg_extract "$pkg"; done
+    log "Extracted all sources."
 }
 
 pkg_checksums() {
