@@ -225,7 +225,7 @@ pkg_depends() {
             *)
                 [ -f "$repo_dir/depends" ] &&
                     while read -r dep _; do
-                        pkg_depends "$dep"
+                        pkg_depends "$dep" ||:
                     done < "$repo_dir/depends"
 
                 missing_deps="$missing_deps $1 "
