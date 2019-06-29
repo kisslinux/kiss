@@ -232,6 +232,9 @@ pkg_build() {
 
     for pkg; do pkg_sources "$pkg"; done
 
+    # TODO: Fix this. This doesn't *actually* work as it overwrites
+    # the repository checksums. 'pkg_checksum' needs to be modified
+    # to support a destination file as output.
     for pkg; do
         # Find the package's repository files. This needs to keep
         # happening as we can't store this data in any kind of data
