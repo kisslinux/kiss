@@ -419,9 +419,6 @@ pkg_clean() {
 
     # Remove temporary directories.
     rm -rf -- "$mak_dir" "$pkg_dir" "$tar_dir"
-
-    # Remove temporary checksum files.
-    rm -rf -- "$cac_dir/checksums-"*
 }
 
 root_check() {
