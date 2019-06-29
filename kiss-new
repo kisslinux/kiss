@@ -116,7 +116,8 @@ pkg_list() {
 }
 
 pkg_sources() {
-    # Download any remote package sources.
+    # Download any remote package sources. The existence of local
+    # files is also checked.
     log "[$1]: Downloading sources..."
 
     # Store each downloaded source in named after the package it
@@ -221,11 +222,15 @@ pkg_depends() {
             *" $1 "*) ;;
 
             *)
+                # Recurse through the dependencies of the child
+                # packages. Keep doing this.
                 [ -f "$repo_dir/depends" ] &&
                     while read -r dep _; do
                         pkg_depends "$dep" ||:
                     done < "$repo_dir/depends"
 
+                # After child dependencies are added to the list,
+                # add the package which depends on them.
                 missing_deps="$missing_deps $1 "
             ;;
         esac
@@ -233,6 +238,10 @@ pkg_depends() {
 }
 
 pkg_verify() {
+    # Verify all package checksums. This is achieved by generating
+    # a new set of checksums and then comparing those with the old
+    # set.
+
     # Find the package's repository files. This needs to keep
     # happening as we can't store this data in any kind of data
     # structure.
@@ -258,6 +267,9 @@ pkg_verify() {
 }
 
 pkg_strip() {
+    # Strip package binaries and libraries. This saves space on the
+    # system as well as on the tarballs we ship for installation.
+
     # Find the package's repository files. This needs to keep
     # happening as we can't store this data in any kind of data
     # structure.
@@ -280,7 +292,9 @@ pkg_strip() {
             *) continue ;;
         esac
 
-        strip "$strip_opts" "$binary" 2>/dev/null
+        # Suppress errors here as some binaries and libraries may
+        # fail to strip. This is OK.
+        strip "$strip_opts" "$binary" 2>/dev/null ||:
     done
 }
 
@@ -303,6 +317,9 @@ pkg_manifest() (
 )
 
 pkg_tar() {
+    # Create a tarball from the built package's files.
+    # This tarball also contains the package's database entry.
+
     # Find the package's repository files. This needs to keep
     # happening as we can't store this data in any kind of data
     # structure.
@@ -370,6 +387,7 @@ pkg_build() {
 
     log "Verified all checksums."
 
+    log "Extracting all sources..."
     for pkg; do pkg_extract "$pkg"; done
     log "Extracted all sources."
 
