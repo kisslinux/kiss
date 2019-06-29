@@ -247,7 +247,8 @@ args() {
     case $1 in
         # Build the list of packages.
         b*)
-
+            shift
+            [ "$1" ] || die "'kiss build' requires an argument."
         ;;
 
         # Generate checksums for packages.
@@ -255,20 +256,17 @@ args() {
             shift
             [ "$1" ] || die "'kiss checksum' requires an argument."
             pkg_checksums "$@"
-            exit
         ;;
 
         # List installed packages.
         l*)
             shift
             pkg_list "$@"
-            exit
         ;;
 
         # Print version and exit.
         v*)
             log "$kiss 0.1.10"
-            exit
         ;;
 
         # Catch all invalid arguments as well as
@@ -281,7 +279,6 @@ args() {
                 "list:      List packages." \
                 "remove:    Remove a package." \
                 "update:    Check for updates."
-            exit
         ;;
     esac
 }
