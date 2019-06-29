@@ -151,8 +151,51 @@ pkg_sources() {
 }
 
 pkg_checksums() {
+    # Generate checksums for a package.
+    # This also downloads any remote sources.
     for pkg; do pkg_lint    "$pkg"; done
     for pkg; do pkg_sources "$pkg"; done
+
+    for pkg; do
+        # Find the package's repository files. This needs to keep
+        # happening as we can't store this data in any kind of data
+        # structure.
+        repo_dir=$(pkg_search "$pkg")
+
+        while read -r src _; do
+            case $src in
+                # Git repository.
+                # Skip checksums on git repositories.
+                git:*) ;;
+
+                *)
+                    # File is local to the package and is stored in the
+                    # repository.
+                    [ -f "$repo_dir/$src" ] &&
+                        src_path=$repo_dir/${src%/*}
+
+                    # File is remote and was downloaded.
+                    [ -f "$src_dir/$pkg/${src##*/}" ] &&
+                        src_path=$src_dir/$pkg
+
+                    # Die here if source for some reason, doesn't exist.
+                    [ "$src_path" ] ||
+                        die "[$pkg]: Couldn't find source '$src'."
+
+                    # An easy way to get 'sha256sum' to print with the basenames
+                    # of files is to 'cd' to the file's directory beforehand.
+                    (cd "$src_path" && sha256sum "${src##*/}") ||
+                        die "[$pkg]: Failed to generate checksums."
+
+                    # Unset this variable so it isn't used again on a failed
+                    # source. There's no 'local' keyword in POSIX sh.
+                    src_path=
+                ;;
+            esac
+        done < "$repo_dir/sources" > "$repo_dir/checksums"
+
+        log "[$pkg]: Generated checksums."
+    done
 }
 
 setup_caching() {
