@@ -202,6 +202,7 @@ pkg_build() {
         set -- $missing_deps
         set +f
     }
+    log "Installing: $*."
 
     for pkg; do
         # Find the package's repository files. This needs to keep
@@ -223,6 +224,8 @@ pkg_build() {
     # Die here as packages without checksums were found above.
     [ "$no_checkums" ] &&
         die "Run '$kiss checksum ${no_checkums% }' to generate checksums."
+
+    for pkg; do pkg_sources "$pkg"; done
 }
 
 pkg_checksums() {
