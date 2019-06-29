@@ -87,17 +87,15 @@ pkg_list() {
     # diectories, this just involves a simple for loop and
     # file read.
 
-    # Changing directories is similar to storing the full
-    # full path in a variable, only there is no variable as
-    # you can access children relatively.
-    cd "$KISS_ROOT/var/db/kiss" || \
-        die "KISS database doesn't exist or is inaccessible."
-
     # Optional arguments can be passed to check for specific
     # packages. If no arguments are passed, list all. As we
     # loop over '$@', if there aren't any arguments we can
     # just set the directory contents to the argument list.
-    [ "$1" ] || set -- *
+    [ "$1" ] || set -- "$KISS_ROOT/var/db/$kiss/"*
+
+    # If the 'glob' above failed, exit early as there are no
+    # packages installed.
+    [ "$1" = "$KISS_ROOT/var/db/$kiss/"\* ] && return
 
     # Loop over each version file and warn if one doesn't exist.
     # Also warn if a package is missing its version file.
@@ -234,6 +232,92 @@ pkg_depends() {
     fi
 }
 
+pkg_verify() {
+    # Find the package's repository files. This needs to keep
+    # happening as we can't store this data in any kind of data
+    # structure.
+    repo_dir=$(pkg_search "$1")
+
+    # Generate a second set of checksums to compare against the
+    # repositorie's checksums for the package.
+    pkg_checksums .checksums "$1"
+
+    # Compare the checksums using 'cmp'.
+    cmp -s "$repo_dir/.checksums" "$repo_dir/checksums" || {
+        log "[$1]: Checksum mismatch."
+
+        # Instead of dying above, log it to the terminal. Also define a
+        # variable so we *can* die after all checksum files have been
+        # checked.
+        mismatch="$mismatch$1 "
+    }
+
+    # The second set of checksums use a temporary file, we need to
+    # delete it.
+    rm -f "$repo_dir/.checksums"
+}
+
+pkg_strip() {
+    # Find the package's repository files. This needs to keep
+    # happening as we can't store this data in any kind of data
+    # structure.
+    repo_dir=$(pkg_search "$1")
+
+    # Package has stripping disabled, stop here.
+    [ -f "$repo_dir/nostrip" ] && return
+
+    log "[$1]: Stripping binaries and libraries..."
+
+    find "$pkg_dir/$1" -type f | while read -r binary; do
+        case $(file -bi "$binary") in
+            application/x-sharedlib*|application/x-pie-executable*)
+                strip_opts=--strip-unneeded
+            ;;
+
+            application/x-archive*)    strip_opts=--strip-debug ;;
+            application/x-executable*) strip_opts=--strip-all ;;
+
+            *) continue ;;
+        esac
+
+        strip "$strip_opts" "$binary" 2>/dev/null
+    done
+}
+
+pkg_manifest() (
+    # Generate the package's manifest file. This is a list of each file
+    # and directory inside the package. The file is used when uninstalling
+    # packages, checking for package conflicts and for general debugging.
+    #
+    # This funcion runs as a subshell to avoid having to 'cd' back to the
+    # prior directory before being able to continue.
+    cd "$pkg_dir/$1"
+
+    # Find all files and directories in the package. Directories are printed
+    # with a trailing forward slash '/'. The list is then reversed with
+    # directories appearing *after* their contents.
+    find . -type d -exec printf '%s/\n' {} + -or -print |
+    sort -r | sed -e ss.ss > "$pkg_dir/$1/var/db/$kiss/$1/manifest"
+
+    log "[$1]: Generated manifest."
+)
+
+pkg_tar() {
+    # Find the package's repository files. This needs to keep
+    # happening as we can't store this data in any kind of data
+    # structure.
+    repo_dir=$(pkg_search "$1")
+
+    # Read the version information to name the package.
+    read -r version release < "$repo_dir/version"
+
+    # Create a tarball from the contents of the built package.
+    tar zpcf "$bin_dir/$1-$version-$release.tar.gz" -C "$pkg_dir/$1" . ||
+        die "[$1]: Failed to create tarball."
+
+    log "[$1]: Successfully created tarball."
+}
+
 pkg_build() {
     # Build packages and turn them into packaged tarballs. This function
     # also checks checksums, downloads sources and ensure all dependencies
@@ -279,30 +363,7 @@ pkg_build() {
         die "Run '$kiss checksum ${no_checkums% }' to generate checksums."
 
     for pkg; do pkg_sources "$pkg"; done
-    for pkg; do
-        # Find the package's repository files. This needs to keep
-        # happening as we can't store this data in any kind of data
-        # structure.
-        repo_dir=$(pkg_search "$pkg")
-
-        # Generate a second set of checksums to compare against the
-        # repositorie's checksums for the package.
-        pkg_checksums .checksums "$pkg"
-
-        # Compare the checksums using 'cmp'.
-        cmp -s "$repo_dir/.checksums" "$repo_dir/checksums" || {
-            log "[$pkg]: Checksum mismatch."
-
-            # Instead of dying above, log it to the terminal. Also define a
-            # variable so we *can* die after all checksum files have been
-            # checked.
-            mismatch="$mismatch$pkg "
-        }
-
-        # The second set of checksums use a temporary file, we need to
-        # delete it.
-        rm -f "$repo_dir/.checksums"
-    done
+    for pkg; do pkg_verify  "$pkg"; done
 
     # Die here as packages with differing checksums were found above.
     [ "$mismatch" ] && die "Checksum mismatch with: ${mismatch% }"
@@ -339,63 +400,15 @@ pkg_build() {
     done
 
     log "Stripping packages..."
-    for pkg; do
-        # Find the package's repository files. This needs to keep
-        # happening as we can't store this data in any kind of data
-        # structure.
-        repo_dir=$(pkg_search "$pkg")
-
-        # Package has stripping disabled, stop here.
-        [ -f "$repo_dir/nostrip" ] && continue
-
-        log "[$pkg]: Stripping binaries and libraries..."
-
-        find "$pkg_dir/$pkg" -type f | while read -r binary; do
-            case $(file -bi "$binary") in
-                application/x-sharedlib*|application/x-pie-executable*)
-                    strip_opts=--strip-unneeded
-                ;;
-
-                application/x-archive*)    strip_opts=--strip-debug ;;
-                application/x-executable*) strip_opts=--strip-all ;;
-
-                *) continue ;;
-            esac
-
-            strip "$strip_opts" "$binary" 2>/dev/null
-        done
-    done
-
+    for pkg; do pkg_strip "$pkg"; done
     log "Stripped all binaries and libraries."
+
     log "Generating package manifests..."
-
-    for pkg; do
-        # This runs in a subshell so we can avoid a 'cd -' or 'cd $OLDPWD'.
-        (
-            cd "$pkg_dir/$pkg"
-            find . -type d -exec printf '%s/\n' {} + -or -print
-        ) | sort -r | sed -e ss.ss > "$pkg_dir/$pkg/var/db/$kiss/$pkg/manifest"
-
-        log "[$pkg]: Generated manifest."
-    done
-
+    for pkg; do pkg_manifest "$pkg"; done
     log "Generated all manifests."
+
     log "Creating package tarballs..."
-
-    for pkg; do
-        # Find the package's repository files. This needs to keep
-        # happening as we can't store this data in any kind of data
-        # structure.
-        repo_dir=$(pkg_search "$pkg")
-
-        # Read the version information to name the package.
-        read -r version release < "$repo_dir/version"
-
-        # Create a tarball from the contents of the built package.
-        tar zpcf "$bin_dir/$pkg-$version-$release.tar.gz" -C "$pkg_dir/$pkg" . ||
-            die "[$pkg]: Failed to create tarball."
-    done
-
+    for pkg; do pkg_tar "$pkg"; done
     log "Created all packages."
 }
 
