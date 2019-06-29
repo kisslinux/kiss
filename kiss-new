@@ -145,7 +145,10 @@ pkg_sources() {
                     continue
                 }
 
-                wget "$src" || die "[$1]: Failed to download $src."
+                wget "$src" || {
+                    rm -f "${src##*/}"
+                    die "[$1]: Failed to download $src."
+                }
             ;;
 
             # Local files (Any source that is non-remote is assumed to be local).
@@ -204,6 +207,8 @@ pkg_build() {
     }
     log "Installing: $*."
 
+    for pkg; do pkg_lint "$pkg"; done
+
     for pkg; do
         # Find the package's repository files. This needs to keep
         # happening as we can't store this data in any kind of data
@@ -226,14 +231,33 @@ pkg_build() {
         die "Run '$kiss checksum ${no_checkums% }' to generate checksums."
 
     for pkg; do pkg_sources "$pkg"; done
+
+    for pkg; do
+        # Find the package's repository files. This needs to keep
+        # happening as we can't store this data in any kind of data
+        # structure.
+        repo_dir=$(pkg_search "$pkg")
+
+        pkg_checksums "$pkg"
+
+        cmp -s "$cac_dir/checksums-$pkg" "$repo_dir/checksums" || {
+            log "[$pkg]: Checksum mismatch."
+
+            # Instead of dying above, log it to the terminal. Also define a
+            # variable so we *can* die after all checksum files have been
+            # checked.
+            mismatch="$mismatch$pkg "
+        }
+    done
+
+    # Die here as packages with differing checksums were found above.
+    [ "$mismatch" ] &&
+        die "Checksum mismatch with: ${mismatch% }"
 }
 
 pkg_checksums() {
     # Generate checksums for packages.
     # This also downloads any remote sources.
-    for pkg; do pkg_lint    "$pkg"; done
-    for pkg; do pkg_sources "$pkg"; done
-
     for pkg; do
         # Find the package's repository files. This needs to keep
         # happening as we can't store this data in any kind of data
@@ -270,7 +294,8 @@ pkg_checksums() {
                     src_path=
                 ;;
             esac
-        done < "$repo_dir/sources" > "$repo_dir/checksums"
+        done < "$repo_dir/sources" | \
+            tee "$cac_dir/checksums-$pkg" > "$repo_dir/checksums"
 
         log "[$pkg]: Generated checksums."
     done
@@ -309,7 +334,12 @@ setup_caching() {
 pkg_clean() {
     # Clean up on exit or error. This removes everything related
     # to the build.
+
+    # Remove temporary directories.
     rm -rf -- "$mak_dir" "$pkg_dir" "$tar_dir"
+
+    # Remove temporary checksum files.
+    rm -rf -- "$cac_dir/checksums-"*
 }
 
 root_check() {
@@ -342,6 +372,10 @@ args() {
         c*)
             shift
             [ "$1" ] || die "'kiss checksum' requires an argument."
+
+            for pkg; do pkg_lint    "$pkg"; done
+            for pkg; do pkg_sources "$pkg"; done
+
             pkg_checksums "$@"
         ;;
 
