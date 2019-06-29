@@ -87,11 +87,18 @@ pkg_list() {
     # diectories, this just involves a simple for loop and
     # file read.
 
+    # Change directories to the database. This allows us to
+    # avoid having to basename each path. If this fails,
+    # set '$1' to mimic a failed glob which indicates that
+    # nothing is installed.
+    cd "$KISS_ROOT/var/db/kiss/" 2>/dev/null ||
+        set -- "$KISS_ROOT/var/db/kiss/"\*
+
     # Optional arguments can be passed to check for specific
     # packages. If no arguments are passed, list all. As we
     # loop over '$@', if there aren't any arguments we can
     # just set the directory contents to the argument list.
-    [ "$1" ] || set -- "$KISS_ROOT/var/db/kiss/"*
+    [ "$1" ] || set -- *
 
     # If the 'glob' above failed, exit early as there are no
     # packages installed.
@@ -111,7 +118,7 @@ pkg_list() {
         }
 
         read -r version release < "$pkg/version" &&
-            printf '%s\n' "${pkg%/*} $version-$release"
+            printf '%s\n' "$pkg $version-$release"
     done
 }
 
@@ -310,7 +317,7 @@ pkg_manifest() (
     # Find all files and directories in the package. Directories are printed
     # with a trailing forward slash '/'. The list is then reversed with
     # directories appearing *after* their contents.
-    find . -type d -exec printf '%s/\n' {} + -or -print |
+    find . -mindepth 1 -type d -exec printf '%s/\n' {} + -or -print |
     sort -r | sed -e ss.ss > "$pkg_dir/$1/var/db/kiss/$1/manifest"
 
     log "[$1]: Generated manifest."
@@ -481,6 +488,7 @@ pkg_checksums() {
 pkg_conflicts() {
     # Check to see if a package conflicts with another.
     # This function takes a path to a KISS tarball as an argument.
+    log "Checking for package conflicts."
 
     # Extract manifest from the tarball and only extract files entries.
     tar xf "$1" -O "./var/db/kiss/$pkg_name/manifest" |
@@ -501,6 +509,38 @@ pkg_conflicts() {
     rm -f "$cac_dir/manifest-$pid"
 }
 
+pkg_remove() {
+    # Remove a package and all of its files. The '/etc' directory
+    # is handled differently and configuration files are *not*
+    # overwritten.
+
+    # Create a backup of 'rm' and 'rmdir' so they aren't removed
+    # during package removal. This ensures that an upgrade to 'busybox'
+    # or your coreutils of choice doesn't break the package manager.
+    cp "$(command -v rm)"    "$cac_dir"
+    cp "$(command -v rmdir)" "$cac_dir"
+
+    for pkg; do
+        # The package is not installed, don't do anything.
+        pkg_list "$pkg" >/dev/null || continue
+
+        while read -r file; do
+            # The file is in '/etc' skip it. This prevents the package
+            # manager from removing user edited config files.
+            [ "${file##/etc/*}" ] || continue
+
+            if [ -d "$KISS_ROOT/$file" ]; then
+                "$cac_dir/rmdir" "$KISS_ROOT/$file" 2>/dev/null || continue
+            else
+                "$cac_dir/rm" -f -- "$KISS_ROOT/$file" ||
+                    log "Failed to remove '$file'."
+            fi
+        done < "$KISS_ROOT/var/db/kiss/$pkg/manifest"
+
+        log "Successfully removed '$pkg'."
+    done
+}
+
 pkg_install() {
     # Install a built package tarball.
 
@@ -508,7 +548,7 @@ pkg_install() {
         # Install can also take the full path to a tarball.
         # We don't need to check the repository if this is the case.
         if [ -f "$pkg" ]; then
-            tar_name=$pkg
+            tar_file=$pkg
 
         else
             # Find the package's repository files. This needs to keep
@@ -530,13 +570,19 @@ pkg_install() {
         fi
 
         # Figure out which package the tarball installs by checking for
-        # a database entry inside the tarball.
-        pkg_name=$(tar tf "$tar_file" | grep -x "\./var/db/kiss/.*/version")
-        pkg_name=${pkg_name%/*}
-        pkg_name=${pkg_name##*/}
+        # a database entry inside the tarball. If no database entry exists,
+        # exit here as the tarball is *most likely* not a KISS package.
+        {
+            pkg_name=$(tar tf "$tar_file" | grep -x "\./var/db/kiss/.*/version")
+            pkg_name=${pkg_name%/*}
+            pkg_name=${pkg_name##*/}
+        } || die "'$tar_file' is not a valid KISS package."
 
         pkg_conflicts "$tar_file"
 
+        # Extract the tarball early to catch any errors before installation
+        # begins. The package manager uninstalls the previous package during
+        # an upgrade so any errors need to be caught ASAP.
         tar pxf "$tar_file" -C "$tar_dir/" ||
             die "[$pkg]: Failed to extract tarball."
 
@@ -548,7 +594,57 @@ pkg_install() {
         cp "$(command -v find)"  "$cac_dir"
 
         log "Removing previous version of package if it exists."
-        pkg_remove
+        pkg_remove "$pkg_name"
+
+        # Installation works by unpacking the tarball to a specified location,
+        # manually running 'mkdir' to create each directory and finally, using
+        # 'mv' to move each file.
+        cd "$tar_dir"
+
+        # Create all of the package's directories.
+        # Optimization: Only find the deepest directories.
+        "$cac_dir/find" . -type d -links -3 -prune | while read -r dir; do
+            "$cac_dir/mkdir" -p "$KISS_ROOT/${dir#./}"
+        done
+
+        # Move all package files to '$KISS_ROOT'.
+        "$cac_dir/find" ./ -mindepth 1 -not -type d | while read -r file; do
+            rpath=${file#.}
+
+            # Don't overwrite existing '/etc' files.
+            [ -z "${rpath##/etc/*}" ] &&
+            [ -f "$KISS_ROOT/${rpath%/*}/${file##*/}" ] &&
+                return
+
+            "$cac_dir/mv" "$file" "$KISS_ROOT/${rpath%/*}"
+        done
+
+        # Run the post install script and suppress errors. If it exists,
+        # it will run, else nothing will happen.
+        "$KISS_ROOT/var/db/kiss/$pkg_name/post-install" 2>/dev/null ||:
+
+        log "Successfully installed '$pkg_name'."
+    done
+}
+
+pkg_updates() {
+    # Check all installed packages for updates. So long as the installed
+    # version and the version in the repositories differ, it's considered
+    # an update.
+    for pkg in "$KISS_ROOT/var/db/kiss/"*; do
+        # Find the package's repository files. This needs to keep
+        # happening as we can't store this data in any kind of data
+        # structure.
+        repo_dir=$(pkg_search "${pkg##*/}")
+
+        # Read version and release information from the installed packages
+        # and repository.
+        read -r db_ver db_rel < "$pkg/version"
+        read -r re_ver re_rel < "$repo_dir/version"
+
+        # Compare installed packages to repository packages.
+        [ "$db_ver-$db_rel" != "$re_ver-$re_rel" ] &&
+            printf '%s\n' "${pkg##*/} $re_ver-$re_rel"
     done
 }
 
@@ -588,6 +684,10 @@ pkg_clean() {
 
     # Remove temporary directories.
     rm -rf -- "$mak_dir" "$pkg_dir" "$tar_dir"
+
+    # Remove cached commands.
+    rm -f  -- "$cac_dir/find" "$cac_dir/mv" "$cac_dir/mkdir" \
+              "$cac_dir/rm" "$cac_dir/rmdir"
 }
 
 root_check() {
@@ -640,12 +740,18 @@ args() {
             shift
             [ "$1" ] || die "'kiss remove' requires an argument."
             root_check
+            pkg_remove "$@"
         ;;
 
         # List installed packages.
         l*)
             shift
             pkg_list "$@"
+        ;;
+
+        # Upgrade packages.
+        u*)
+            pkg_updates
         ;;
 
         # Print version and exit.
