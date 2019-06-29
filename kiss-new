@@ -103,7 +103,7 @@ pkg_list() {
     # Also warn if a package is missing its version file.
     for pkg; do
         [ -d "$pkg" ] || {
-            log "Package '$pkg' is not installed." >&2
+            log "Package '$pkg' is not installed."
             return 1
         }
 
@@ -161,34 +161,47 @@ pkg_sources() {
 
 pkg_depends() {
     # Resolve all dependencies and install them in the right order.
-    for pkg; do
-        # Find the package's repository files. This needs to keep
-        # happening as we can't store this data in any kind of data
-        # structure.
-        repo_dir=$(pkg_search "$pkg")
 
-        # Package doesn't depend on anything, skip it.
-        [ -f "$repo_dir/depends" ] || continue
+    # Find the package's repository files. This needs to keep
+    # happening as we can't store this data in any kind of data
+    # structure.
+    repo_dir=$(pkg_search "$1")
 
-        while read -r dep _; do
-            pkg_list "$dep" >/dev/null || {
-                case $missing_deps in
-                    # Dependency is already in list, skip it.
-                    *" $dep "*) ;;
+    pkg_list "$1" >/dev/null || {
+        case $missing_deps in
+            # Dependency is already in list, skip it.
+            *" $1 "*) ;;
 
-                    *)
-                        missing_deps="$missing_deps $dep "
-                    ;;
-                esac
-            }
-        done < "$repo_dir/depends"
-    done
+            *)
+                [ -f "$repo_dir/depends" ] &&
+                    while read -r dep _; do
+                        pkg_depends "$dep"
+                    done < "$repo_dir/depends"
+
+                missing_deps="$missing_deps $1 "
+            ;;
+        esac
+    }
 }
 
 pkg_build() {
     # Build packages and turn them into packaged tarballs. This function
     # also checks checksums, downloads sources and ensure all dependencies
     # are installed.
+
+    # Resolve dependencies and generate a list.
+    log "Resolving dependencies..."
+    for pkg; do pkg_depends "$pkg"; done
+
+    # Disable globbing with 'set -f' to ensure that the unquoted
+    # variable doesn't expand into anything nasty.
+    # shellcheck disable=2086,2046
+    {
+        # Set the resolved dependency list as the function's arguments.
+        set -f
+        set -- $missing_deps
+        set +f
+    }
 
     for pkg; do
         # Find the package's repository files. This needs to keep
@@ -210,8 +223,6 @@ pkg_build() {
     # Die here as packages without checksums were found above.
     [ "$no_checkums" ] &&
         die "Run '$kiss checksum ${no_checkums% }' to generate checksums."
-
-    pkg_depends "$@"
 }
 
 pkg_checksums() {
