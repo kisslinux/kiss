@@ -43,8 +43,17 @@ pkg_lint() {
 
     [ -f sources ]  || die "Sources file not found."
     [ -x build ]    || die "Build file not found or not executable."
-    [ -f licenses ] || die "License file not found or empty."
-    [ -f version ]  || die "Version file not found or empty."
+    [ -s licenses ] || die "License file not found or empty."
+    [ -s version ]  || die "Version file not found or empty."
+
+    # Ensure that the release field in the version file is set
+    # to something.
+    read -r _ rel < version
+    [ "$rel" ] || die "Release field not found in version file."
+
+    # Unset this variable so it isn't used again on a failed
+    # source. There's no 'local' keyword in POSIX sh.
+    rel=
 }
 
 pkg_search() {
