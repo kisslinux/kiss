@@ -329,7 +329,7 @@ pkg_build() {
 
         # Copy the repository files to the package directory.
         # This acts as the database entry.
-        cp -Rf "$repo_dir" "$pkg_dir/$pkg/var/db/$kiss"
+        cp -Rf "$repo_dir" "$pkg_dir/$pkg/var/db/$kiss/"
 
         log "[$pkg]: Sucessfully built package."
 
@@ -367,6 +367,19 @@ pkg_build() {
     done
 
     log "Stripped all binaries and libraries."
+    log "Generating package manifests..."
+
+    for pkg; do
+        # This runs in a subshell so we can avoid a 'cd -' or 'cd $OLDPWD'.
+        (
+            cd "$pkg_dir/$pkg"
+            find . -type d -exec printf '%s/\n' {} + -or -print
+        ) | sort -r | sed -e ss.ss > "$pkg_dir/$pkg/var/db/$kiss/$pkg/manifest"
+
+        log "[$pkg]: Generated manifest."
+    done
+
+    log "Generated all manifests."
 }
 
 pkg_checksums() {
