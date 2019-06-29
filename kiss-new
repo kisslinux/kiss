@@ -170,7 +170,13 @@ pkg_depends() {
     # structure.
     repo_dir=$(pkg_search "$1")
 
-    pkg_list "$1" >/dev/null || {
+    # This does a depth-first search. The deepest dependencies are
+    # listed first and then the parents in reverse order.
+    if pkg_list "$1" >/dev/null; then
+        # If a package is already installed but 'pkg_depends' was
+        # given an argument, add it to the list anyway.
+        [ "$2" ] && missing_deps="$missing_deps $1 "
+    else
         case $missing_deps in
             # Dependency is already in list, skip it.
             *" $1 "*) ;;
@@ -184,7 +190,7 @@ pkg_depends() {
                 missing_deps="$missing_deps $1 "
             ;;
         esac
-    }
+    fi
 }
 
 pkg_build() {
@@ -193,8 +199,10 @@ pkg_build() {
     # are installed.
 
     # Resolve dependencies and generate a list.
+    # Send 'force' to 'pkg_depends' to always include the explicitly
+    # requested packages.
     log "Resolving dependencies..."
-    for pkg; do pkg_depends "$pkg"; done
+    for pkg; do pkg_depends "$pkg" force; done
 
     # Disable globbing with 'set -f' to ensure that the unquoted
     # variable doesn't expand into anything nasty.
@@ -208,7 +216,6 @@ pkg_build() {
     log "Installing: $*."
 
     for pkg; do pkg_lint "$pkg"; done
-
     for pkg; do
         # Find the package's repository files. This needs to keep
         # happening as we can't store this data in any kind of data
@@ -231,19 +238,18 @@ pkg_build() {
         die "Run '$kiss checksum ${no_checkums% }' to generate checksums."
 
     for pkg; do pkg_sources "$pkg"; done
-
-    # TODO: Fix this. This doesn't *actually* work as it overwrites
-    # the repository checksums. 'pkg_checksum' needs to be modified
-    # to support a destination file as output.
     for pkg; do
         # Find the package's repository files. This needs to keep
         # happening as we can't store this data in any kind of data
         # structure.
         repo_dir=$(pkg_search "$pkg")
 
-        pkg_checksums "$pkg"
+        # Generate a second set of checksums to compare against the
+        # repositorie's checksums for the package.
+        pkg_checksums .checksums "$pkg"
 
-        cmp -s "$cac_dir/checksums-$pkg" "$repo_dir/checksums" || {
+        # Compare the checksums using 'cmp'.
+        cmp -s "$repo_dir/.checksums" "$repo_dir/checksums" || {
             log "[$pkg]: Checksum mismatch."
 
             # Instead of dying above, log it to the terminal. Also define a
@@ -251,16 +257,24 @@ pkg_build() {
             # checked.
             mismatch="$mismatch$pkg "
         }
+
+        # The second set of checksums use a temporary file, we need to
+        # delete it.
+        rm -f "$repo_dir/.checksums"
     done
 
     # Die here as packages with differing checksums were found above.
-    [ "$mismatch" ] &&
-        die "Checksum mismatch with: ${mismatch% }"
+    [ "$mismatch" ] && die "Checksum mismatch with: ${mismatch% }"
+
+    log "Verified all checksums."
 }
 
 pkg_checksums() {
     # Generate checksums for packages.
     # This also downloads any remote sources.
+    checksum_file=$1
+    shift
+
     for pkg; do
         # Find the package's repository files. This needs to keep
         # happening as we can't store this data in any kind of data
@@ -297,10 +311,9 @@ pkg_checksums() {
                     src_path=
                 ;;
             esac
-        done < "$repo_dir/sources" | \
-            tee "$cac_dir/checksums-$pkg" > "$repo_dir/checksums"
+        done < "$repo_dir/sources" > "$repo_dir/$checksum_file"
 
-        log "[$pkg]: Generated checksums."
+        log "[$pkg]: Generated/Verified checksums."
     done
 }
 
@@ -379,7 +392,7 @@ args() {
             for pkg; do pkg_lint    "$pkg"; done
             for pkg; do pkg_sources "$pkg"; done
 
-            pkg_checksums "$@"
+            pkg_checksums checksums "$@"
         ;;
 
         # Install packages.
