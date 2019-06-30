@@ -276,6 +276,7 @@ pkg_verify() {
 pkg_strip() {
     # Strip package binaries and libraries. This saves space on the
     # system as well as on the tarballs we ship for installation.
+    log "[$1]: Stripping binaries and libraries..."
 
     # Find the package's repository files. This needs to keep
     # happening as we can't store this data in any kind of data
@@ -309,7 +310,8 @@ pkg_manifest() (
     # Generate the package's manifest file. This is a list of each file
     # and directory inside the package. The file is used when uninstalling
     # packages, checking for package conflicts and for general debugging.
-    #
+    log "[$1]: Generating manifest..."
+
     # This funcion runs as a subshell to avoid having to 'cd' back to the
     # prior directory before being able to continue.
     cd "$pkg_dir/$1"
@@ -326,6 +328,7 @@ pkg_manifest() (
 pkg_tar() {
     # Create a tarball from the built package's files.
     # This tarball also contains the package's database entry.
+    log "[$1]: Creating tarball..."
 
     # Find the package's repository files. This needs to keep
     # happening as we can't store this data in any kind of data
