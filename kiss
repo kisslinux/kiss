@@ -43,7 +43,6 @@ pkg_lint() {
 
     [ -f sources ]  || die "Sources file not found."
     [ -x build ]    || die "Build file not found or not executable."
-    [ -s licenses ] || die "License file not found or empty."
     [ -s version ]  || die "Version file not found or empty."
 
     # Ensure that the release field in the version file is set
