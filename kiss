@@ -376,7 +376,13 @@ pkg_build() {
     for pkg; do
         # Don't check for pre-built package if it was passed to KISS
         # directly.
-        case $explicit_packages in *" $pkg "*) continue ;; esac
+        case $explicit_packages in
+            *" $pkg "*)
+                shift
+                set -- "$@" "$pkg"
+                continue
+            ;;
+        esac
 
         # Find the package's repository files. This needs to keep
         # happening as we can't store this data in any kind of data
@@ -430,8 +436,9 @@ pkg_build() {
     [ "$mismatch" ] &&
         die "Checksum mismatch with: ${mismatch% }"
 
-    for pkg; do pkg_extract "$pkg"; done
     for pkg; do
+        pkg_extract "$pkg"
+
         # Find the package's repository files. This needs to keep
         # happening as we can't store this data in any kind of data
         # structure.
