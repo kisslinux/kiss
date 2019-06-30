@@ -404,7 +404,7 @@ pkg_build() {
 
         # Add the removed package back to the list if it doesn't
         # have a pre-built binary.
-        set -- "$pkg" "$@"
+        set -- "$@" "$pkg"
     done
 
     for pkg; do pkg_lint "$pkg"; done
@@ -531,7 +531,7 @@ pkg_conflicts() {
     log "Checking for package conflicts."
 
     # Extract manifest from the tarball and only extract files entries.
-    tar xf "$1" -O "./var/db/kiss/$pkg_name/manifest" |
+    tar xf "$1" -O "./var/db/kiss/$2/manifest" |
     while read -r line; do
         [ "${line%%*/}" ] && printf '%s\n' "$line" >> "$cac_dir/manifest-$pid"
     done ||:
@@ -539,10 +539,10 @@ pkg_conflicts() {
     # Compare extracted manifest to all installed manifests.
     # If there are matching lines (files) there is a package conflict.
     for db in "$KISS_ROOT/var/db/kiss/"*; do
-        [ "$pkg_name" = "${db##*/}" ] && continue
+        [ "$2" = "${db##*/}" ] && continue
 
         grep -Fxf "$cac_dir/manifest-$pid" "$db/manifest" 2>/dev/null &&
-            die "Package '$pkg_name' conflicts with '${db##*/}'."
+            die "Package '$2' conflicts with '${db##*/}'."
     done
 
     # Remove this temporary file as we no longer need it.
@@ -590,7 +590,7 @@ pkg_install() {
     for pkg; do
         # Install can also take the full path to a tarball.
         # We don't need to check the repository if this is the case.
-        if [ -f "$pkg" ]; then
+        if [ -f "$pkg" ] && [ -z "${pkg%%*.tar.gz}" ] ; then
             tar_file=$pkg
 
         else
@@ -621,7 +621,7 @@ pkg_install() {
             pkg_name=${pkg_name##*/}
         } || die "'$tar_file' is not a valid KISS package."
 
-        pkg_conflicts "$tar_file"
+        pkg_conflicts "$tar_file" "$pkg_name"
 
         # Extract the tarball early to catch any errors before installation
         # begins. The package manager uninstalls the previous package during
