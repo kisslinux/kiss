@@ -11,7 +11,7 @@
 # an error is optional or required.
 #
 # Where possible the package manager should "error first".
-# Check things first, die is necessary and continue if all is well.
+# Check things first, die if necessary and continue if all is well.
 #
 # The code below conforms to shellcheck's rules. However, some
 # lint errors *are* disabled as they relate to unexpected
@@ -114,7 +114,7 @@ pkg_list() {
 
         [ -f "$pkg/version" ] || {
             log "Warning: Package '$pkg' has no version file."
-            return
+            continue
         }
 
         read -r version release < "$pkg/version" &&
@@ -353,6 +353,11 @@ pkg_build() {
     log "Resolving dependencies..."
     for pkg; do pkg_depends "$pkg" force; done
 
+    # Store the explicit packages so we can handle them differently
+    # below. Dependencies are automatically installed but packages
+    # passed to KISS aren't.
+    explicit_packages=" $* "
+
     # Disable globbing with 'set -f' to ensure that the unquoted
     # variable doesn't expand into anything nasty.
     # shellcheck disable=2086,2046
@@ -363,6 +368,38 @@ pkg_build() {
         set +f
     }
     log "Installing: $*."
+    log "Checking to see if any dependencies have already been built..."
+    log "Installing any pre-built dependencies..."
+
+    # Install any pre-built dependencies if they exist in the binary
+    # directory and are up to date.
+    for pkg; do
+        # Don't check for pre-built package if it was passed to KISS
+        # directly.
+        case $explicit_packages in *" $pkg "*) continue ;; esac
+
+        # Find the package's repository files. This needs to keep
+        # happening as we can't store this data in any kind of data
+        # structure.
+        repo_dir=$(pkg_search "$pkg")
+
+        # Figure out the version and release.
+        read -r version release < "$repo_dir/version"
+
+        # Remove the current package from the package list.
+        shift
+
+        # Install any pre-built binaries if they exist.
+        [ -f "$bin_dir/$pkg#$version-$release.tar.gz" ] && {
+            log "[$pkg]: Found pre-built binary."
+            pkg_install "$bin_dir/$pkg#$version-$release.tar.gz"
+            continue
+        }
+
+        # Add the removed package back to the list if it doesn't
+        # have a pre-built binary.
+        set -- "$pkg" "$@"
+    done
 
     for pkg; do pkg_lint "$pkg"; done
     for pkg; do
@@ -390,15 +427,10 @@ pkg_build() {
     for pkg; do pkg_verify  "$pkg"; done
 
     # Die here as packages with differing checksums were found above.
-    [ "$mismatch" ] && die "Checksum mismatch with: ${mismatch% }"
+    [ "$mismatch" ] &&
+        die "Checksum mismatch with: ${mismatch% }"
 
-    log "Verified all checksums."
-
-    log "Extracting all sources..."
     for pkg; do pkg_extract "$pkg"; done
-    log "Extracted all sources."
-
-    log "Building packages..."
     for pkg; do
         # Find the package's repository files. This needs to keep
         # happening as we can't store this data in any kind of data
@@ -422,19 +454,20 @@ pkg_build() {
         # Create the manifest file early and make it empty.
         # This ensure that the manifest is added to the manifest...
         : > "$pkg_dir/$pkg/var/db/kiss/$pkg/manifest"
+
+        pkg_strip    "$pkg"
+        pkg_manifest "$pkg"
+        pkg_tar      "$pkg"
+
+        # Install only dependencies of passed packages.
+        case $explicit_packages in
+            *" $pkg "*) continue ;;
+            *)          pkg_install "$pkg" ;;
+        esac
     done
 
-    log "Stripping packages..."
-    for pkg; do pkg_strip "$pkg"; done
-    log "Stripped all binaries and libraries."
-
-    log "Generating package manifests..."
-    for pkg; do pkg_manifest "$pkg"; done
-    log "Generated all manifests."
-
-    log "Creating package tarballs..."
-    for pkg; do pkg_tar "$pkg"; done
-    log "Created all packages."
+    log "Successfully built all packages."
+    log "Run '$kiss i $*' to install them."
 }
 
 pkg_checksums() {
@@ -522,7 +555,10 @@ pkg_remove() {
 
     for pkg; do
         # The package is not installed, don't do anything.
-        pkg_list "$pkg" >/dev/null || continue
+        pkg_list "$pkg" >/dev/null || {
+            log "[$pkg]: Not installed."
+            continue
+        }
 
         while read -r file; do
             # The file is in '/etc' skip it. This prevents the package
@@ -688,6 +724,9 @@ pkg_clean() {
     # Remove cached commands.
     rm -f  -- "$cac_dir/find" "$cac_dir/mv" "$cac_dir/mkdir" \
               "$cac_dir/rm" "$cac_dir/rmdir"
+
+    # Remove temporary files.
+    rm -f "$repo_dir/.checksums"
 }
 
 root_check() {
