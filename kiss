@@ -438,6 +438,8 @@ pkg_build() {
     [ "$mismatch" ] &&
         die "Checksum mismatch with: ${mismatch% }"
 
+    # Finally build and create tarballs for all passed packages and
+    # dependencies.
     for pkg; do
         pkg_extract "$pkg"
 
@@ -475,8 +477,8 @@ pkg_build() {
         esac
     done
 
-    log "Successfully built all packages."
-    log "Run '$kiss i $*' to install the built packages."
+    log "Successfully built package(s)."
+    log "Run '$kiss i $*' to install the built package(s)."
 }
 
 pkg_checksums() {
@@ -578,11 +580,11 @@ pkg_remove() {
                 "$cac_dir/rmdir" "$KISS_ROOT/$file" 2>/dev/null || continue
             else
                 "$cac_dir/rm" -f -- "$KISS_ROOT/$file" ||
-                    log "Failed to remove '$file'."
+                    log "[$pkg]: Failed to remove '$file'."
             fi
         done < "$KISS_ROOT/var/db/kiss/$pkg/manifest"
 
-        log "Successfully removed '$pkg'."
+        log "[$pkg]: Removed successfully."
     done
 }
 
@@ -617,11 +619,11 @@ pkg_install() {
         # Figure out which package the tarball installs by checking for
         # a database entry inside the tarball. If no database entry exists,
         # exit here as the tarball is *most likely* not a KISS package.
-        {
-            pkg_name=$(tar tf "$tar_file" | grep -x "\./var/db/kiss/.*/version")
-            pkg_name=${pkg_name%/*}
-            pkg_name=${pkg_name##*/}
-        } || die "'$tar_file' is not a valid KISS package."
+        pkg_name=$(tar tf "$tar_file" | grep -x "\./var/db/kiss/.*/version") ||
+            die "'${tar_file##*/}' is not a valid KISS package."
+
+        pkg_name=${pkg_name%/*}
+        pkg_name=${pkg_name##*/}
 
         pkg_conflicts "$tar_file" "$pkg_name"
 
@@ -629,7 +631,7 @@ pkg_install() {
         # begins. The package manager uninstalls the previous package during
         # an upgrade so any errors need to be caught ASAP.
         tar pxf "$tar_file" -C "$tar_dir/" ||
-            die "[$pkg]: Failed to extract tarball."
+            die "[$pkg_name]: Failed to extract tarball."
 
         # Create a backup of 'mv', 'mkdir' and 'find' so they aren't removed
         # during package removal. This ensures that an upgrade to 'busybox' or
@@ -638,7 +640,7 @@ pkg_install() {
         cp "$(command -v mkdir)" "$cac_dir"
         cp "$(command -v find)"  "$cac_dir"
 
-        log "Removing previous version of package if it exists."
+        log "[$pkg_name]: Removing previous version of package if it exists."
         pkg_remove "$pkg_name"
 
         # Installation works by unpacking the tarball to a specified location,
@@ -668,7 +670,7 @@ pkg_install() {
         # it will run, else nothing will happen.
         "$KISS_ROOT/var/db/kiss/$pkg_name/post-install" 2>/dev/null ||:
 
-        log "Successfully installed '$pkg_name'."
+        log "[$pkg_name]: Installed successfully."
     done
 }
 
@@ -837,7 +839,10 @@ main() {
     # up before we die. This occurs on 'Ctrl+C' as well as sucess and error.
     trap pkg_clean EXIT INT
 
+    # Create the required temporary directories and set the variables
+    # which point to them.
     setup_caching
+
     args "$@"
 }
 
