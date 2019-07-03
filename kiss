@@ -37,9 +37,9 @@ pkg_lint() {
     # Check that each mandatory file in the package entry exists.
     log "[$1]: Checking repository files..."
 
-    pkg_location=$(pkg_search "$1")
+    repo_dir=$(pkg_search "$1")
 
-    cd "$pkg_location" || die "'$pkg_location' not accessible"
+    cd "$repo_dir" || die "'$repo_dir' not accessible"
 
     [ -f sources ]   || die "[$1]: Sources file not found."
     [ -x build ]     || die "[$1]: Build file not found or not executable."
