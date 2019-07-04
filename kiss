@@ -583,6 +583,11 @@ pkg_remove() {
         die "[$1]: Package is required by ${required_by%, }." \
             "[$1]: Aborting here..."
 
+    # Block being able to abort the script with 'Ctrl+C' during installation.
+    # Removes all risk of the user aborting a package installation leaving
+    # an incomplete package installed.
+    trap '' INT
+
     while read -r file; do
         # The file is in '/etc' skip it. This prevents the package
         # manager from removing user edited configuration files.
@@ -595,6 +600,10 @@ pkg_remove() {
                 log "[$1]: Failed to remove '$file'."
         fi
     done < "$KISS_ROOT/var/db/kiss/$1/manifest"
+
+    # Reset 'trap' to its original value. Installation is done so
+    # we no longer need to block 'Ctrl+C'.
+    trap pkg_clean EXIT INT
 
     log "[$1]: Removed successfully."
 }
