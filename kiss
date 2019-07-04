@@ -839,6 +839,7 @@ args() {
             shift
             [ "$1" ] || die "'kiss remove' requires an argument."
             root_check
+            log "Removing packages..."
             for pkg; do pkg_remove "$pkg" check; done
         ;;
 
