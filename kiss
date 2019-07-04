@@ -665,6 +665,11 @@ pkg_install() {
         cp "$(command -v mkdir)" "$cac_dir"
         cp "$(command -v find)"  "$cac_dir"
 
+        # Block being able to abort the script with 'Ctrl+C' during installation.
+        # Removes all risk of the user aborting a package installation leaving
+        # an incomplete package installed.
+        trap '' INT
+
         log "[$pkg_name]: Removing previous version of package if it exists."
         pkg_remove "$pkg_name"
         log "[$pkg_name]: Installing package..."
@@ -689,8 +694,12 @@ pkg_install() {
             [ -f "$KISS_ROOT/${rpath%/*}/${file##*/}" ] &&
                 return
 
-            "$cac_dir/mv" "$file" "$KISS_ROOT/${rpath%/*}"
+            "$cac_dir/mv" "$file" "$KISS_ROOT/${rpath%/*}" ||:
         done
+
+        # Reset 'trap' to its original value. Installation is done so
+        # we no longer need to block 'Ctrl+C'.
+        trap pkg_clean EXIT INT
 
         # Run the post install script and suppress errors. If it exists,
         # it will run, else nothing will happen.
