@@ -565,28 +565,38 @@ pkg_remove() {
     cp "$(command -v rm)"    "$cac_dir"
     cp "$(command -v rmdir)" "$cac_dir"
 
-    for pkg; do
-        # The package is not installed, don't do anything.
-        pkg_list "$pkg" >/dev/null || {
-            log "[$pkg]: Not installed."
-            continue
-        }
+    # The package is not installed, don't do anything.
+    pkg_list "$1" >/dev/null || {
+        log "[$1]: Not installed."
+        return
+    }
 
-        while read -r file; do
-            # The file is in '/etc' skip it. This prevents the package
-            # manager from removing user edited configuration files.
-            [ "${file##/etc/*}" ] || continue
-
-            if [ -d "$KISS_ROOT/$file" ]; then
-                "$cac_dir/rmdir" "$KISS_ROOT/$file" 2>/dev/null || continue
-            else
-                "$cac_dir/rm" -f -- "$KISS_ROOT/$file" ||
-                    log "[$pkg]: Failed to remove '$file'."
-            fi
-        done < "$KISS_ROOT/var/db/kiss/$pkg/manifest"
-
-        log "[$pkg]: Removed successfully."
+    # Make sure that nothing depends on this package.
+    [ "$2" = check ] && for file in "$KISS_ROOT/var/db/kiss/"*; do
+        # Check each depends file for the package and if it's
+        # a run-time dependency, append to the $required_by string.
+        grep -q "^$1$" "$file/depends" 2>/dev/null &&
+            required_by="$required_by${file##*/}, "
     done
+
+    [ "$required_by" ] &&
+        die "[$1]: Package is required by ${required_by%, }." \
+            "[$1]: Aborting here..."
+
+    while read -r file; do
+        # The file is in '/etc' skip it. This prevents the package
+        # manager from removing user edited configuration files.
+        [ "${file##/etc/*}" ] || continue
+
+        if [ -d "$KISS_ROOT/$file" ]; then
+            "$cac_dir/rmdir" "$KISS_ROOT/$file" 2>/dev/null || continue
+        else
+            "$cac_dir/rm" -f -- "$KISS_ROOT/$file" ||
+                log "[$1]: Failed to remove '$file'."
+        fi
+    done < "$KISS_ROOT/var/db/kiss/$1/manifest"
+
+    log "[$1]: Removed successfully."
 }
 
 pkg_install() {
@@ -643,6 +653,7 @@ pkg_install() {
 
         log "[$pkg_name]: Removing previous version of package if it exists."
         pkg_remove "$pkg_name"
+        log "[$pkg_name]: Installing package..."
 
         # Installation works by unpacking the tar-ball to a specified location,
         # manually running 'mkdir' to create each directory and finally, using
@@ -814,7 +825,7 @@ args() {
             shift
             [ "$1" ] || die "'kiss remove' requires an argument."
             root_check
-            pkg_remove "$@"
+            for pkg; do pkg_remove "$pkg" check; done
         ;;
 
         # List installed packages.
