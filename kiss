@@ -576,7 +576,7 @@ pkg_remove() {
         # Check each depends file for the package and if it's
         # a run-time dependency, append to the $required_by string.
         grep -q "^$1$" "$file/depends" 2>/dev/null &&
-            required_by="$required_by${file##*/}, "
+            required_by="$required_by'${file##*/}', "
     done
 
     [ "$required_by" ] &&
@@ -643,6 +643,20 @@ pkg_install() {
         # an upgrade so any errors need to be caught ASAP.
         tar pxf "$tar_file" -C "$tar_dir/" ||
             die "[$pkg_name]: Failed to extract tar-ball."
+
+        log "[$pkg_name]: Checking that all dependencies are installed..."
+
+        # Make sure that all run-time dependencies are installed prior to
+        # installing the package.
+        [ -f "$tar_dir/var/db/kiss/$pkg_name/depends" ] &&
+            while read -r dep dep_type; do
+                [ "$dep_type" ] || pkg_list "$dep" >/dev/null ||
+                    required_install="$required_install'$dep', "
+            done < "$tar_dir/var/db/kiss/$pkg_name/depends"
+
+        [ "$required_install" ] &&
+            die "[$1]: Package requires ${required_install%, }." \
+                "[$1]: Aborting here..."
 
         # Create a backup of 'mv', 'mkdir' and 'find' so they aren't removed
         # during package removal. This ensures that an upgrade to 'busybox' or
