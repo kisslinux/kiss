@@ -201,7 +201,9 @@ pkg_extract() {
 
             # Local files (Any source that is non-remote is assumed to be local).
             *)
-                [ -f "$repo_dir/$src" ] || die "[$1]: Local file $src not found."
+                [ -f "$repo_dir/$src" ] ||
+                    die "[$1]: Local file $src not found."
+
                 cp -f "$repo_dir/$src" "./$dest"
             ;;
         esac
