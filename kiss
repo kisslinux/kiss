@@ -1,7 +1,7 @@
 #!/bin/sh -e
 #
 # This is a simple package manager written in POSIX 'sh' for
-# KISS Linux utlizing the core unix utilites where needed.
+# KISS Linux utilizing the core UNIX utilities where needed.
 #
 # The script runs with 'set -e' enabled. It will exit on any
 # non-zero return code. This ensures that no function continues
@@ -83,11 +83,11 @@ pkg_search() {
 
 pkg_list() {
     # List installed packages. As the format is files and
-    # diectories, this just involves a simple for loop and
+    # directories, this just involves a simple for loop and
     # file read.
 
     # Change directories to the database. This allows us to
-    # avoid having to basename each path. If this fails,
+    # avoid having to 'basename' each path. If this fails,
     # set '$1' to mimic a failed glob which indicates that
     # nothing is installed.
     cd "$KISS_ROOT/var/db/kiss/" 2>/dev/null ||
@@ -168,7 +168,7 @@ pkg_sources() {
 }
 
 pkg_extract() {
-    # Extract all source archives to the build diectory and copy over
+    # Extract all source archives to the build directory and copy over
     # any local repository files.
     log "[$1]: Extracting sources..."
 
@@ -187,11 +187,11 @@ pkg_extract() {
 
         case $src in
             # Do nothing as git repository was downloaded to the build
-            # diectory directly.
+            # directory directly.
             git:*) ;;
 
-            # Only 'tar' archives are currently supported for extaction.
-            # Any other filetypes are simply copied to '$mak_dir' which
+            # Only 'tar' archives are currently supported for extraction.
+            # Any other file-types are simply copied to '$mak_dir' which
             # allows you to extract them manually.
             *://*.tar*|*://*.tgz)
                 tar xf "$src_dir/$1/${src##*/}" -C "./$dest" \
@@ -256,7 +256,7 @@ pkg_verify() {
     repo_dir=$(pkg_search "$1")
 
     # Generate a second set of checksums to compare against the
-    # repositorie's checksums for the package.
+    # repository's checksums for the package.
     pkg_checksums .checksums "$1"
 
     # Compare the checksums using 'cmp'.
@@ -276,8 +276,7 @@ pkg_verify() {
 
 pkg_strip() {
     # Strip package binaries and libraries. This saves space on the
-    # system as well as on the tarballs we ship for installation.
-    log "[$1]: Stripping binaries and libraries..."
+    # system as well as on the tar-balls we ship for installation.
 
     # Find the package's repository files. This needs to keep
     # happening as we can't store this data in any kind of data
@@ -313,7 +312,7 @@ pkg_manifest() (
     # packages, checking for package conflicts and for general debugging.
     log "[$1]: Generating manifest..."
 
-    # This funcion runs as a subshell to avoid having to 'cd' back to the
+    # This funcion runs as a sub-shell to avoid having to 'cd' back to the
     # prior directory before being able to continue.
     cd "$pkg_dir/$1"
 
@@ -327,9 +326,9 @@ pkg_manifest() (
 )
 
 pkg_tar() {
-    # Create a tarball from the built package's files.
-    # This tarball also contains the package's database entry.
-    log "[$1]: Creating tarball..."
+    # Create a tar-ball from the built package's files.
+    # This tar-ball also contains the package's database entry.
+    log "[$1]: Creating tar-ball..."
 
     # Find the package's repository files. This needs to keep
     # happening as we can't store this data in any kind of data
@@ -339,15 +338,15 @@ pkg_tar() {
     # Read the version information to name the package.
     read -r version release < "$repo_dir/version"
 
-    # Create a tarball from the contents of the built package.
+    # Create a tar-ball from the contents of the built package.
     tar zpcf "$bin_dir/$1#$version-$release.tar.gz" -C "$pkg_dir/$1" . ||
-        die "[$1]: Failed to create tarball."
+        die "[$1]: Failed to create tar-ball."
 
-    log "[$1]: Successfully created tarball."
+    log "[$1]: Successfully created tar-ball."
 }
 
 pkg_build() {
-    # Build packages and turn them into packaged tarballs. This function
+    # Build packages and turn them into packaged tar-balls. This function
     # also checks checksums, downloads sources and ensure all dependencies
     # are installed.
 
@@ -451,7 +450,7 @@ pkg_build() {
         repo_dir=$(pkg_search "$pkg")
 
         # Install built packages to a directory under the package name
-        # to avod collisions with other packages.
+        # to avoid collisions with other packages.
         mkdir -p "$pkg_dir/$pkg/var/db/kiss"
 
         # Move to the build directory and call the build script.
@@ -462,7 +461,7 @@ pkg_build() {
         # This acts as the database entry.
         cp -Rf "$repo_dir" "$pkg_dir/$pkg/var/db/kiss/"
 
-        log "[$pkg]: Sucessfully built package."
+        log "[$pkg]: Successfully built package."
 
         # Create the manifest file early and make it empty.
         # This ensure that the manifest is added to the manifest...
@@ -515,7 +514,7 @@ pkg_checksums() {
                     [ "$src_path" ] ||
                         die "[$pkg]: Couldn't find source '$src'."
 
-                    # An easy way to get 'sha256sum' to print with the basenames
+                    # An easy way to get 'sha256sum' to print with the 'basename'
                     # of files is to 'cd' to the file's directory beforehand.
                     (cd "$src_path" && sha256sum "${src##*/}") ||
                         die "[$pkg]: Failed to generate checksums."
@@ -533,10 +532,10 @@ pkg_checksums() {
 
 pkg_conflicts() {
     # Check to see if a package conflicts with another.
-    # This function takes a path to a KISS tarball as an argument.
+    # This function takes a path to a KISS tar-ball as an argument.
     log "[$2]: Checking for package conflicts."
 
-    # Extract manifest from the tarball and only extract files entries.
+    # Extract manifest from the tar-ball and only extract files entries.
     tar xf "$1" -O "./var/db/kiss/$2/manifest" |
     while read -r line; do
         [ "${line%%*/}" ] && printf '%s\n' "$line" >> "$cac_dir/manifest-$pid"
@@ -562,7 +561,7 @@ pkg_remove() {
 
     # Create a backup of 'rm' and 'rmdir' so they aren't removed
     # during package removal. This ensures that an upgrade to 'busybox'
-    # or your coreutils of choice doesn't break the package manager.
+    # or your core utilities of choice doesn't break the package manager.
     cp "$(command -v rm)"    "$cac_dir"
     cp "$(command -v rmdir)" "$cac_dir"
 
@@ -575,7 +574,7 @@ pkg_remove() {
 
         while read -r file; do
             # The file is in '/etc' skip it. This prevents the package
-            # manager from removing user edited config files.
+            # manager from removing user edited configuration files.
             [ "${file##/etc/*}" ] || continue
 
             if [ -d "$KISS_ROOT/$file" ]; then
@@ -591,10 +590,10 @@ pkg_remove() {
 }
 
 pkg_install() {
-    # Install a built package tarball.
+    # Install a built package tar-ball.
 
     for pkg; do
-        # Install can also take the full path to a tarball.
+        # Install can also take the full path to a tar-ball.
         # We don't need to check the repository if this is the case.
         if [ -f "$pkg" ] && [ -z "${pkg%%*.tar.gz}" ] ; then
             tar_file=$pkg
@@ -618,9 +617,9 @@ pkg_install() {
             tar_file=$bin_dir/$tar_name
         fi
 
-        # Figure out which package the tarball installs by checking for
-        # a database entry inside the tarball. If no database entry exists,
-        # exit here as the tarball is *most likely* not a KISS package.
+        # Figure out which package the tar-ball installs by checking for
+        # a database entry inside the tar-ball. If no database entry exists,
+        # exit here as the tar-ball is *most likely* not a KISS package.
         pkg_name=$(tar tf "$tar_file" | grep -x "\./var/db/kiss/.*/version") ||
             die "'${tar_file##*/}' is not a valid KISS package."
 
@@ -629,15 +628,15 @@ pkg_install() {
 
         pkg_conflicts "$tar_file" "$pkg_name"
 
-        # Extract the tarball early to catch any errors before installation
+        # Extract the tar-ball early to catch any errors before installation
         # begins. The package manager uninstalls the previous package during
         # an upgrade so any errors need to be caught ASAP.
         tar pxf "$tar_file" -C "$tar_dir/" ||
-            die "[$pkg_name]: Failed to extract tarball."
+            die "[$pkg_name]: Failed to extract tar-ball."
 
         # Create a backup of 'mv', 'mkdir' and 'find' so they aren't removed
         # during package removal. This ensures that an upgrade to 'busybox' or
-        # your coreutils of choice doesn't break the package manager.
+        # your core utilities of choice doesn't break the package manager.
         cp "$(command -v mv)"    "$cac_dir"
         cp "$(command -v mkdir)" "$cac_dir"
         cp "$(command -v find)"  "$cac_dir"
@@ -645,7 +644,7 @@ pkg_install() {
         log "[$pkg_name]: Removing previous version of package if it exists."
         pkg_remove "$pkg_name"
 
-        # Installation works by unpacking the tarball to a specified location,
+        # Installation works by unpacking the tar-ball to a specified location,
         # manually running 'mkdir' to create each directory and finally, using
         # 'mv' to move each file.
         cd "$tar_dir"
@@ -780,9 +779,9 @@ args() {
     # that follow are all package names.
 
     # Actions can be abbreviated to their first letter. This saves
-    # keystrokes once you memorize themand it also has the side-effect
-    # of "correcting" spelling mistakes assuming the first letter is
-    # right.
+    # keystrokes once you memorize the commands and it also has the
+    # side-effect of "correcting" spelling mistakes (assuming the first
+    # letter is right).
     case $1 in
         # Build the list of packages.
         b*)
@@ -865,7 +864,7 @@ main() {
     old_ifs=$IFS
 
     # Catch errors and ensure that build files and directories are cleaned
-    # up before we die. This occurs on 'Ctrl+C' as well as sucess and error.
+    # up before we die. This occurs on 'Ctrl+C' as well as success and error.
     trap pkg_clean EXIT INT
 
     # Create the required temporary directories and set the variables
