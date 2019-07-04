@@ -680,6 +680,29 @@ pkg_updates() {
     # Check all installed packages for updates. So long as the installed
     # version and the version in the repositories differ, it's considered
     # an update.
+
+    # Disable globbing with 'set -f' to ensure that the unquoted
+    # variable doesn't expand into anything nasty.
+    # shellcheck disable=2086,2046
+    {
+        set -f
+        IFS=:
+        set -- $KISS_PATH
+        IFS=$old_ifs
+        set +f
+    }
+
+    log "Updating repositories..."
+
+    # Update each repository in '$KISS_PATH'. It is assumed that
+    # each repository is 'git' tracked.
+    for repo; do
+        log "[${repo##*/}]: Updating repository."
+        (cd "$repo"; git rev-parse --git-dir >/dev/null && git pull)
+    done
+
+    log "Checking for new package versions..."
+
     for pkg in "$KISS_ROOT/var/db/kiss/"*; do
         # Find the package's repository files. This needs to keep
         # happening as we can't store this data in any kind of data
@@ -693,7 +716,7 @@ pkg_updates() {
 
         # Compare installed packages to repository packages.
         [ "$db_ver-$db_rel" != "$re_ver-$re_rel" ] &&
-            printf '%s\n' "${pkg##*/} $re_ver-$re_rel"
+            printf '%s\n' "${pkg##*/} $db_ver-$db_rel ==> $re_ver-$re_rel"
     done
 }
 
@@ -836,6 +859,10 @@ main() {
     # instances to be run at once. Store the value in another variable so
     # that it doesn't change beneath us.
     pid=$$
+
+    # Store the original value of IFS so we can revert back to it if the
+    # variable is ever changed.
+    old_ifs=$IFS
 
     # Catch errors and ensure that build files and directories are cleaned
     # up before we die. This occurs on 'Ctrl+C' as well as sucess and error.
