@@ -674,14 +674,14 @@ pkg_install() {
         cp "$(command -v mkdir)" "$cac_dir"
         cp "$(command -v find)"  "$cac_dir"
 
+        log "[$pkg_name]: Removing previous version of package if it exists."
+        pkg_remove "$pkg_name"
+        log "[$pkg_name]: Installing package..."
+
         # Block being able to abort the script with 'Ctrl+C' during installation.
         # Removes all risk of the user aborting a package installation leaving
         # an incomplete package installed.
         trap '' INT
-
-        log "[$pkg_name]: Removing previous version of package if it exists."
-        pkg_remove "$pkg_name"
-        log "[$pkg_name]: Installing package..."
 
         # Installation works by unpacking the tar-ball to a specified location,
         # manually running 'mkdir' to create each directory and finally, using
@@ -874,7 +874,7 @@ args() {
 
         # Print version and exit.
         v*)
-            log "$kiss 0.2.1"
+            log "$kiss 0.2.2"
         ;;
 
         # Catch all invalid arguments as well as
