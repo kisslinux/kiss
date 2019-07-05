@@ -667,12 +667,10 @@ pkg_install() {
             die "[$1]: Package requires ${required_install%, }." \
                 "[$1]: Aborting here..."
 
-        # Create a backup of 'mv', 'mkdir' and 'find' so they aren't removed
-        # during package removal. This ensures that an upgrade to 'busybox' or
-        # your core utilities of choice doesn't break the package manager.
-        cp "$(command -v mv)"    "$cac_dir"
-        cp "$(command -v mkdir)" "$cac_dir"
-        cp "$(command -v find)"  "$cac_dir"
+        # Create a backup of 'cp' so it isn't removed during package removal.
+        # This ensures that an upgrade to 'busybox' or your core utilities of
+        # choice doesn't break the package manager.
+        cp "$(command -v cp)" "$cac_dir"
 
         log "[$pkg_name]: Removing previous version of package if it exists."
         pkg_remove "$pkg_name"
@@ -684,27 +682,10 @@ pkg_install() {
         trap '' INT
 
         # Installation works by unpacking the tar-ball to a specified location,
-        # manually running 'mkdir' to create each directory and finally, using
-        # 'mv' to move each file.
-        cd "$tar_dir"
-
-        # Create all of the package's directories.
-        # Optimization: Only find the deepest directories.
-        "$cac_dir/find" . -type d -links -3 -prune | while read -r dir; do
-            "$cac_dir/mkdir" -p "$KISS_ROOT/${dir#./}"
-        done
-
-        # Move all package files to '$KISS_ROOT'.
-        "$cac_dir/find" ./ -mindepth 1 -not -type d | while read -r file; do
-            rpath=${file#.}
-
-            # Don't overwrite existing '/etc' files.
-            [ -z "${rpath##/etc/*}" ] &&
-            [ -f "$KISS_ROOT/${rpath%/*}/${file##*/}" ] &&
-                return
-
-            "$cac_dir/mv" "$file" "$KISS_ROOT/${rpath%/*}" ||:
-        done
+        # using 'cp' to create hard links and then 'rm' to remove the original
+        # reference to them. Regular 'mv' has no concept of "merging"
+        # directories.
+        cp -arl "$tar_dir/." "$KISS_ROOT/"
 
         # Reset 'trap' to its original value. Installation is done so
         # we no longer need to block 'Ctrl+C'.
@@ -800,8 +781,7 @@ pkg_clean() {
     rm -rf -- "$mak_dir" "$pkg_dir" "$tar_dir"
 
     # Remove cached commands.
-    rm -f  -- "$cac_dir/find" "$cac_dir/mv" "$cac_dir/mkdir" \
-              "$cac_dir/rm" "$cac_dir/rmdir"
+    rm -f  -- "$cac_dir/cp" "$cac_dir/rm" "$cac_dir/rmdir"
 
     # Remove temporary files.
     rm -f "$repo_dir/.checksums"
