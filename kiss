@@ -684,8 +684,8 @@ pkg_install() {
         # Installation works by unpacking the tar-ball to a specified location,
         # using 'cp' to create hard links and then 'rm' to remove the original
         # reference to them. Regular 'mv' has no concept of "merging"
-        # directories.
-        cp -arl "$tar_dir/." "$KISS_ROOT/"
+        # directories so this workaround is needed.
+        cp -arl "$tar_dir/." "$KISS_ROOT/" 2>/dev/null ||:
 
         # Reset 'trap' to its original value. Installation is done so
         # we no longer need to block 'Ctrl+C'.
@@ -784,7 +784,7 @@ pkg_clean() {
     rm -f  -- "$cac_dir/cp" "$cac_dir/rm" "$cac_dir/rmdir"
 
     # Remove temporary files.
-    rm -f "$repo_dir/.checksums"
+    rm -f  -- "$repo_dir/.checksums"
 }
 
 root_check() {
