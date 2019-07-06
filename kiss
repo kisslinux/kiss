@@ -479,7 +479,7 @@ pkg_build() {
     done
 
     log "Successfully built package(s)."
-    log "Run '$kiss i $explicit_packages' to install the built package(s)."
+    log "Run '$kiss i${explicit_packages% }' to install the built package(s)."
 }
 
 pkg_checksums() {
