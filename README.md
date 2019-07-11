@@ -105,7 +105,3 @@ Kiss's `list` operator lists the installed packages and their versions. Giving `
 ### `kiss update`
 
 Kiss's `update` operator compares the repository versions of packages to the installed database versions of packages. Any mismatch in versions is considered a new upgrade from the repository.
-
-The `update` mechanism doesn't do a `git pull` of the repository. This must be done manually beforehand and is intentional. It allows the user to `git pull` selectively. You can slow down the distribution's package updates by limiting pulling to a week behind master for example.
-
-
