@@ -370,7 +370,15 @@ pkg_build() {
         set -- $missing_deps
         set +f
     }
+
     log "Building: $*."
+    log "Continue?: [y/n]."
+
+    # POSIX 'read' has none of the "nice" options like '-n', '-p'
+    # etc etc. This is the most basic usage of 'read'.
+    read -r REPLY
+    [ "$REPLY" = y ] || exit
+
     log "Checking to see if any dependencies have already been built..."
     log "Installing any pre-built dependencies..."
 
@@ -746,9 +754,36 @@ pkg_updates() {
         read -r re_ver re_rel < "$repo_dir/version"
 
         # Compare installed packages to repository packages.
-        [ "$db_ver-$db_rel" != "$re_ver-$re_rel" ] &&
+        [ "$db_ver-$db_rel" != "$re_ver-$re_rel" ] && {
             printf '%s\n' "${pkg##*/} $db_ver-$db_rel ==> $re_ver-$re_rel"
+            outdated="$outdated${pkg##*/} "
+        }
     done
+
+    # End here if no packages have an update.
+    [ "$outdated" ] || {
+        log "Everything is up to date."
+        return
+    }
+
+    # Disable globbing with 'set -f' to ensure that the unquoted
+    # variable doesn't expand into anything nasty.
+    # shellcheck disable=2086,2046
+    {
+        set -f
+        set -- $outdated
+        set +f
+    }
+
+    log "Packages to update: ${outdated% }."
+    log "Update packages?: [y/n]."
+
+    # POSIX 'read' has none of the "nice" options like '-n', '-p'
+    # etc etc. This is the most basic usage of 'read'.
+    read -r REPLY
+
+    # Update any outdated packages if 'y' was inputted above.
+    [ "$REPLY" = y ] && pkg_build "$@"
 }
 
 setup_caching() {
