@@ -675,11 +675,11 @@ pkg_install() {
             die "[$1]: Package requires ${required_install%, }." \
                 "[$1]: Aborting here..."
 
-        # Create a backup of 'mv', 'cpio' and 'find' so they aren't removed
+        # Create a backup of 'mv', 'rsync' and 'find' so they aren't removed
         # during package removal. This ensures that an upgrade to 'busybox' or
         # your core utilities of choice doesn't break the package manager.
         cp "$(command -v mv)"    "$cac_dir"
-        cp "$(command -v cpio)"  "$cac_dir"
+        cp "$(command -v rsync)" "$cac_dir"
         cp "$(command -v find)"  "$cac_dir"
 
         log "[$pkg_name]: Removing previous version of package if it exists."
@@ -691,17 +691,10 @@ pkg_install() {
         # an incomplete package installed.
         trap '' INT
 
-        # Installation works by unpacking the tar-ball to a specified location,
-        # manually running 'cpio' to create each directory and finally, using
-        # 'mv' to move each file.
-        cd "$tar_dir"
-
-        # Create all of the package's directories.
-        "$cac_dir/find" . -type d | "$cac_dir/cpio" -mp "$KISS_ROOT/"
-
-        # Move all package files to '$KISS_ROOT'.
-        "$cac_dir/find" . -mindepth 1 -not -type d \
-            -exec "$cac_dir/mv" -n {} "$KISS_ROOT/"{} \;
+        # "Install" the package using 'rsync'. None of the coreutils could
+        # correctly accomplish this task. The preservation of permissions,
+        # proper handling of existing files etc.
+        "$cac_dir/rsync" --ignore-existing -a "$tar_dir/" "$KISS_ROOT/"
 
         # Reset 'trap' to its original value. Installation is done so
         # we no longer need to block 'Ctrl+C'.
@@ -824,7 +817,7 @@ pkg_clean() {
     rm -rf -- "$mak_dir" "$pkg_dir" "$tar_dir"
 
     # Remove cached commands.
-    rm -f  -- "$cac_dir/find" "$cac_dir/mv" "$cac_dir/cpio" \
+    rm -f  -- "$cac_dir/find" "$cac_dir/mv" "$cac_dir/rsync" \
               "$cac_dir/rm" "$cac_dir/rmdir"
 
     # Remove temporary files.
