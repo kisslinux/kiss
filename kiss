@@ -684,7 +684,7 @@ pkg_install() {
         trap '' INT
 
         # Installation works by unpacking the tar-ball to a specified location,
-        # manually running 'mkdir' to create each directory and finally, using
+        # manually running 'cpio' to create each directory and finally, using
         # 'mv' to move each file.
         cd "$tar_dir"
 
