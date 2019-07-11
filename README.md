@@ -31,13 +31,23 @@ See: <https://github.com/kissx/packages>
 
 POSIX `coreutils`:
 
-- `cat`, `command`, `cp`, `find`, `mkdir`, `sh`, `rm`, `rmdir`, `sed`, `tee`
+- `cmp`
+- `command`
+- `cp`
+- `cpio`
+- `find`
+- `mkdir`
+- `rm`
+- `rmdir`
+- `sed`
+- `sh`
 
 Other utilities:
 
 - `file`
-- `git` (For `git` packages.)
+- `git`
 - `sha256sum` (Included in default `busybox`)
+- `strip`
 - `tar` (Included in default `busybox`)
 - `wget`(Included in default `busybox`)
 
