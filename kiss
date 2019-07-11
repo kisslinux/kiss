@@ -667,11 +667,11 @@ pkg_install() {
             die "[$1]: Package requires ${required_install%, }." \
                 "[$1]: Aborting here..."
 
-        # Create a backup of 'mv', 'mkdir' and 'find' so they aren't removed
+        # Create a backup of 'mv', 'cpio' and 'find' so they aren't removed
         # during package removal. This ensures that an upgrade to 'busybox' or
         # your core utilities of choice doesn't break the package manager.
         cp "$(command -v mv)"    "$cac_dir"
-        cp "$(command -v mkdir)" "$cac_dir"
+        cp "$(command -v cpio)"  "$cac_dir"
         cp "$(command -v find)"  "$cac_dir"
 
         log "[$pkg_name]: Removing previous version of package if it exists."
@@ -689,9 +689,7 @@ pkg_install() {
         cd "$tar_dir"
 
         # Create all of the package's directories.
-        # Optimization: Only find the deepest directories.
-        "$cac_dir/find" . -type d -links -3 -prune \
-            -exec "$cac_dir/mkdir" -p "$KISS_ROOT/"{} \;
+        "$cac_dir/find" . -type d | "$cac_dir/cpio" -mp "$KISS_ROOT/"
 
         # Move all package files to '$KISS_ROOT'.
         "$cac_dir/find" . -mindepth 1 -not -type d \
@@ -791,7 +789,7 @@ pkg_clean() {
     rm -rf -- "$mak_dir" "$pkg_dir" "$tar_dir"
 
     # Remove cached commands.
-    rm -f  -- "$cac_dir/find" "$cac_dir/mv" "$cac_dir/mkdir" \
+    rm -f  -- "$cac_dir/find" "$cac_dir/mv" "$cac_dir/cpio" \
               "$cac_dir/rm" "$cac_dir/rmdir"
 
     # Remove temporary files.
@@ -865,7 +863,7 @@ args() {
 
         # Print version and exit.
         v*)
-            log "$kiss 0.2.3"
+            log "$kiss 0.2.4"
         ;;
 
         # Catch all invalid arguments as well as
