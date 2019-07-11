@@ -34,7 +34,6 @@ POSIX `coreutils`:
 - `cmp`
 - `command`
 - `cp`
-- `cpio`
 - `find`
 - `mkdir`
 - `rm`
@@ -46,6 +45,7 @@ Other utilities:
 
 - `file`
 - `git`
+- `rsync`
 - `sha256sum` (Included in default `busybox`)
 - `strip`
 - `tar` (Included in default `busybox`)
