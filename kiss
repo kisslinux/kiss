@@ -372,12 +372,11 @@ pkg_build() {
     }
 
     log "Building: $*."
-    log "Continue?: [y/n]."
+    log "Continue?: Press Enter to continue or Ctrl+C to abort here."
 
     # POSIX 'read' has none of the "nice" options like '-n', '-p'
     # etc etc. This is the most basic usage of 'read'.
-    read -r REPLY
-    [ "$REPLY" = y ] || exit
+    read -r REPLY || exit
 
     log "Checking to see if any dependencies have already been built..."
     log "Installing any pre-built dependencies..."
@@ -769,14 +768,11 @@ pkg_updates() {
     }
 
     log "Packages to update: ${outdated% }."
-    log "Update packages?: [y/n]."
+    log "Update packages?: Press Enter to continue or Ctrl+C to abort here."
 
     # POSIX 'read' has none of the "nice" options like '-n', '-p'
     # etc etc. This is the most basic usage of 'read'.
-    read -r REPLY
-
-    # Update any outdated packages if 'y' was inputted above.
-    [ "$REPLY" = y ] && pkg_build "$@"
+    read -r REPLY && pkg_build "$@"
 }
 
 setup_caching() {
