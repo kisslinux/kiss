@@ -222,29 +222,23 @@ pkg_depends() {
 
     # This does a depth-first search. The deepest dependencies are
     # listed first and then the parents in reverse order.
-    if pkg_list "$1" >/dev/null; then
-        # If a package is already installed but 'pkg_depends' was
-        # given an argument, add it to the list anyway.
-        [ "$2" ] && missing_deps="$missing_deps $1 "
-    else
-        case $missing_deps in
-            # Dependency is already in list, skip it.
-            *" $1 "*) ;;
+    case $missing_deps in
+        # Dependency is already in list, skip it.
+        *" $1 "*) ;;
 
-            *)
-                # Recurse through the dependencies of the child
-                # packages. Keep doing this.
-                [ -f "$repo_dir/depends" ] &&
-                    while read -r dep _; do
-                        pkg_depends "$dep" ||:
-                    done < "$repo_dir/depends"
+        *)
+            # Recurse through the dependencies of the child
+            # packages. Keep doing this.
+            [ -f "$repo_dir/depends" ] &&
+                while read -r dep _; do
+                    pkg_depends "$dep" ||:
+                done < "$repo_dir/depends"
 
-                # After child dependencies are added to the list,
-                # add the package which depends on them.
-                missing_deps="$missing_deps $1 "
-            ;;
-        esac
-    fi
+            # After child dependencies are added to the list,
+            # add the package which depends on them.
+            missing_deps="$missing_deps $1 "
+        ;;
+    esac
 }
 
 pkg_verify() {
@@ -352,11 +346,22 @@ pkg_build() {
     # also checks checksums, downloads sources and ensure all dependencies
     # are installed.
 
+    # If 'all' was passed to 'kiss build', rebuild all packages.
+    [ "$1" = all ] && {
+        cd "$KISS_ROOT/var/db/kiss" || die "Failed to find installed packages."
+
+        # Use a glob after 'cd' to generate a list of all installed packages
+        # based on directory names.
+        set -- *
+
+        [ "$1" = \* ] && die "No packages installed, aborting..."
+    }
+
     # Resolve dependencies and generate a list.
     # Send 'force' to 'pkg_depends' to always include the explicitly
     # requested packages.
     log "Resolving dependencies..."
-    for pkg; do pkg_depends "$pkg" force; done
+    for pkg; do pkg_depends "$pkg"; done
 
     # Store the explicit packages so we can handle them differently
     # below. Dependencies are automatically installed but packages
@@ -373,10 +378,33 @@ pkg_build() {
         set +f
     }
 
+    for pkg; do
+        case $explicit_packages in
+            *" $pkg "*)
+                build_packages="$build_packages$pkg "
+            ;;
+
+            *)
+                pkg_list "$pkg" >/dev/null ||
+                    build_packages="$build_packages$pkg "
+            ;;
+        esac
+    done
+
+    # Disable globbing with 'set -f' to ensure that the unquoted
+    # variable doesn't expand into anything nasty.
+    # shellcheck disable=2086,2046
+    {
+        # Set the resolved dependency list as the function's arguments.
+        set -f
+        set -- $build_packages
+        set +f
+    }
+
     log "Building: $*."
 
     # Only ask for confirmation if more than one package needs to be built.
-    [ $# -gt 1 ] && {
+    [ $# -gt 1 ] || [ "$mode_update" ] && {
         log "Continue?: Press Enter to continue or Ctrl+C to abort here."
 
         # POSIX 'read' has none of the "nice" options like '-n', '-p'
@@ -774,11 +802,13 @@ pkg_updates() {
     }
 
     log "Packages to update: ${outdated% }."
-    log "Update packages?: Press Enter to continue or Ctrl+C to abort here."
+
+    # Tell 'pkg_build' to always prompt before build.
+    mode_update=1
 
     # POSIX 'read' has none of the "nice" options like '-n', '-p'
     # etc etc. This is the most basic usage of 'read'.
-    read -r REPLY && pkg_build "$@"
+    pkg_build "$@"
 }
 
 setup_caching() {
