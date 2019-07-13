@@ -372,11 +372,15 @@ pkg_build() {
     }
 
     log "Building: $*."
-    log "Continue?: Press Enter to continue or Ctrl+C to abort here."
 
-    # POSIX 'read' has none of the "nice" options like '-n', '-p'
-    # etc etc. This is the most basic usage of 'read'.
-    read -r REPLY || exit
+    # Only ask for confirmation if more than one package needs to be built.
+    [ $# -gt 1 ] && {
+        log "Continue?: Press Enter to continue or Ctrl+C to abort here."
+
+        # POSIX 'read' has none of the "nice" options like '-n', '-p'
+        # etc etc. This is the most basic usage of 'read'.
+        read -r REPLY || exit
+    }
 
     log "Checking to see if any dependencies have already been built..."
     log "Installing any pre-built dependencies..."
