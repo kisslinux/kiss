@@ -889,6 +889,12 @@ args() {
             pkg_updates
         ;;
 
+        # Search packages
+        s*)
+            [ "$2" ] || die "'kiss search' requires an argument."
+            pkg_search "$2"
+        ;;
+
         # Print version and exit.
         v*)
             log "$kiss 0.2.6"
@@ -897,12 +903,13 @@ args() {
         # Catch all invalid arguments as well as
         # any help related flags (-h, --help, help).
         *)
-            log "$kiss [b|c|i|l|r|u] [pkg]" \
+            log "$kiss [b|c|i|l|r|s|u] [pkg]" \
                 "build:     Build a package." \
                 "checksum:  Generate checksums." \
                 "install:   Install a package (Runs build if needed)." \
                 "list:      List packages." \
                 "remove:    Remove a package." \
+                "search:    Search for a package." \
                 "update:    Check for updates."
         ;;
     esac
