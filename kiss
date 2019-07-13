@@ -897,7 +897,7 @@ args() {
 
         # Print version and exit.
         v*)
-            log "$kiss 0.2.6"
+            log "$kiss 0.2.7"
         ;;
 
         # Catch all invalid arguments as well as
