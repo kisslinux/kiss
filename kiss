@@ -393,7 +393,7 @@ pkg_build() {
     log "Building: $*."
 
     # Only ask for confirmation if more than one package needs to be built.
-    [ $# -gt 1 ] || [ "$mode_update" ] && {
+    [ $# -gt 1 ] || [ "$build_prompt" ] && {
         log "Continue?: Press Enter to continue or Ctrl+C to abort here."
 
         # POSIX 'read' has none of the "nice" options like '-n', '-p'
@@ -793,7 +793,7 @@ pkg_updates() {
     log "Packages to update: ${outdated% }."
 
     # Tell 'pkg_build' to always prompt before build.
-    mode_update=1
+    build_prompt=1
 
     # POSIX 'read' has none of the "nice" options like '-n', '-p'
     # etc etc. This is the most basic usage of 'read'.
@@ -872,12 +872,11 @@ args() {
             [ "$1" ] || {
                 cd "$KISS_ROOT/var/db/kiss" || die "Failed to find package db."
 
-                # Use a glob after 'cd' to generate a list of all
-                # installed packages based on directory names.
+                # Use a glob after 'cd' to generate a list of all installed
+                # packages based on directory names.
                 set -- *
 
-                # Undo the above 'cd' to ensure we stay in the same
-                # location.
+                # Undo the above 'cd' to ensure we stay in the same location.
                 cd - >/dev/null
             }
 
