@@ -1,17 +1,17 @@
 #!/bin/sh -e
 #
 # This is a simple package manager written in POSIX 'sh' for
-# KISS Linux utilizing the core UNIX utilities where needed.
+# KISS Linux, utilizing the core UNIX utilities where needed.
 #
 # The script runs with 'set -e' enabled. It will exit on any
 # non-zero return code. This ensures that no function continues
 # if it fails at any point.
 #
 # Keep in mind that this involves extra code in the case where
-# an error is optional or required.
+# an error is optional and/or required.
 #
-# Where possible the package manager should "error first".
-# Check things first, die if necessary and continue if all is well.
+# Where possible the package manager should check things first,
+# die if necessary and continue if all is well.
 #
 # The code below conforms to shellcheck's rules. However, some
 # lint errors *are* disabled as they relate to unexpected
