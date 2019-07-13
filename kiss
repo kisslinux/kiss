@@ -284,6 +284,8 @@ pkg_strip() {
 
     log "[$1]: Stripping binaries and libraries..."
 
+    # Strip only files matching the below mime-types from the package
+    # directory. No alternative to 'file' here sadly.
     find "$pkg_dir/$1" -type f | while read -r binary; do
         case $(file -bi "$binary") in
             application/x-sharedlib*|application/x-pie-executable*)
@@ -346,9 +348,6 @@ pkg_build() {
     # also checks checksums, downloads sources and ensure all dependencies
     # are installed.
 
-    # Resolve dependencies and generate a list.
-    # Send 'force' to 'pkg_depends' to always include the explicitly
-    # requested packages.
     log "Resolving dependencies..."
     for pkg; do pkg_depends "$pkg"; done
 
@@ -367,6 +366,9 @@ pkg_build() {
         set +f
     }
 
+    # The dependency solver always lists all dependencies regardless of
+    # whether or not they are installed. Ensure that all explicit packages
+    # are included and ensure that all installed packages are excluded.
     for pkg; do
         case $explicit_packages in
             *" $pkg "*)
