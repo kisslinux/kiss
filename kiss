@@ -346,17 +346,6 @@ pkg_build() {
     # also checks checksums, downloads sources and ensure all dependencies
     # are installed.
 
-    # If 'all' was passed to 'kiss build', rebuild all packages.
-    [ "$1" = all ] && {
-        cd "$KISS_ROOT/var/db/kiss" || die "Failed to find installed packages."
-
-        # Use a glob after 'cd' to generate a list of all installed packages
-        # based on directory names.
-        set -- *
-
-        [ "$1" = \* ] && die "No packages installed, aborting..."
-    }
-
     # Resolve dependencies and generate a list.
     # Send 'force' to 'pkg_depends' to always include the explicitly
     # requested packages.
@@ -878,7 +867,20 @@ args() {
         # Build the list of packages.
         b*)
             shift
-            [ "$1" ] || die "'kiss build' requires an argument."
+
+            # If no arguments were passed, rebuild all packages.
+            [ "$1" ] || {
+                cd "$KISS_ROOT/var/db/kiss" || die "Failed to find package db."
+
+                # Use a glob after 'cd' to generate a list of all
+                # installed packages based on directory names.
+                set -- *
+
+                # Undo the above 'cd' to ensure we stay in the same
+                # location.
+                cd - >/dev/null
+            }
+
             pkg_build "$@"
         ;;
 
