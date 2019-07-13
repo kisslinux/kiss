@@ -37,6 +37,8 @@ pkg_lint() {
     # Check that each mandatory file in the package entry exists.
     log "[$1]: Checking repository files..."
 
+    # Figure out *where* the repository entry for the package
+    # is located.
     repo_dir=$(pkg_search "$1")
 
     cd "$repo_dir" || die "'$repo_dir' not accessible"
@@ -46,7 +48,7 @@ pkg_lint() {
     [ -s version ]   || die "[$1]: Version file not found or empty."
 
     # Ensure that the release field in the version file is set
-    # to something.
+    # to something. The above test checks for the version field inclusively.
     read -r _ rel < version
     [ "$rel" ] || die "Release field not found in version file."
 
