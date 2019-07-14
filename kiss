@@ -926,13 +926,14 @@ args() {
 
         # Search packages
         s*)
-            [ "$2" ] || die "'kiss search' requires an argument."
-            pkg_search "$2"
+            shift
+            [ "$1" ] || die "'kiss search' requires an argument."
+            for pkg; do pkg_search "$pkg"; done
         ;;
 
         # Print version and exit.
         v*)
-            log "$kiss 0.2.7"
+            log "$kiss 0.3.0"
         ;;
 
         # Catch all invalid arguments as well as
