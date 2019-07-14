@@ -16,6 +16,7 @@ Tiny package manager for KISS Linux.
     * [`kiss checksum pkg`](#kiss-checksum-pkg)
     * [`kiss install pkg`](#kiss-install-pkg)
     * [`kiss remove pkg`](#kiss-remove-pkg)
+    * [`kiss search pkg`](#kiss-search-pkg)
     * [`kiss list` or `kiss list pkg`](#kiss-list-or-kiss-list-pkg)
     * [`kiss update`](#kiss-update)
 
@@ -86,6 +87,8 @@ export KISS_PATH=~/projects/kiss-new/repo
 
 Kiss's `build` operator handles a package from its source code to the installable `.tar.gz` file. Sources are downloaded, checksums are verified, dependencies are checked and the package is compiled then packaged.
 
+NOTE: `build` without an argument will rebuild the entire system.
+
 ### `kiss checksum pkg`
 
 Kiss's `checksum` operator generates the initial checksums for a package from every source in the `sources` file.
@@ -97,6 +100,11 @@ Kiss's `install` operator takes the built `.tar.gz` file and installs it in the 
 ### `kiss remove pkg`
 
 Kiss's `remove` operator uninstalls a package from your system. Files and directories in `/etc` are untouched. Support for exclusions will come as they are needed.
+
+### `kiss search pkg`
+
+Kiss's `search` operator searches all repositories for a package and prints
+the full path to its repository files. Multiple arguments are welcome.
 
 ### `kiss list` or `kiss list pkg`
 
