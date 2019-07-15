@@ -14,6 +14,7 @@ Tiny package manager for KISS Linux.
 * [How does each operator work?](#how-does-each-operator-work)
     * [`kiss build pkg`](#kiss-build-pkg)
     * [`kiss checksum pkg`](#kiss-checksum-pkg)
+    * [`kiss depends pkg`](#kiss-depends-pkg)
     * [`kiss install pkg`](#kiss-install-pkg)
     * [`kiss remove pkg`](#kiss-remove-pkg)
     * [`kiss search pkg`](#kiss-search-pkg)
@@ -92,6 +93,10 @@ NOTE: `build` without an argument will rebuild the entire system.
 ### `kiss checksum pkg`
 
 Kiss's `checksum` operator generates the initial checksums for a package from every source in the `sources` file.
+
+### `kiss depends pkg`
+
+Kiss's `depends` operator prints the package's dependencies.
 
 ### `kiss install pkg`
 

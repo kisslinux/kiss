@@ -231,6 +231,7 @@ pkg_depends() {
             # packages. Keep doing this.
             [ -f "$repo_dir/depends" ] &&
                 while read -r dep _; do
+                    [ "${dep##\#*}" ] || continue
                     pkg_depends "$dep" ||:
                 done < "$repo_dir/depends"
 
@@ -691,7 +692,8 @@ pkg_install() {
         # installing the package.
         [ -f "$tar_dir/var/db/kiss/$pkg_name/depends" ] &&
             while read -r dep dep_type; do
-                [ "$dep_type" ] || pkg_list "$dep" >/dev/null ||
+                [ "${dep##\#*}" ] || continue
+                [ "$dep_type" ]   || pkg_list "$dep" >/dev/null ||
                     required_install="$required_install'$dep', "
             done < "$tar_dir/var/db/kiss/$pkg_name/depends"
 
@@ -896,6 +898,21 @@ args() {
             pkg_checksums checksums "$@"
         ;;
 
+        # List dependencies for a package.
+        d*)
+            shift
+            [ "$1" ] || die "'kiss depends' requires an argument."
+
+            for pkg; do
+                repo_dir=$(pkg_search "$pkg")
+
+                [ -f "$repo_dir/depends" ] && {
+                    log "[$pkg]: Has the following dependencies:"
+                    cat "$repo_dir/depends"
+                }
+            done
+        ;;
+
         # Install packages.
         i*)
             shift
@@ -933,7 +950,7 @@ args() {
 
         # Print version and exit.
         v*)
-            log "$kiss 0.3.0"
+            log "$kiss 0.3.1"
         ;;
 
         # Catch all invalid arguments as well as
