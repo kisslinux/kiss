@@ -3,17 +3,6 @@
 Tiny package manager for KISS Linux.
 
 
-## Table of Contents
-
-<!-- vim-markdown-toc GFM -->
-
-* [Package format](#package-format)
-* [Getting started](#getting-started)
-* [Usage](#usage)
-
-<!-- vim-markdown-toc -->
-
-
 ## Package format
 
 See: <https://kissx.github.io/pages/package-system/>
