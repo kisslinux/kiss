@@ -8,7 +8,6 @@ Tiny package manager for KISS Linux.
 <!-- vim-markdown-toc GFM -->
 
 * [Package format](#package-format)
-* [Dependencies](#dependencies)
 * [Getting started](#getting-started)
 * [Usage](#usage)
 
@@ -17,32 +16,8 @@ Tiny package manager for KISS Linux.
 
 ## Package format
 
-See: <https://github.com/kissx/packages>
+See: <https://kissx.github.io/pages/package-system/>
 
-
-## Dependencies
-
-POSIX `coreutils`:
-
-- `cmp`
-- `command`
-- `cp`
-- `find`
-- `mkdir`
-- `rm`
-- `rmdir`
-- `sed`
-- `sh`
-
-Other utilities:
-
-- `file`
-- `git`
-- `rsync`
-- `sha256sum` (Included in default `busybox`)
-- `strip`
-- `tar` (Included in default `busybox`)
-- `wget`(Included in default `busybox`)
 
 ## Getting started
 
@@ -56,19 +31,21 @@ export KISS_ROOT=~/.kiss
 # Repositories to use (Required).
 # Colon separated like '$PATH'.
 # Repositories will be search in order.
-# Default:
-export KISS_PATH=~/projects/kiss-new/repo
+# Default: ''
+export KISS_PATH=/packages/core:/packages/extra:/packages/xorg:/packages/public
 ```
 
 ## Usage
 
 ```sh
 ➜ kiss
-=> kiss [b|c|i|l|r|u] [pkg]
+=> kiss [b|c|i|l|r|s|u] [pkg]
 => build:     Build a package.
 => checksum:  Generate checksums.
+=> depends:   List package dependencies.
 => install:   Install a package (Runs build if needed).
 => list:      List packages.
 => remove:    Remove a package.
+=> search:    Search for a package.
 => update:    Check for updates.
 ```
