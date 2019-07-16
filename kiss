@@ -952,7 +952,7 @@ args() {
 
         # Print version and exit.
         v*)
-            log "$kiss 0.3.2"
+            log "$kiss 0.3.3"
         ;;
 
         # Catch all invalid arguments as well as
@@ -961,6 +961,7 @@ args() {
             log "$kiss [b|c|i|l|r|s|u] [pkg]" \
                 "build:     Build a package." \
                 "checksum:  Generate checksums." \
+                "depends:   List package dependencies." \
                 "install:   Install a package (Runs build if needed)." \
                 "list:      List packages." \
                 "remove:    Remove a package." \
