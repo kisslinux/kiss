@@ -337,9 +337,11 @@ pkg_tar() {
     # Read the version information to name the package.
     read -r version release < "$repo_dir/version"
 
-    # Create a tar-ball from the contents of the built package.
-    tar zpcf "$bin_dir/$1#$version-$release.tar.gz" -C "$pkg_dir/$1" . ||
-        die "[$1]: Failed to create tar-ball."
+    # Create a tar-ball from the contents of the built package. `fakeroot`
+    # is used here to correct issues with file ownership.
+    fakeroot \
+        tar zpcf "$bin_dir/$1#$version-$release.tar.gz" -C "$pkg_dir/$1" . ||
+            die "[$1]: Failed to create tar-ball."
 
     log "[$1]: Successfully created tar-ball."
 }
@@ -487,7 +489,7 @@ pkg_build() {
         mkdir -p "$pkg_dir/$pkg/var/db/kiss"
 
         # Move to the build directory and call the build script.
-        (cd "$mak_dir/$pkg"; "$repo_dir/build" "$pkg_dir/$pkg") ||
+        (cd "$mak_dir/$pkg"; fakeroot "$repo_dir/build" "$pkg_dir/$pkg") ||
             die "[$pkg]: Build failed."
 
         # Copy the repository files to the package directory.
@@ -950,7 +952,7 @@ args() {
 
         # Print version and exit.
         v*)
-            log "$kiss 0.3.1"
+            log "$kiss 0.3.2"
         ;;
 
         # Catch all invalid arguments as well as
