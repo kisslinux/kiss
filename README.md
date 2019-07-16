@@ -28,7 +28,7 @@ export KISS_PATH=/packages/core:/packages/extra:/packages/xorg:/packages/public
 
 ```sh
 ➜ kiss
-=> kiss [b|c|i|l|r|s|u] [pkg]
+=> kiss [b|c|d|i|l|r|s|u] [pkg] [pkg] [pkg]
 => build:     Build a package.
 => checksum:  Generate checksums.
 => depends:   List package dependencies.

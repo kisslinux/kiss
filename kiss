@@ -952,13 +952,13 @@ args() {
 
         # Print version and exit.
         v*)
-            log "$kiss 0.3.3"
+            log "$kiss 0.3.4"
         ;;
 
         # Catch all invalid arguments as well as
         # any help related flags (-h, --help, help).
         *)
-            log "$kiss [b|c|i|l|r|s|u] [pkg]" \
+            log "$kiss [b|c|d|i|l|r|s|u] [pkg] [pkg] [pkg]" \
                 "build:     Build a package." \
                 "checksum:  Generate checksums." \
                 "depends:   List package dependencies." \
