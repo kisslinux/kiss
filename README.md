@@ -5,7 +5,7 @@ Tiny package manager for KISS Linux.
 
 ## Package format
 
-See: <https://kissx.github.io/pages/package-system/>
+See: <https://getkiss.org/pages/package-system/>
 
 
 ## Getting started
