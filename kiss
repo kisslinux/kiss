@@ -674,7 +674,6 @@ pkg_install() {
         # Figure out which package the tar-ball installs by checking for
         # a database entry inside the tar-ball. If no database entry exists,
         # exit here as the tar-ball is *most likely* not a KISS package.
-        tar tf "$tar_file" 2>&1 | less
         pkg_name=$(tar tf "$tar_file" | grep -x "\./$pkg_db/.*/version") ||
             die "'${tar_file##*/}' is not a valid KISS package."
 
