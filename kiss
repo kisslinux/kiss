@@ -92,8 +92,8 @@ pkg_list() {
     # avoid having to 'basename' each path. If this fails,
     # set '$1' to mimic a failed glob which indicates that
     # nothing is installed.
-    cd "$KISS_ROOT/var/db/kiss/" 2>/dev/null ||
-        set -- "$KISS_ROOT/var/db/kiss/"\*
+    cd "$KISS_ROOT/$db" 2>/dev/null ||
+        set -- "$KISS_ROOT/$db/"\*
 
     # Optional arguments can be passed to check for specific
     # packages. If no arguments are passed, list all. As we
@@ -103,7 +103,7 @@ pkg_list() {
 
     # If the 'glob' above failed, exit early as there are no
     # packages installed.
-    [ "$1" = "$KISS_ROOT/var/db/kiss/"\* ] && return 1
+    [ "$1" = "$KISS_ROOT/$db/"\* ] && return 1
 
     # Loop over each version file and warn if one doesn't exist.
     # Also warn if a package is missing its version file.
@@ -319,7 +319,7 @@ pkg_manifest() (
     # with a trailing forward slash '/'. The list is then reversed with
     # directories appearing *after* their contents.
     find . -mindepth 1 -type d -exec printf '%s/\n' {} + -or -print |
-    sort -r | sed -e ss.ss > "$pkg_dir/$1/var/db/kiss/$1/manifest"
+    sort -r | sed -e ss.ss > "$pkg_dir/$1/$db/$1/manifest"
 
     log "[$1]: Generated manifest."
 )
@@ -486,7 +486,7 @@ pkg_build() {
 
         # Install built packages to a directory under the package name
         # to avoid collisions with other packages.
-        mkdir -p "$pkg_dir/$pkg/var/db/kiss"
+        mkdir -p "$pkg_dir/$pkg/$db"
 
         # Move to the build directory and call the build script.
         (cd "$mak_dir/$pkg"; fakeroot "$repo_dir/build" "$pkg_dir/$pkg") ||
@@ -494,13 +494,13 @@ pkg_build() {
 
         # Copy the repository files to the package directory.
         # This acts as the database entry.
-        cp -Rf "$repo_dir" "$pkg_dir/$pkg/var/db/kiss/"
+        cp -Rf "$repo_dir" "$pkg_dir/$pkg/$db/"
 
         log "[$pkg]: Successfully built package."
 
         # Create the manifest file early and make it empty.
         # This ensure that the manifest is added to the manifest...
-        : > "$pkg_dir/$pkg/var/db/kiss/$pkg/manifest"
+        : > "$pkg_dir/$pkg/$db/$pkg/manifest"
 
         pkg_strip    "$pkg"
         pkg_manifest "$pkg"
@@ -571,14 +571,14 @@ pkg_conflicts() {
     log "[$2]: Checking for package conflicts."
 
     # Extract manifest from the tar-ball and only extract files entries.
-    tar xf "$1" -O "./var/db/kiss/$2/manifest" |
+    tar xf "$1" -O "./$db/$2/manifest" |
     while read -r line; do
         [ "${line%%*/}" ] && printf '%s\n' "$line" >> "$cac_dir/manifest-$pid"
     done ||:
 
     # Compare extracted manifest to all installed manifests.
     # If there are matching lines (files) there is a package conflict.
-    for db in "$KISS_ROOT/var/db/kiss/"*; do
+    for db in "$KISS_ROOT/$db/"*; do
         [ "$2" = "${db##*/}" ] && continue
 
         grep -Fxf "$cac_dir/manifest-$pid" "$db/manifest" 2>/dev/null &&
@@ -607,7 +607,7 @@ pkg_remove() {
     }
 
     # Make sure that nothing depends on this package.
-    [ "$2" = check ] && for file in "$KISS_ROOT/var/db/kiss/"*; do
+    [ "$2" = check ] && for file in "$KISS_ROOT/$db/"*; do
         # Check each depends file for the package and if it's
         # a run-time dependency, append to the $required_by string.
         grep -q "^$1$" "$file/depends" 2>/dev/null &&
@@ -634,7 +634,7 @@ pkg_remove() {
             "$cac_dir/rm" -f -- "$KISS_ROOT/$file" ||
                 log "[$1]: Failed to remove '$file'."
         fi
-    done < "$KISS_ROOT/var/db/kiss/$1/manifest"
+    done < "$KISS_ROOT/$db/$1/manifest"
 
     # Reset 'trap' to its original value. Installation is done so
     # we no longer need to block 'Ctrl+C'.
@@ -674,7 +674,7 @@ pkg_install() {
         # Figure out which package the tar-ball installs by checking for
         # a database entry inside the tar-ball. If no database entry exists,
         # exit here as the tar-ball is *most likely* not a KISS package.
-        pkg_name=$(tar tf "$tar_file" | grep -x "\./var/db/kiss/.*/version") ||
+        pkg_name=$(tar tf "$tar_file" | grep -x "\./$db/.*/version") ||
             die "'${tar_file##*/}' is not a valid KISS package."
 
         pkg_name=${pkg_name%/*}
@@ -692,12 +692,12 @@ pkg_install() {
 
         # Make sure that all run-time dependencies are installed prior to
         # installing the package.
-        [ -f "$tar_dir/var/db/kiss/$pkg_name/depends" ] &&
+        [ -f "$tar_dir/$db/$pkg_name/depends" ] &&
             while read -r dep dep_type; do
                 [ "${dep##\#*}" ] || continue
                 [ "$dep_type" ]   || pkg_list "$dep" >/dev/null ||
                     required_install="$required_install'$dep', "
-            done < "$tar_dir/var/db/kiss/$pkg_name/depends"
+            done < "$tar_dir/$db/$pkg_name/depends"
 
         [ "$required_install" ] &&
             die "[$1]: Package requires ${required_install%, }." \
@@ -730,7 +730,7 @@ pkg_install() {
 
         # Run the post install script and suppress errors. If it exists,
         # it will run, else nothing will happen.
-        "$KISS_ROOT/var/db/kiss/$pkg_name/post-install" 2>/dev/null ||:
+        "$KISS_ROOT/$db/$pkg_name/post-install" 2>/dev/null ||:
 
         log "[$pkg_name]: Installed successfully."
     done
@@ -763,7 +763,7 @@ pkg_updates() {
 
     log "Checking for new package versions..."
 
-    for pkg in "$KISS_ROOT/var/db/kiss/"*; do
+    for pkg in "$KISS_ROOT/$db/"*; do
         # Find the package's repository files. This needs to keep
         # happening as we can't store this data in any kind of data
         # structure.
@@ -876,7 +876,7 @@ args() {
 
             # If no arguments were passed, rebuild all packages.
             [ "$1" ] || {
-                cd "$KISS_ROOT/var/db/kiss" || die "Failed to find package db."
+                cd "$KISS_ROOT/$db" || die "Failed to find package db."
 
                 # Use a glob after 'cd' to generate a list of all installed
                 # packages based on directory names.
@@ -976,6 +976,9 @@ main() {
     # in place of 'kiss'. This allows the script name to be changed
     # easily.
     kiss=${0##*/}
+
+    # Set the location to the repository and package database.
+    db=var/db/kiss/installed
 
     # The PID of the current shell process is used to isolate directories
     # to each specific KISS instance. This allows multiple package manager
