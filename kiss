@@ -600,6 +600,9 @@ pkg_remove() {
     cp "$(command -v rm)"    "$cac_dir"
     cp "$(command -v rmdir)" "$cac_dir"
 
+    # Don't remove `musl`. This safegaurds against breaking the system.
+    [ "$1" != musl ] || return 0
+
     # The package is not installed, don't do anything.
     pkg_list "$1" >/dev/null || {
         log "[$1]: Not installed."
@@ -719,10 +722,16 @@ pkg_install() {
         # an incomplete package installed.
         trap '' INT
 
+        # Don't ignore existing files when installing `musl`.
+        case $pkg_name in
+            musl) rsync_ignore= ;;
+            *)    rsync_ignore=--ignore-existing ;;
+        esac
+
         # "Install" the package using 'rsync'. None of the coreutils could
         # correctly accomplish this task. The preservation of permissions,
         # proper handling of existing files etc.
-        "$cac_dir/rsync" --ignore-existing -a "$tar_dir/" "$KISS_ROOT/"
+        "$cac_dir/rsync" "$rsync_ignore" -a "$tar_dir/" "$KISS_ROOT/"
 
         # Reset 'trap' to its original value. Installation is done so
         # we no longer need to block 'Ctrl+C'.
@@ -952,7 +961,7 @@ args() {
 
         # Print version and exit.
         v*)
-            log "$kiss 0.4.1"
+            log "$kiss 0.4.2"
         ;;
 
         # Catch all invalid arguments as well as
