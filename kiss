@@ -810,8 +810,8 @@ setup_caching() {
     # directories which need to exist and set variables for easy
     # access to them.
 
-    # Main cache directory (~/.cache/kiss/) typically.
-    mkdir -p "${cac_dir:=${XDG_CACHE_HOME:=$HOME/.cache}/kiss}" ||
+    # Main cache directory.
+    mkdir -p "${cac_dir:=$KISS_ROOT/var/cache/kiss}" ||
         die "Couldn't create cache directory ($cac_dir)."
 
     # Build directory.
