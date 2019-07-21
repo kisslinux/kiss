@@ -913,6 +913,37 @@ args() {
             pkg_list "$@"
         ;;
 
+        # Print package manifest.
+        m*)
+            shift
+            [ "$1" ] || die "'kiss manifest' requires an argument."
+
+            for pkg; do
+                if pkg_list "$pkg" >/dev/null; then
+                    log "[$pkg]: Owns the following files:"
+                    cat "$KISS_ROOT/$pkg_db/$pkg/manifest"
+                else
+                    log "[$pkg]: Not installed."
+                fi
+            done
+        ;;
+
+        # Check which package owns a file.
+        o*)
+            shift
+            [ "$1" ]    || die "'kiss owns' requires an argument."
+            [ -f "$1" ] || die "File '$1' doesn't exist."
+
+            set +f
+            pkg_owns=$(grep -lFx "$1" "$KISS_ROOT/$pkg_db/"*/manifest)
+            set -f
+
+            pkg_owns=${pkg_owns%/*}
+            pkg_owns=${pkg_owns##*/}
+
+            log "[$pkg_owns] owns '$1'"
+        ;;
+
         # Upgrade packages.
         u*)
             pkg_updates
@@ -927,7 +958,7 @@ args() {
 
         # Print version and exit.
         v*)
-            log "kiss 0.5.3"
+            log "kiss 0.5.4"
         ;;
 
         # Catch all invalid arguments as well as
@@ -939,6 +970,8 @@ args() {
                 "depends:   List package dependencies." \
                 "install:   Install a package (Runs build if needed)." \
                 "list:      List packages." \
+                "manifest:  List package files owned by package." \
+                "owns:      Check which package owns a file." \
                 "remove:    Remove a package." \
                 "search:    Search for a package." \
                 "update:    Check for updates."
