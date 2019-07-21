@@ -465,7 +465,7 @@ pkg_build() {
 
     # Die here as packages without checksums were found above.
     [ "$no_checkums" ] &&
-        die "Run '$kiss checksum ${no_checkums% }' to generate checksums."
+        die "Run 'kiss checksum ${no_checkums% }' to generate checksums."
 
     for pkg; do pkg_sources "$pkg"; done
     for pkg; do pkg_verify  "$pkg"; done
@@ -514,7 +514,7 @@ pkg_build() {
     done
 
     log "Successfully built package(s)."
-    log "Run '$kiss i${explicit_packages% }' to install the built package(s)."
+    log "Run 'kiss i${explicit_packages% }' to install the built package(s)."
 }
 
 pkg_checksums() {
@@ -660,7 +660,7 @@ pkg_install() {
 
             [ -f "$bin_dir/$tar_name" ] ||
                 die "Package '$pkg' has not been built." \
-                    "Run '$kiss build $pkg'."
+                    "Run 'kiss build $pkg'."
 
             tar_file=$bin_dir/$tar_name
         fi
@@ -805,36 +805,6 @@ pkg_updates() {
     pkg_build "$@"
 }
 
-setup_caching() {
-    # Setup the host machine for the package manager. Create any
-    # directories which need to exist and set variables for easy
-    # access to them.
-
-    # Main cache directory.
-    mkdir -p "${cac_dir:=$KISS_ROOT/var/cache/kiss}" ||
-        die "Couldn't create cache directory ($cac_dir)."
-
-    # Build directory.
-    mkdir -p "${mak_dir:=$cac_dir/build-$pid}" ||
-        die "Couldn't create build directory ($mak_dir)."
-
-    # Package directory.
-    mkdir -p "${pkg_dir:=$cac_dir/pkg-$pid}" ||
-        die "Couldn't create package directory ($pkg_dir)."
-
-    # Tar directory.
-    mkdir -p "${tar_dir:=$cac_dir/extract-$pid}" ||
-        die "Couldn't create tar directory ($tar_dir)."
-
-    # Source directory.
-    mkdir -p "${src_dir:=$cac_dir/sources}" ||
-        die "Couldn't create source directory ($src_dir)."
-
-    # Binary directory.
-    mkdir -p "${bin_dir:=$cac_dir/bin}" ||
-        die "Couldn't create binary directory ($bin_dir)."
-}
-
 pkg_clean() {
     # Clean up on exit or error. This removes everything related
     # to the build.
@@ -851,7 +821,7 @@ root_check() {
     # When this variable is empty, a value of '/' is assumed.
     [ -w "$KISS_ROOT/" ] || \
         die "No write permissions to '${KISS_ROOT:-/}'." \
-            "You may need to run '$kiss' as root."
+            "You may need to run 'kiss' as root."
 }
 
 args() {
@@ -947,13 +917,13 @@ args() {
 
         # Print version and exit.
         v*)
-            log "$kiss 0.5.1"
+            log "kiss 0.5.1"
         ;;
 
         # Catch all invalid arguments as well as
         # any help related flags (-h, --help, help).
         *)
-            log "$kiss [b|c|d|i|l|r|s|u] [pkg] [pkg] [pkg]" \
+            log "kiss [b|c|d|i|l|r|s|u] [pkg] [pkg] [pkg]" \
                 "build:     Build a package." \
                 "checksum:  Generate checksums." \
                 "depends:   List package dependencies." \
@@ -967,11 +937,6 @@ args() {
 }
 
 main() {
-    # Store the script name in a variable and use it everywhere
-    # in place of 'kiss'. This allows the script name to be changed
-    # easily.
-    kiss=${0##*/}
-
     # Set the location to the repository and package database.
     pkg_db=var/db/kiss/installed
 
@@ -991,7 +956,13 @@ main() {
 
     # Create the required temporary directories and set the variables
     # which point to them.
-    setup_caching
+    mkdir -p "${cac_dir:=$KISS_ROOT/var/cache/kiss}" \
+             "${mak_dir:=$cac_dir/build-$pid}" \
+             "${pkg_dir:=$cac_dir/pkg-$pid}" \
+             "${tar_dir:=$cac_dir/extract-$pid}" \
+             "${src_dir:=$cac_dir/sources}" \
+             "${bin_dir:=$cac_dir/bin}" \
+        || die "Couldn't create cache directories."
 
     args "$@"
 }
