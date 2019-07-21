@@ -866,6 +866,18 @@ args() {
             shift
             [ "$1" ] || die "'kiss install' requires an argument."
             root_check
+
+            # Create a list of each package's dependencies.
+            for pkg; do pkg_depends "$pkg"; done
+
+            # Filter the list, only including explicit packages.
+            for pkg in $missing_deps; do
+                case " $* " in
+                    *" $pkg "*) install_pkgs="$install_pkgs $pkg " ;;
+                esac
+            done
+
+            set -- $install_pkgs
             pkg_install "$@"
         ;;
 
@@ -875,7 +887,24 @@ args() {
             [ "$1" ] || die "'kiss remove' requires an argument."
             root_check
             log "Removing packages..."
-            for pkg; do pkg_remove "$pkg" check; done
+
+            # Create a list of each package's dependencies.
+            for pkg; do pkg_depends "$pkg"; done
+
+            # Reverse the list of dependencies filtering out anything
+            # not explicitly set for removal.
+            for pkg in $missing_deps; do
+                case " $* " in
+                    *" $pkg "*) remove_pkgs="$pkg $remove_pkgs" ;;
+                esac
+            done
+
+            for pkg in $remove_pkgs; do
+                pkg_list "$pkg" >/dev/null ||
+                    die "[$pkg]: Not installed."
+
+                pkg_remove "$pkg" check
+            done
         ;;
 
         # List installed packages.
@@ -898,7 +927,7 @@ args() {
 
         # Print version and exit.
         v*)
-            log "kiss 0.5.2"
+            log "kiss 0.5.3"
         ;;
 
         # Catch all invalid arguments as well as
