@@ -932,16 +932,19 @@ args() {
         o*)
             shift
             [ "$1" ] || die "'kiss owns' requires an argument."
-            [ -f "$KISS_ROOT/$1" ] || die "File '$1' doesn't exist."
 
-            set +f
-            pkg_owns=$(grep -lFx "$1" "$KISS_ROOT/$pkg_db/"*/manifest)
-            set -f
+            for file; do
+                [ -f "$KISS_ROOT/$file" ] || die "File '$file' doesn't exist."
 
-            pkg_owns=${pkg_owns%/*}
-            pkg_owns=${pkg_owns##*/}
+                set +f
+                pkg_owns=$(grep -lFx "$file" "$KISS_ROOT/$pkg_db/"*/manifest)
+                set -f
 
-            log "[$pkg_owns] owns '$1'"
+                pkg_owns=${pkg_owns%/*}
+                pkg_owns=${pkg_owns##*/}
+
+                log "[$pkg_owns] owns '$file'"
+            done
         ;;
 
         # Upgrade packages.
