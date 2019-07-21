@@ -707,15 +707,13 @@ pkg_install() {
         [ -f "$KISS_ROOT/$pkg_db/$pkg_name/manifest" ] &&
             cp -f "$KISS_ROOT/$pkg_db/$pkg_name/manifest" "$cac_dir/m-$pkg_name"
 
-        # Install the package by using 'tar' and overwrite any existing files
-        # (ignoring files in '/etc').
-        (cd "$tar_dir"; tar cpf - --exclude ./etc/\* . |
-         tar -C "$KISS_ROOT/" -vxpf -)
+        # Install the package by using 'rsync' and overwrite any existing files
+        # (excluding '/etc/').
+        rsync -Kav --exclude etc -- "$tar_dir/" "$KISS_ROOT/"
 
-        # Install all '/etc' files however don't overwrite any which already
-        # exist.
-        (cd "$tar_dir"; tar cpf - ./etc |
-         tar -C "$KISS_ROOT/" -kvxpf -) 2>/dev/null
+        # If '/etc/' exists in the package, install it but don't overwrite.
+        [ -d "$tar_dir/etc" ] &&
+            rsync -Kav --ignore-existing "$tar_dir/etc" "$KISS_ROOT/"
 
         # Remove any leftover files if this is an upgrade.
         [ -f "$cac_dir/m-$pkg_name" ]
@@ -949,7 +947,7 @@ args() {
 
         # Print version and exit.
         v*)
-            log "$kiss 0.4.2"
+            log "$kiss 0.5.0"
         ;;
 
         # Catch all invalid arguments as well as
