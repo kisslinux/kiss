@@ -716,7 +716,7 @@ pkg_install() {
             rsync -Kav --ignore-existing "$tar_dir/etc" "$KISS_ROOT/"
 
         # Remove any leftover files if this is an upgrade.
-        [ -f "$cac_dir/m-$pkg_name" ]
+        [ -f "$cac_dir/m-$pkg_name" ] &&
             awk 'NR==FNR{lines[$0];next}!($0 in lines)' \
                 "$KISS_ROOT/$pkg_db/$pkg_name/manifest" "$cac_dir/m-$pkg_name" |
             while read -r file; do
@@ -947,7 +947,7 @@ args() {
 
         # Print version and exit.
         v*)
-            log "$kiss 0.5.0"
+            log "$kiss 0.5.1"
         ;;
 
         # Catch all invalid arguments as well as
