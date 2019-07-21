@@ -594,15 +594,6 @@ pkg_remove() {
     # is handled differently and configuration files are *not*
     # overwritten.
 
-    # Create a backup of 'rm' and 'rmdir' so they aren't removed
-    # during package removal. This ensures that an upgrade to 'busybox'
-    # or your core utilities of choice doesn't break the package manager.
-    cp "$(command -v rm)"    "$cac_dir"
-    cp "$(command -v rmdir)" "$cac_dir"
-
-    # Don't remove `musl`. This safegaurds against breaking the system.
-    [ "$1" != musl ] || return 0
-
     # The package is not installed, don't do anything.
     pkg_list "$1" >/dev/null || {
         log "[$1]: Not installed."
@@ -632,9 +623,9 @@ pkg_remove() {
         [ "${file##/etc/*}" ] || continue
 
         if [ -d "$KISS_ROOT/$file" ]; then
-            "$cac_dir/rmdir" "$KISS_ROOT/$file" 2>/dev/null || continue
+            rmdir "$KISS_ROOT/$file" 2>/dev/null || continue
         else
-            "$cac_dir/rm" -f -- "$KISS_ROOT/$file" ||
+            rm -f -- "$KISS_ROOT/$file" ||
                 log "[$1]: Failed to remove '$file'."
         fi
     done < "$KISS_ROOT/$pkg_db/$1/manifest"
@@ -685,9 +676,7 @@ pkg_install() {
 
         pkg_conflicts "$tar_file" "$pkg_name"
 
-        # Extract the tar-ball early to catch any errors before installation
-        # begins. The package manager uninstalls the previous package during
-        # an upgrade so any errors need to be caught ASAP.
+        # Extract the tar-ball to catch any errors before installation begins.
         tar pxf "$tar_file" -C "$tar_dir/" ||
             die "[$pkg_name]: Failed to extract tar-ball."
 
@@ -706,15 +695,6 @@ pkg_install() {
             die "[$1]: Package requires ${required_install%, }." \
                 "[$1]: Aborting here..."
 
-        # Create a backup of 'mv', 'rsync' and 'find' so they aren't removed
-        # during package removal. This ensures that an upgrade to 'busybox' or
-        # your core utilities of choice doesn't break the package manager.
-        cp "$(command -v mv)"    "$cac_dir"
-        cp "$(command -v rsync)" "$cac_dir"
-        cp "$(command -v find)"  "$cac_dir"
-
-        log "[$pkg_name]: Removing previous version of package if it exists."
-        pkg_remove "$pkg_name"
         log "[$pkg_name]: Installing package..."
 
         # Block being able to abort the script with 'Ctrl+C' during installation.
@@ -722,16 +702,28 @@ pkg_install() {
         # an incomplete package installed.
         trap '' INT
 
-        # Don't ignore existing files when installing `musl`.
-        case $pkg_name in
-            musl) rsync_ignore= ;;
-            *)    rsync_ignore=--ignore-existing ;;
-        esac
+        # If the package is already installed (and this is an upgrade) make a
+        # backup of the manifest file.
+        [ -f "$KISS_ROOT/$pkg_db/$pkg_name/manifest" ] &&
+            cp -f "$KISS_ROOT/$pkg_db/$pkg_name/manifest" "$cac_dir/m-$pkg_name"
 
-        # "Install" the package using 'rsync'. None of the coreutils could
-        # correctly accomplish this task. The preservation of permissions,
-        # proper handling of existing files etc.
-        "$cac_dir/rsync" "$rsync_ignore" -a "$tar_dir/" "$KISS_ROOT/"
+        # Install the package by using 'tar' and overwrite any existing files
+        # (ignoring files in '/etc').
+        (cd "$tar_dir"; tar cpf - --exclude ./etc/\* . |
+         tar -C "$KISS_ROOT/" -vxpf -)
+
+        # Install all '/etc' files however don't overwrite any which already
+        # exist.
+        (cd "$tar_dir"; tar cpf - ./etc |
+         tar -C "$KISS_ROOT/" -kvxpf -) 2>/dev/null
+
+        # Remove any leftover files if this is an upgrade.
+        [ -f "$cac_dir/m-$pkg_name" ]
+            awk 'NR==FNR{lines[$0];next}!($0 in lines)' \
+                "$KISS_ROOT/$pkg_db/$pkg_name/manifest" "$cac_dir/m-$pkg_name" |
+            while read -r file; do
+                rm -f "$KISS_ROOT/$file"
+            done
 
         # Reset 'trap' to its original value. Installation is done so
         # we no longer need to block 'Ctrl+C'.
@@ -852,12 +844,8 @@ pkg_clean() {
     # Remove temporary directories.
     rm -rf -- "$mak_dir" "$pkg_dir" "$tar_dir"
 
-    # Remove cached commands.
-    rm -f  -- "$cac_dir/find" "$cac_dir/mv" "$cac_dir/rsync" \
-              "$cac_dir/rm" "$cac_dir/rmdir"
-
     # Remove temporary files.
-    rm -f "$repo_dir/.checksums"
+    rm -f "$repo_dir/.checksums" "$cac_dir/m-"*
 }
 
 root_check() {
