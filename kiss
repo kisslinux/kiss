@@ -1,4 +1,9 @@
-#!/bin/sh -e
+#!/bin/sh -ef
+#
+# Disable warnings against word-splitting and globbing.
+# They are used *safely* throughout this script as globbing
+# is globally disabled and assumptions can be made about the input.
+# shellcheck disable=2046,2086
 #
 # This is a simple package manager written in POSIX 'sh' for
 # KISS Linux, utilizing the core UNIX utilities where needed.
@@ -67,14 +72,8 @@ pkg_search() {
             "Repositories will be searched in the configured order." \
             "The variable should work just like \$PATH."
 
-    # Disable globbing with 'set -f' to ensure that the unquoted
-    # variable doesn't expand into anything nasty.
-    # shellcheck disable=2086,2046
-    {
-        set -f
-        set -- "$1" $(IFS=:; find $KISS_PATH -maxdepth 1 -name "$1")
-        set +f
-    }
+    # Find the repository containing a package.
+    set -- "$1" $(IFS=:; find $KISS_PATH -maxdepth 1 -name "$1")
 
     # A package may also not be found due to a repository not being
     # readable by the current user. Either way, we need to die here.
@@ -99,7 +98,7 @@ pkg_list() {
     # packages. If no arguments are passed, list all. As we
     # loop over '$@', if there aren't any arguments we can
     # just set the directory contents to the argument list.
-    [ "$1" ] || set -- *
+    [ "$1" ] || { set +f; set -f -- *; }
 
     # If the 'glob' above failed, exit early as there are no
     # packages installed.
@@ -359,15 +358,8 @@ pkg_build() {
     # passed to KISS aren't.
     explicit_packages=" $* "
 
-    # Disable globbing with 'set -f' to ensure that the unquoted
-    # variable doesn't expand into anything nasty.
-    # shellcheck disable=2086,2046
-    {
-        # Set the resolved dependency list as the function's arguments.
-        set -f
-        set -- $missing_deps
-        set +f
-    }
+    # Set the resolved dependency list as the function's arguments.
+    set -- $missing_deps
 
     # The dependency solver always lists all dependencies regardless of
     # whether or not they are installed. Ensure that all explicit packages
@@ -385,15 +377,8 @@ pkg_build() {
         esac
     done
 
-    # Disable globbing with 'set -f' to ensure that the unquoted
-    # variable doesn't expand into anything nasty.
-    # shellcheck disable=2086,2046
-    {
-        # Set the resolved dependency list as the function's arguments.
-        set -f
-        set -- $build_packages
-        set +f
-    }
+    # Set the filtered dependency list as the function's arguments.
+    set -- $build_packages
 
     log "Building: $*."
 
@@ -576,6 +561,9 @@ pkg_conflicts() {
         [ "${line%%*/}" ] && printf '%s\n' "$line" >> "$cac_dir/manifest-$pid"
     done ||:
 
+    # Enable globbing.
+    set +f
+
     # Compare extracted manifest to all installed manifests.
     # If there are matching lines (files) there is a package conflict.
     for db in "$KISS_ROOT/$pkg_db/"*; do
@@ -584,6 +572,9 @@ pkg_conflicts() {
         grep -Fxf "$cac_dir/manifest-$pid" "$db/manifest" 2>/dev/null &&
             die "Package '$2' conflicts with '${db##*/}'."
     done
+
+    # Disable globbing.
+    set -f
 
     # Remove this temporary file as we no longer need it.
     rm -f "$cac_dir/manifest-$pid"
@@ -600,13 +591,19 @@ pkg_remove() {
         return
     }
 
+    # Enable globbing.
+    set +f
+
     # Make sure that nothing depends on this package.
     [ "$2" = check ] && for file in "$KISS_ROOT/$pkg_db/"*; do
         # Check each depends file for the package and if it's
         # a run-time dependency, append to the $required_by string.
-        grep -q "^$1$" "$file/depends" 2>/dev/null &&
+        grep -qFx "$1" "$file/depends" 2>/dev/null &&
             required_by="$required_by'${file##*/}', "
     done
+
+    # Disable globbing.
+    set -f
 
     [ "$required_by" ] &&
         die "[$1]: Package is required by ${required_by%, }." \
@@ -740,18 +737,10 @@ pkg_updates() {
     # version and the version in the repositories differ, it's considered
     # an update.
 
-    # Disable globbing with 'set -f' to ensure that the unquoted
-    # variable doesn't expand into anything nasty.
-    # shellcheck disable=2086,2046
-    {
-        set -f
-        IFS=:
-        set -- $KISS_PATH
-        IFS=$old_ifs
-        set +f
-    }
-
     log "Updating repositories..."
+
+    # Create a list of all repositories.
+    IFS=:; set -- $KISS_PATH; IFS=$old_ifs
 
     # Update each repository in '$KISS_PATH'. It is assumed that
     # each repository is 'git' tracked.
@@ -761,6 +750,9 @@ pkg_updates() {
     done
 
     log "Checking for new package versions..."
+
+    # Enable globbing.
+    set +f
 
     for pkg in "$KISS_ROOT/$pkg_db/"*; do
         # Find the package's repository files. This needs to keep
@@ -780,20 +772,17 @@ pkg_updates() {
         }
     done
 
+    # Disable globbing.
+    set -f
+
     # End here if no packages have an update.
     [ "$outdated" ] || {
         log "Everything is up to date."
         return
     }
 
-    # Disable globbing with 'set -f' to ensure that the unquoted
-    # variable doesn't expand into anything nasty.
-    # shellcheck disable=2086,2046
-    {
-        set -f
-        set -- $outdated
-        set +f
-    }
+    # Turn the string of outdated packages into a 'list'.
+    set -- $outdated
 
     log "Packages to update: ${outdated% }."
 
@@ -813,7 +802,7 @@ pkg_clean() {
     rm -rf -- "$mak_dir" "$pkg_dir" "$tar_dir"
 
     # Remove temporary files.
-    rm -f "$repo_dir/.checksums" "$cac_dir/m-"*
+    (set +f; rm  -f "$repo_dir/.checksums" "$cac_dir/m-"*)
 }
 
 root_check() {
@@ -845,7 +834,7 @@ args() {
 
                 # Use a glob after 'cd' to generate a list of all installed
                 # packages based on directory names.
-                set -- *
+                set +f; set -f -- *
 
                 # Undo the above 'cd' to ensure we stay in the same location.
                 cd - >/dev/null
