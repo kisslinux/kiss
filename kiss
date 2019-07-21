@@ -253,10 +253,10 @@ pkg_verify() {
 
     # Generate a second set of checksums to compare against the
     # repository's checksums for the package.
-    pkg_checksums .checksums "$1"
+    pkg_checksums "$1" > "$cac_dir/c-$1"
 
     # Compare the checksums using 'cmp'.
-    cmp -s "$repo_dir/.checksums" "$repo_dir/checksums" || {
+    cmp -s "$cac_dir/c-$1" "$repo_dir/checksums" || {
         log "[$1]: Checksum mismatch."
 
         # Instead of dying above, log it to the terminal. Also define a
@@ -264,10 +264,6 @@ pkg_verify() {
         # checked.
         mismatch="$mismatch$1 "
     }
-
-    # The second set of checksums use a temporary file, we need to
-    # delete it.
-    rm -f "$repo_dir/.checksums"
 }
 
 pkg_strip() {
@@ -504,50 +500,43 @@ pkg_build() {
 
 pkg_checksums() {
     # Generate checksums for packages.
-    # This also downloads any remote sources.
-    checksum_file=$1
-    shift
 
-    for pkg; do
-        # Find the package's repository files. This needs to keep
-        # happening as we can't store this data in any kind of data
-        # structure.
-        repo_dir=$(pkg_search "$pkg")
+    # Find the package's repository files. This needs to keep
+    # happening as we can't store this data in any kind of data
+    # structure.
+    repo_dir=$(pkg_search "$1")
 
-        while read -r src _; do
-            case $src in
-                # Git repository.
-                # Skip checksums on git repositories.
-                git:*) ;;
+    while read -r src _; do
+        case $src in
+            # Git repository.
+            # Skip checksums on git repositories.
+            git:*) ;;
 
-                *)
-                    # File is local to the package and is stored in the
-                    # repository.
-                    [ -f "$repo_dir/$src" ] &&
-                        src_path=$repo_dir/${src%/*}
+            *)
+                # File is local to the package and is stored in the
+                # repository.
+                [ -f "$repo_dir/$src" ] &&
+                    src_path=$repo_dir/${src%/*}
 
-                    # File is remote and was downloaded.
-                    [ -f "$src_dir/$pkg/${src##*/}" ] &&
-                        src_path=$src_dir/$pkg
+                # File is remote and was downloaded.
+                [ -f "$src_dir/$1/${src##*/}" ] &&
+                    src_path=$src_dir/$1
 
-                    # Die here if source for some reason, doesn't exist.
-                    [ "$src_path" ] ||
-                        die "[$pkg]: Couldn't find source '$src'."
+                # Die here if source for some reason, doesn't exist.
+                [ "$src_path" ] ||
+                    die "[$1]: Couldn't find source '$src'."
 
-                    # An easy way to get 'sha256sum' to print with the 'basename'
-                    # of files is to 'cd' to the file's directory beforehand.
-                    (cd "$src_path" && sha256sum "${src##*/}") ||
-                        die "[$pkg]: Failed to generate checksums."
+                # An easy way to get 'sha256sum' to print with the 'basename'
+                # of files is to 'cd' to the file's directory beforehand.
+                (cd "$src_path" && sha256sum "${src##*/}") ||
+                    die "[$1]: Failed to generate checksums."
 
-                    # Unset this variable so it isn't used again on a failed
-                    # source. There's no 'local' keyword in POSIX sh.
-                    src_path=
-                ;;
-            esac
-        done < "$repo_dir/sources" > "$repo_dir/$checksum_file"
-
-        log "[$pkg]: Generated/Verified checksums."
-    done
+                # Unset this variable so it isn't used again on a failed
+                # source. There's no 'local' keyword in POSIX sh.
+                src_path=
+            ;;
+        esac
+    done < "$repo_dir/sources"
 }
 
 pkg_conflicts() {
@@ -802,7 +791,7 @@ pkg_clean() {
     rm -rf -- "$mak_dir" "$pkg_dir" "$tar_dir"
 
     # Remove temporary files.
-    (set +f; rm  -f "$repo_dir/.checksums" "$cac_dir/m-"*)
+    (set +f; rm  -f "$cac_dir/c-"* "$cac_dir/m-"*)
 }
 
 root_check() {
@@ -850,8 +839,11 @@ args() {
 
             for pkg; do pkg_lint    "$pkg"; done
             for pkg; do pkg_sources "$pkg"; done
+            for pkg; do
+                pkg_checksums "$pkg" > "$(pkg_search "$pkg")/checksums"
 
-            pkg_checksums checksums "$@"
+                log "[$pkg]: Generated checksums."
+            done
         ;;
 
         # List dependencies for a package.
