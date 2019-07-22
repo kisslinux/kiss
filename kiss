@@ -709,6 +709,10 @@ pkg_install() {
                 [ -f "$KISS_ROOT/$file" ] && rm -f "$KISS_ROOT/$file"
             done
 
+        # Install the package again to fix any non-leftover files being
+        # removed above.
+        rsync -HKav --exclude etc -- "$tar_dir/" "$KISS_ROOT/"
+
         # Reset 'trap' to its original value. Installation is done so
         # we no longer need to block 'Ctrl+C'.
         trap pkg_clean EXIT INT
@@ -961,7 +965,7 @@ args() {
 
         # Print version and exit.
         v*)
-            log "kiss 0.5.5"
+            log "kiss 0.5.6"
         ;;
 
         # Catch all invalid arguments as well as
