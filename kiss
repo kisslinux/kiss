@@ -662,20 +662,22 @@ pkg_install() {
 
         pkg_conflicts "$tar_file" "$pkg_name"
 
+        mkdir -p "$tar_dir/$pkg_name"
+
         # Extract the tar-ball to catch any errors before installation begins.
-        tar pxf "$tar_file" -C "$tar_dir/" ||
+        tar pxf "$tar_file" -C "$tar_dir/$pkg_name" ||
             die "[$pkg_name]: Failed to extract tar-ball."
 
         log "[$pkg_name]: Checking that all dependencies are installed..."
 
         # Make sure that all run-time dependencies are installed prior to
         # installing the package.
-        [ -f "$tar_dir/$pkg_db/$pkg_name/depends" ] &&
+        [ -f "$tar_dir/$pkg_name/$pkg_db/$pkg_name/depends" ] &&
             while read -r dep dep_type; do
                 [ "${dep##\#*}" ] || continue
                 [ "$dep_type" ]   || pkg_list "$dep" >/dev/null ||
                     required_install="$required_install'$dep', "
-            done < "$tar_dir/$pkg_db/$pkg_name/depends"
+            done < "$tar_dir/$pkg_name/$pkg_db/$pkg_name/depends"
 
         [ "$required_install" ] &&
             die "[$1]: Package requires ${required_install%, }." \
@@ -693,28 +695,37 @@ pkg_install() {
         [ -f "$KISS_ROOT/$pkg_db/$pkg_name/manifest" ] &&
             cp -f "$KISS_ROOT/$pkg_db/$pkg_name/manifest" "$cac_dir/m-$pkg_name"
 
-        # Make a backup of the `rm` command so it isn't removed below.
-        cp "$(command -v rm)" "$cac_dir"
+        # This is repeated multiple times. Better to make it a function.
+        rsync_pkg() {
+            rsync -HKav --exclude etc -- "$tar_dir/$pkg_name/" "$KISS_ROOT/"
+        }
 
         # Install the package by using 'rsync' and overwrite any existing files
         # (excluding '/etc/').
-        rsync -HKav --exclude etc -- "$tar_dir/" "$KISS_ROOT/"
+        rsync_pkg
 
         # If '/etc/' exists in the package, install it but don't overwrite.
-        [ -d "$tar_dir/etc" ] &&
-            rsync -HKav --ignore-existing "$tar_dir/etc" "$KISS_ROOT/"
+        [ -d "$tar_dir/$pkg_name/etc" ] &&
+            rsync -HKav --ignore-existing "$tar_dir/$pkg_name/etc" "$KISS_ROOT/"
 
         # Remove any leftover files if this is an upgrade.
-        [ -f "$cac_dir/m-$pkg_name" ] &&
+        [ -f "$cac_dir/m-$pkg_name" ] && {
             awk 'NR==FNR{lines[$0];next}!($0 in lines)' \
                 "$KISS_ROOT/$pkg_db/$pkg_name/manifest" "$cac_dir/m-$pkg_name" |
             while read -r file; do
-                [ -f "$KISS_ROOT/$file" ] && "$cac_dir/rm" -f "$KISS_ROOT/$file"
+                # Skip deleting some leftover files.
+                [ -f "$KISS_ROOT/$file" ] &&
+                    case $file in
+                        *bin/rm|*bin/busybox|*bin/rsync|/etc/*) ;;
+                        *) rm -f "$KISS_ROOT/$file" ;;
+                    esac
             done
+        }
 
         # Install the package again to fix any non-leftover files being
         # removed above.
-        rsync -HKav --exclude etc -- "$tar_dir/" "$KISS_ROOT/"
+        rsync_pkg
+        rsync_pkg
 
         # Reset 'trap' to its original value. Installation is done so
         # we no longer need to block 'Ctrl+C'.
@@ -968,7 +979,7 @@ args() {
 
         # Print version and exit.
         v*)
-            log "kiss 0.5.7"
+            log "kiss 0.5.8"
         ;;
 
         # Catch all invalid arguments as well as
