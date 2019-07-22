@@ -714,7 +714,7 @@ pkg_install() {
                 "$KISS_ROOT/$pkg_db/$pkg_name/manifest" "$cac_dir/m-$pkg_name" |
             while read -r file; do
                 # Skip deleting some leftover files.
-                [ -f "$KISS_ROOT/$file" ] &&
+                [ -f "$KISS_ROOT/$file" ] && [ ! -L "$KISS_ROOT/$file" ] &&
                     case $file in
                         *bin/rm|*bin/busybox|*bin/rsync|/etc/*) ;;
                         *) rm -f "$KISS_ROOT/$file" ;;
@@ -979,7 +979,7 @@ args() {
 
         # Print version and exit.
         v*)
-            log "kiss 0.5.8"
+            log "kiss 0.5.9"
         ;;
 
         # Catch all invalid arguments as well as
