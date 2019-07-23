@@ -130,7 +130,9 @@ pkg_sources() {
     # Store each downloaded source in named after the package it
     # belongs to. This avoid conflicts between two packages having a
     # source of the same name.
-    mkdir -p "$src_dir/$1" && cd "$src_dir/$1"
+    mkdir -p "$src_dir/$1"
+    chmod "$src_dir/$1"
+    cd "$src_dir/$1"
 
     # Find the package's repository files. This needs to keep
     # happening as we can't store this data in any kind of data
@@ -1027,6 +1029,9 @@ main() {
              "${src_dir:=$cac_dir/sources}" \
              "${bin_dir:=$cac_dir/bin}" \
         || die "Couldn't create cache directories."
+
+    # Set sticky bit in the "permanent" directories so users can write to it.
+    chmod 1777 "$cac_dir" "$src_dir" "$bin_dir"
 
     args "$@"
 }
