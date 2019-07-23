@@ -970,11 +970,22 @@ args() {
             pkg_updates
         ;;
 
-        # Search packages
+        # Search for packages.
         s*)
             shift
             [ "$1" ] || die "'kiss search' requires an argument."
-            for pkg; do pkg_search "$pkg"; done
+
+            for pkg; do
+                # Create a list of all matching packages.
+                set -- $(IFS=:; find $KISS_PATH -mindepth 1 \
+                                     -maxdepth 1 -name "$pkg")
+
+                # Print all matches. If there aren't any, print an error.
+                printf '%s\n' "${@:-$(log "[$pkg] Not installed.")}"
+
+                # Exit with an error if a search fails.
+                [ "$1" ] || exit 1
+            done
         ;;
 
         # Print version and exit.
