@@ -995,9 +995,8 @@ args() {
             log "kiss 0.5.9"
         ;;
 
-        # Catch all invalid arguments as well as
-        # any help related flags (-h, --help, help).
-        *)
+        # Print usage and exit.
+        h|he|hel|help|-h|--help)
             log "kiss [b|c|d|i|l|r|s|u] [pkg] [pkg] [pkg]" \
                 "build:     Build a package." \
                 "checksum:  Generate checksums." \
@@ -1009,6 +1008,11 @@ args() {
                 "remove:    Remove a package." \
                 "search:    Search for a package." \
                 "update:    Check for updates."
+        ;;
+
+        # Print message about invalid commands.
+        *)
+            die "'kiss $1' is not a valid command."
         ;;
     esac
 }
