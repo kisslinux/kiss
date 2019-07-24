@@ -834,7 +834,7 @@ args() {
     # letter is right).
     case $1 in
         # Build the list of packages.
-        b*)
+        b|bu|bui|buil|build)
             shift
 
             # If no arguments were passed, rebuild all packages.
@@ -853,7 +853,7 @@ args() {
         ;;
 
         # Generate checksums for packages.
-        c*)
+        c|ch|che|chec|check|checks|checksu|checksum|checksums)
             shift
             [ "$1" ] || die "'kiss checksum' requires an argument."
 
@@ -867,7 +867,7 @@ args() {
         ;;
 
         # List dependencies for a package.
-        d*)
+        d|de|dep|depe|depen|depend|depends)
             shift
             [ "$1" ] || die "'kiss depends' requires an argument."
 
@@ -882,7 +882,7 @@ args() {
         ;;
 
         # Install packages.
-        i*)
+        i|in|ins|inst|insta|instal|install)
             shift
             [ "$1" ] || die "'kiss install' requires an argument."
             root_check
@@ -902,7 +902,7 @@ args() {
         ;;
 
         # Remove packages.
-        r*)
+        r|re|rem|remo|remov|remove)
             shift
             [ "$1" ] || die "'kiss remove' requires an argument."
             root_check
@@ -928,13 +928,13 @@ args() {
         ;;
 
         # List installed packages.
-        l*)
+        l|li|lis|list)
             shift
             pkg_list "$@"
         ;;
 
         # Print package manifest.
-        m*)
+        m|ma|man|mani|manif|manife|manifest)
             shift
             [ "$1" ] || die "'kiss manifest' requires an argument."
 
@@ -949,7 +949,7 @@ args() {
         ;;
 
         # Check which package owns a file.
-        o*)
+        o|ow|own|owns)
             shift
             [ "$1" ] || die "'kiss owns' requires an argument."
 
@@ -968,12 +968,12 @@ args() {
         ;;
 
         # Upgrade packages.
-        u*)
+        u|up|upg|upgr|upgra|upgrad|upgrade)
             pkg_updates
         ;;
 
         # Search for packages.
-        s*)
+        s|se|sea|sear|searc|search)
             shift
             [ "$1" ] || die "'kiss search' requires an argument."
 
@@ -991,7 +991,7 @@ args() {
         ;;
 
         # Print version and exit.
-        v*)
+        v|ve|ver|vers|versi|versio|version)
             log "kiss 0.5.9"
         ;;
 
