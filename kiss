@@ -983,7 +983,7 @@ args() {
                                      -maxdepth 1 -name "$pkg")
 
                 # Print all matches. If there aren't any, print an error.
-                printf '%s\n' "${@:-$(log "[$pkg] Not installed.")}"
+                printf '%s\n' "${@:-$(log "[$pkg] Not found.")}"
 
                 # Exit with an error if a search fails.
                 [ "$1" ] || exit 1
