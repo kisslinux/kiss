@@ -131,7 +131,7 @@ pkg_sources() {
     # belongs to. This avoid conflicts between two packages having a
     # source of the same name.
     mkdir -p "$src_dir/$1"
-    chmod "$src_dir/$1"
+    chmod 1777 "$src_dir/$1"
     cd "$src_dir/$1"
 
     # Find the package's repository files. This needs to keep
