@@ -798,8 +798,7 @@ pkg_updates() {
     # Tell 'pkg_build' to always prompt before build.
     build_prompt=1
 
-    # POSIX 'read' has none of the "nice" options like '-n', '-p'
-    # etc etc. This is the most basic usage of 'read'.
+    # Build all packages requiring an update.
     pkg_build "$@"
 }
 
