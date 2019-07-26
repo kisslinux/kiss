@@ -996,7 +996,7 @@ args() {
         ;;
 
         # Print usage and exit.
-        h|he|hel|help|-h|--help)
+        h|he|hel|help|-h|--help|'')
             log "kiss [b|c|d|i|l|r|s|u] [pkg] [pkg] [pkg]" \
                 "build:     Build a package." \
                 "checksum:  Generate checksums." \
