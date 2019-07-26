@@ -600,8 +600,8 @@ pkg_remove() {
         die "[$1]: Package is required by ${required_by%, }." \
             "[$1]: Aborting here..."
 
-    # Block being able to abort the script with 'Ctrl+C' during installation.
-    # Removes all risk of the user aborting a package installation leaving
+    # Block being able to abort the script with 'Ctrl+C' during removal.
+    # Removes all risk of the user aborting a package removal leaving
     # an incomplete package installed.
     trap '' INT
 
@@ -618,7 +618,7 @@ pkg_remove() {
         fi
     done < "$KISS_ROOT/$pkg_db/$1/manifest"
 
-    # Reset 'trap' to its original value. Installation is done so
+    # Reset 'trap' to its original value. Removal is done so
     # we no longer need to block 'Ctrl+C'.
     trap pkg_clean EXIT INT
 
