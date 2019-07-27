@@ -22,12 +22,12 @@ export KISS_ROOT=~/.kiss
 
 ```sh
 ➜ kiss
-=> kiss [b|c|d|i|l|r|s|u] [pkg] [pkg] [pkg]
+=> kiss [b|c|d|i|l|m|o|r|s|u] [pkg] [pkg] [pkg]
 => build:     Build a package.
 => checksum:  Generate checksums.
 => depends:   List package dependencies.
 => install:   Install a package (Runs build if needed).
-=> list:      List packages.
+=> list:      List installed packages.
 => manifest:  List package files owned by package.
 => owns:      Check which package owns a file.
 => remove:    Remove a package.
