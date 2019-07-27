@@ -16,12 +16,6 @@ Add these to your `shellrc`.
 # The location to install packages (Optional).
 # Default: /
 export KISS_ROOT=~/.kiss
-
-# Repositories to use (Required).
-# Colon separated like '$PATH'.
-# Repositories will be search in order.
-# Default: ''
-export KISS_PATH=/packages/core:/packages/extra:/packages/xorg:/packages/public
 ```
 
 ## Usage
