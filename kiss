@@ -1010,7 +1010,7 @@ args() {
                 "build:     Build a package." \
                 "checksum:  Generate checksums." \
                 "depends:   List package dependencies." \
-                "install:   Install a package (Runs build if needed)." \
+                "install:   Install a package." \
                 "list:      List installed packages." \
                 "manifest:  List package files owned by package." \
                 "owns:      Check which package owns a file." \
