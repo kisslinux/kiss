@@ -958,10 +958,15 @@ args() {
             [ "$1" ] || die "'kiss owns' requires an argument."
 
             for file; do
-                [ -f "$KISS_ROOT/$file" ] || die "File '$file' doesn't exist."
+                # Strip 'KISS_ROOT' from the file path if passed and
+                # follow symlinks.
+                file=$(realpath "$KISS_ROOT/${file##$KISS_ROOT}")
+
+                [ -f "$file" ] || die "File '$file' doesn't exist."
 
                 set +f
-                pkg_owns=$(grep -lFx "$file" "$KISS_ROOT/$pkg_db/"*/manifest)
+                pkg_owns=$(grep -lFx "${file##$KISS_ROOT}" \
+                                     "$KISS_ROOT/$pkg_db/"*/manifest)
                 set -f
 
                 pkg_owns=${pkg_owns%/*}
