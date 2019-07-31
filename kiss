@@ -960,12 +960,12 @@ args() {
             for file; do
                 # Strip 'KISS_ROOT' from the file path if passed and
                 # follow symlinks.
-                file=$(realpath "$KISS_ROOT/${file##$KISS_ROOT}")
+                file_true=$(readlink -f "$KISS_ROOT/${file##$KISS_ROOT}")
 
-                [ -f "$file" ] || die "File '$file' doesn't exist."
+                [ -f "$file_true" ] || die "File '$file' doesn't exist."
 
                 set +f
-                pkg_owns=$(grep -lFx "${file##$KISS_ROOT}" \
+                pkg_owns=$(grep -lFx "${file_true##$KISS_ROOT}" \
                                      "$KISS_ROOT/$pkg_db/"*/manifest)
                 set -f
 
