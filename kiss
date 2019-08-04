@@ -726,13 +726,13 @@ pkg_install() {
                         *bin/rm|*bin/busybox|*bin/rsync|/etc/*) ;;
                         *) rm -f "$KISS_ROOT/$file" ;;
                     esac
-            done
+            done ||:
         }
 
         # Install the package again to fix any non-leftover files being
         # removed above.
-        rsync_pkg
-        rsync_pkg
+        rsync_pkg ||:
+        rsync_pkg ||:
 
         # Reset 'trap' to its original value. Installation is done so
         # we no longer need to block 'Ctrl+C'.
@@ -1002,7 +1002,7 @@ args() {
 
         # Print version and exit.
         v|ve|ver|vers|versi|versio|version)
-            log "kiss 0.5.11"
+            log "kiss 0.5.12"
         ;;
 
         # Print usage and exit.
