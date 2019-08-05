@@ -73,7 +73,9 @@ pkg_search() {
             "The variable should work just like \$PATH."
 
     # Find the repository containing a package.
-    set -- "$1" $(IFS=:; find $KISS_PATH -maxdepth 1 -name "$1")
+    # Searches installed packages if the package is absent from the repositories.
+    set -- "$1" $(IFS=:; find $KISS_PATH "$KISS_ROOT/$pkg_db" \
+                              -maxdepth 1 -name "$1")
 
     # A package may also not be found due to a repository not being
     # readable by the current user. Either way, we need to die here.
