@@ -895,7 +895,13 @@ args() {
             root_check
 
             # Create a list of each package's dependencies.
-            for pkg; do pkg_depends "$pkg"; done
+            for pkg; do
+                if [ "${pkg%%*.tar.gz}" ]; then
+                    pkg_depends "$pkg"
+                else
+                    missing_deps="$missing_deps $pkg "
+                fi
+            done
 
             # Filter the list, only including explicit packages.
             for pkg in $missing_deps; do
