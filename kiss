@@ -133,7 +133,6 @@ pkg_sources() {
     # belongs to. This avoid conflicts between two packages having a
     # source of the same name.
     mkdir -p "$src_dir/$1"
-    chmod 1777 "$src_dir/$1"
     cd "$src_dir/$1"
 
     # Find the package's repository files. This needs to keep
@@ -424,9 +423,11 @@ pkg_build() {
         shift
 
         # Install any pre-built binaries if they exist.
+        # This calls 'args' to inherit a root check and call
+        # to 'sudo' to elevate permissions.
         [ -f "$bin_dir/$pkg#$version-$release.tar.gz" ] && {
-            log "[$pkg]: Found pre-built binary."
-            pkg_install "$bin_dir/$pkg#$version-$release.tar.gz"
+            log "[$pkg]: Found pre-built binary, installing..."
+            args i "$bin_dir/$pkg#$version-$release.tar.gz"
             continue
         }
 
@@ -892,7 +893,14 @@ args() {
         i|in|ins|inst|insta|instal|install)
             shift
             [ "$1" ] || die "'kiss install' requires an argument."
-            root_check
+
+            # Rerun the script with 'sudo' if the user isn't root.
+            # Cheeky but 'sudo' can't be used on shell functions
+            # themselves.
+            [ "$(id -u)" != 0 ] && {
+                sudo KISS_PATH=$KISS_PATH kiss i "$@"
+                return
+            }
 
             # Create a list of each package's dependencies.
             for pkg; do
@@ -918,7 +926,15 @@ args() {
         r|re|rem|remo|remov|remove)
             shift
             [ "$1" ] || die "'kiss remove' requires an argument."
-            root_check
+
+            # Rerun the script with 'sudo' if the user isn't root.
+            # Cheeky but 'sudo' can't be used on shell functions
+            # themselves.
+            [ "$(id -u)" != 0 ] && {
+                sudo KISS_PATH=$KISS_PATH kiss r "$@"
+                return
+            }
+
             log "Removing packages..."
 
             # Create a list of each package's dependencies.
@@ -1062,9 +1078,6 @@ main() {
              "${src_dir:=$cac_dir/sources}" \
              "${bin_dir:=$cac_dir/bin}" \
         || die "Couldn't create cache directories."
-
-    # Set sticky bit in the "permanent" directories so users can write to it.
-    chmod 1777 "$cac_dir" "$src_dir" "$bin_dir"
 
     args "$@"
 }
