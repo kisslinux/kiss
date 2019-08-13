@@ -729,6 +729,9 @@ pkg_install() {
                         *bin/rm|*bin/busybox|*bin/rsync|/etc/*) ;;
                         *) rm -f "$KISS_ROOT/$file" ;;
                     esac
+
+                # Remove directories if empty.
+                [ -d "$KISS_ROOT/$file" ] && rmdir "$file" 2>/dev/null ||:
             done ||:
         }
 
@@ -866,21 +869,6 @@ args() {
             done
         ;;
 
-        # List dependencies for a package.
-        d|de|dep|depe|depen|depend|depends)
-            shift
-            [ "$1" ] || die "'kiss depends' requires an argument."
-
-            for pkg; do
-                repo_dir=$(pkg_search "$pkg")
-
-                [ -f "$repo_dir/depends" ] && {
-                    log "[$pkg]: Has the following dependencies:"
-                    cat "$repo_dir/depends"
-                }
-            done
-        ;;
-
         # Install packages.
         i|in|ins|inst|insta|instal|install)
             shift
@@ -954,45 +942,6 @@ args() {
             pkg_list "$@"
         ;;
 
-        # Print package manifest.
-        m|ma|man|mani|manif|manife|manifest)
-            shift
-            [ "$1" ] || die "'kiss manifest' requires an argument."
-
-            for pkg; do
-                if pkg_list "$pkg" >/dev/null; then
-                    log "[$pkg]: Owns the following files:"
-                    cat "$KISS_ROOT/$pkg_db/$pkg/manifest"
-                else
-                    log "[$pkg]: Not installed."
-                fi
-            done
-        ;;
-
-        # Check which package owns a file.
-        o|ow|own|owns)
-            shift
-            [ "$1" ] || die "'kiss owns' requires an argument."
-
-            for file; do
-                # Strip 'KISS_ROOT' from the file path if passed and
-                # follow symlinks.
-                file_true=$(readlink -f "$KISS_ROOT/${file##$KISS_ROOT}")
-
-                [ -f "$file_true" ] || die "File '$file' doesn't exist."
-
-                set +f
-                pkg_owns=$(grep -lFx "${file_true##$KISS_ROOT}" \
-                                     "$KISS_ROOT/$pkg_db/"*/manifest)
-                set -f
-
-                pkg_owns=${pkg_owns%/*}
-                pkg_owns=${pkg_owns##*/}
-
-                log "[$pkg_owns] owns '$file'"
-            done
-        ;;
-
         # Upgrade packages.
         u|up|upg|upgr|upgra|upgrad|upgrade)
             pkg_updates
@@ -1023,14 +972,11 @@ args() {
 
         # Print usage and exit.
         h|he|hel|help|-h|--help|'')
-            log "kiss [b|c|d|i|l|m|o|r|s|u] [pkg] [pkg] [pkg]" \
+            log "kiss [b|c|i|l|r|s|u] [pkg] [pkg] [pkg]" \
                 "build:     Build a package." \
                 "checksum:  Generate checksums." \
-                "depends:   List package dependencies." \
                 "install:   Install a package." \
                 "list:      List installed packages." \
-                "manifest:  List package files owned by package." \
-                "owns:      Check which package owns a file." \
                 "remove:    Remove a package." \
                 "search:    Search for a package." \
                 "update:    Check for updates."
