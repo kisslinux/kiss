@@ -842,8 +842,6 @@ pkg_clean() {
     # to the build.
     [ "$KISS_DEBUG" = 1 ] && return
 
-    log "Cleaning cache directories..."
-
     # Remove temporary directories.
     rm -rf -- "$mak_dir" "$pkg_dir" "$tar_dir"
 
@@ -993,7 +991,7 @@ args() {
 
         # Print version and exit.
         v|ve|ver|vers|versi|versio|version)
-            log "kiss 0.6.1"
+            log "kiss 0.6.2"
         ;;
 
         # Print usage and exit.
