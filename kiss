@@ -765,8 +765,32 @@ pkg_updates() {
     # Update each repository in '$KISS_PATH'. It is assumed that
     # each repository is 'git' tracked.
     for repo; do
-        log "[${repo##*/}]: Updating repository."
-        (cd "$repo"; git rev-parse --git-dir >/dev/null && git pull)
+        cd "$repo"
+
+        # Go to the root of the repository (if it exists).
+        cd "$(git rev-parse --show-toplevel 2>/dev/null)" 2>/dev/null ||:
+
+        [ -d .git ] || {
+            log "[$repo]: Not a git repository, skipping..."
+            continue
+        }
+
+        case $repos in
+            # If the repository has already been updated, skip it.
+            *" $PWD "*) ;;
+            *)
+                repos="$repos $PWD "
+
+                log "[$PWD]: Updating repository."
+
+                if [ -w "$PWD" ]; then
+                    git pull
+                else
+                    log "[$PWD]: Need root to update."
+                    sudo git pull
+                fi
+            ;;
+        esac
     done
 
     log "Checking for new package versions..."
@@ -817,6 +841,8 @@ pkg_clean() {
     # Clean up on exit or error. This removes everything related
     # to the build.
     [ "$KISS_DEBUG" = 1 ] && return
+
+    log "Cleaning cache directories..."
 
     # Remove temporary directories.
     rm -rf -- "$mak_dir" "$pkg_dir" "$tar_dir"
@@ -967,7 +993,7 @@ args() {
 
         # Print version and exit.
         v|ve|ver|vers|versi|versio|version)
-            log "kiss 0.6.0"
+            log "kiss 0.6.1"
         ;;
 
         # Print usage and exit.
