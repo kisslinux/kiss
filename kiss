@@ -401,7 +401,7 @@ pkg_build() {
     # Install any pre-built dependencies if they exist in the binary
     # directory and are up to date.
     for pkg; do
-        # Don't check for pre-built package if it was passed to KISS
+        # Don't check for a pre-built package if it was passed to KISS
         # directly.
         case $explicit_packages in
             *" $pkg "*)
@@ -863,7 +863,7 @@ pkg_clean() {
     rm -rf -- "$mak_dir" "$pkg_dir" "$tar_dir"
 
     # Remove temporary files.
-    (set +f; rm  -f "$cac_dir/c-"* "$cac_dir/m-"* "$cac_dir/rm")
+    set +f; rm  -f "$cac_dir/c-"* "$cac_dir/m-"*
 }
 
 args() {
