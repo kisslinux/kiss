@@ -8,16 +8,6 @@ Tiny package manager for KISS Linux.
 See: <https://getkiss.org/pages/package-system/>
 
 
-## Getting started
-
-Add these to your `shellrc`.
-
-```sh
-# The location to install packages (Optional).
-# Default: /
-export KISS_ROOT=~/.kiss
-```
-
 ## Usage
 
 ```sh
