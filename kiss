@@ -763,7 +763,10 @@ pkg_install() {
 
         # Run the post install script and suppress errors. If it exists,
         # it will run, else nothing will happen.
-        "$KISS_ROOT/$pkg_db/$pkg_name/post-install" 2>/dev/null ||:
+        [ -x "$KISS_ROOT/$pkg_db/$pkg_name/post-install" ] && {
+            log "[$pkg_name]: Running post-install script..."
+            "$KISS_ROOT/$pkg_db/$pkg_name/post-install" 2>/dev/null ||:
+        }
 
         log "[$pkg_name]: Installed successfully."
     done
