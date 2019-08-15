@@ -765,7 +765,7 @@ pkg_install() {
         # it will run, else nothing will happen.
         [ -x "$KISS_ROOT/$pkg_db/$pkg_name/post-install" ] && {
             log "[$pkg_name]: Running post-install script..."
-            "$KISS_ROOT/$pkg_db/$pkg_name/post-install" 2>/dev/null ||:
+            "$KISS_ROOT/$pkg_db/$pkg_name/post-install" ||:
         }
 
         log "[$pkg_name]: Installed successfully."
