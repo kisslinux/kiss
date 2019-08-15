@@ -984,7 +984,7 @@ args() {
         ;;
 
         # Upgrade packages.
-        u|up|upg|upgr|upgra|upgrad|upgrade)
+        u|up|upd|upda|updat|update)
             pkg_updates
         ;;
 
