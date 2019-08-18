@@ -480,9 +480,9 @@ pkg_build() {
         mkdir -p "$pkg_dir/$pkg/$pkg_db"
 
         # Move to the build directory and call the build script.
-        # This also saves the build output to a log file.
-        (cd "$mak_dir/$pkg"; fakeroot "$repo_dir/build" "$pkg_dir/$pkg" 2>&1 |
-         tee "$log_dir/$pkg-$date.log") || die "[$pkg]: Build failed."
+        cd "$mak_dir/$pkg"
+        fakeroot "$repo_dir/build" "$pkg_dir/$pkg" ||
+            die "[$pkg]: Build failed."
 
         # Copy the repository files to the package directory.
         # This acts as the database entry.
@@ -1049,10 +1049,6 @@ main() {
     # variable is ever changed.
     old_ifs=$IFS
 
-    # Store the current date to properly name log files. This may also be
-    # used later for other functionality.
-    date=$(date +%F-%T)
-
     # Catch errors and ensure that build files and directories are cleaned
     # up before we die. This occurs on 'Ctrl+C' as well as success and error.
     trap pkg_clean EXIT INT
@@ -1065,7 +1061,6 @@ main() {
              "${tar_dir:=$cac_dir/extract-$pid}" \
              "${src_dir:=$cac_dir/sources}" \
              "${bin_dir:=$cac_dir/bin}" \
-             "${log_dir:=$cac_dir/logs}" \
         || die "Couldn't create cache directories."
 
     args "$@"
