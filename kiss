@@ -506,7 +506,6 @@ pkg_build() {
     done
 
     log "Successfully built package(s)."
-    log "Saved build log files to '$log_dir'."
 
     # Turn the explicit packages into a 'list'.
     set -- $explicit_packages
