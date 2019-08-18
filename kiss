@@ -872,21 +872,31 @@ pkg_clean() {
 }
 
 args() {
-    # Parse script arguments manually. POSIX 'sh' has no 'getopts'
-    # or equivalent built in. This is rather easy to do in our case
-    # since the first argument is always an "action" and the arguments
-    # that follow are all package names.
+    # Different operations are executed based on the name of the script
+    # itself. This allows each operation to be split into a separate
+    # utility without needing to create a library to contain common
+    # functions.
 
-    # Actions can be abbreviated to their first letter. This saves
-    # keystrokes once you memorize the commands and it also has the
-    # side-effect of "correcting" spelling mistakes (assuming the first
-    # letter is right).
-    case $1 in
-        # Build the list of packages.
-        b|bu|bui|buil|build)
-            shift
+    # Parse argument lists early to catch errors or transform the list.
+    case $kiss in
+        kiss-install|kiss-remove)
+            [ "$1" ] || die "'$kiss' requires an argument."
 
-            # If no arguments were passed, rebuild all packages.
+            # Rerun the script with 'sudo' if the user isn't root.
+            # Cheeky but 'sudo' can't be used on shell functions
+            # themselves.
+            [ "$(id -u)" != 0 ] && {
+                sudo KISS_PATH=$KISS_PATH "$0" "$@"
+                return
+            }
+        ;;
+
+        kiss-checksums|kiss-search)
+            [ "$1" ] || die "'$kiss' requires an argument."
+        ;;
+
+        # If no arguments were passed, rebuild all packages.
+        kiss-build)
             [ "$1" ] || {
                 cd "$KISS_ROOT/$pkg_db" || die "Failed to find package db."
 
@@ -897,15 +907,15 @@ args() {
                 # Undo the above 'cd' to ensure we stay in the same location.
                 cd - >/dev/null
             }
+        ;;
+    esac
 
+    case $kiss in
+        kiss-build)
             pkg_build "$@"
         ;;
 
-        # Generate checksums for packages.
-        c|ch|che|chec|check|checks|checksu|checksum|checksums)
-            shift
-            [ "$1" ] || die "'kiss checksum' requires an argument."
-
+        kiss-checksums)
             for pkg; do pkg_lint    "$pkg"; done
             for pkg; do pkg_sources "$pkg"; done
             for pkg; do
@@ -915,19 +925,7 @@ args() {
             done
         ;;
 
-        # Install packages.
-        i|in|ins|inst|insta|instal|install)
-            shift
-            [ "$1" ] || die "'kiss install' requires an argument."
-
-            # Rerun the script with 'sudo' if the user isn't root.
-            # Cheeky but 'sudo' can't be used on shell functions
-            # themselves.
-            [ "$(id -u)" != 0 ] && {
-                sudo KISS_PATH=$KISS_PATH kiss i "$@"
-                return
-            }
-
+        kiss-install)
             # Create a list of each package's dependencies.
             for pkg; do
                 if [ "${pkg%%*.tar.gz}" ]; then
@@ -948,21 +946,7 @@ args() {
             pkg_install "$@"
         ;;
 
-        # Remove packages.
-        r|re|rem|remo|remov|remove)
-            shift
-            [ "$1" ] || die "'kiss remove' requires an argument."
-
-            # Rerun the script with 'sudo' if the user isn't root.
-            # Cheeky but 'sudo' can't be used on shell functions
-            # themselves.
-            [ "$(id -u)" != 0 ] && {
-                sudo KISS_PATH=$KISS_PATH kiss r "$@"
-                return
-            }
-
-            log "Removing packages..."
-
+        kiss-remove)
             # Create a list of each package's dependencies.
             for pkg; do pkg_depends "$pkg"; done
 
@@ -982,22 +966,15 @@ args() {
             done
         ;;
 
-        # List installed packages.
-        l|li|lis|list)
-            shift
+        kiss-list)
             pkg_list "$@"
         ;;
 
-        # Upgrade packages.
-        u|up|upd|upda|updat|update)
-            pkg_updates
+        kiss-update)
+            pkg_update
         ;;
 
-        # Search for packages.
-        s|se|sea|sear|searc|search)
-            shift
-            [ "$1" ] || die "'kiss search' requires an argument."
-
+        kiss-search)
             for pkg; do
                 # Create a list of all matching packages.
                 set -- $(IFS=:; find $KISS_PATH -mindepth 1 \
@@ -1011,26 +988,22 @@ args() {
             done
         ;;
 
-        # Print version and exit.
-        v|ve|ver|vers|versi|versio|version)
+        kiss-version)
             log "kiss 0.6.3"
         ;;
 
-        # Print usage and exit.
-        h|he|hel|help|-h|--help|'')
-            log "kiss [b|c|i|l|r|s|u] [pkg] [pkg] [pkg]" \
-                "build:     Build a package." \
-                "checksum:  Generate checksums." \
-                "install:   Install a package." \
-                "list:      List installed packages." \
-                "remove:    Remove a package." \
-                "search:    Search for a package." \
-                "update:    Check for updates."
-        ;;
-
-        # Print message about invalid commands.
         *)
-            die "'kiss $1' is not a valid command."
+            echo "$kiss"
+            log \
+                "kiss can be invoked using these script names." \
+                "kiss-build:    Build a package." \
+                "kiss-checksum: Generate checksums." \
+                "kiss-install:  Install a package." \
+                "kiss-list:     List installed packages." \
+                "kiss-remove:   Remove a package." \
+                "kiss-search:   Search for a package." \
+                "kiss-update:   Update packages." \
+                "SETUP: link this script to the above names!"
         ;;
     esac
 }
@@ -1048,6 +1021,9 @@ main() {
     # Store the original value of IFS so we can revert back to it if the
     # variable is ever changed.
     old_ifs=$IFS
+
+    # Store the name of the calling script for use in 'args()'.
+    kiss=${0##*/}
 
     # Catch errors and ensure that build files and directories are cleaned
     # up before we die. This occurs on 'Ctrl+C' as well as success and error.
