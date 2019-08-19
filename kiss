@@ -1074,7 +1074,7 @@ args() {
 
         # Print version and exit.
         v|ve|ver|vers|versi|versio|version)
-            log "kiss 0.7.0"
+            printf 'kiss 0.7.0\n'
         ;;
 
         # Print usage and exit.
