@@ -61,9 +61,9 @@ pkg_search() {
     # in $KISS_PATH/*.
     [ "$KISS_PATH" ] || \
         die "\$KISS_PATH needs to be set" \
-            "Example: KISS_PATH=/var/db/kiss/repo/core:/var/db/kiss/repo/extra" \
-            "Repositories will be searched in the configured order." \
-            "The variable should work just like \$PATH."
+            "Example: 'KISS_PATH=/var/db/kiss/repo/core:/var/db/kiss/repo/extra'" \
+            "Repositories will be searched in the configured order" \
+            "The variable should work just like \$PATH"
 
     # Find the repository containing a package.
     # Searches installed packages if the package is absent from the repositories.
