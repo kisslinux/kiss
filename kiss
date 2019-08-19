@@ -366,7 +366,9 @@ pkg_fixdeps() {
     done >> depends-copy
 
     # Remove duplicate entries from the new depends file.
-    sort depends-copy | uniq > depends-new
+    # This remove duplicate lines looking *only* at the
+    # first column.
+    sort -u -k1,1 depends-copy > depends-new
 
     # Display a 'diff' of the new dependencies agaisnt
     # the old ones. '-N' treats non-existent files as blank.
