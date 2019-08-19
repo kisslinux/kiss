@@ -28,31 +28,31 @@
 
 die() {
     # Print a message and exit with '1' (error).
-    printf '\033[31m!>\033[m %s\n' "$@" >&2
+    printf '\033[1;31m!>\033[m %s.\n' "$@" >&2
     exit 1
 }
 
 log() {
     # Print a message prettily.
-    printf '\033[32m=>\033[m %s\n' "$@"
+    printf '\033[1;32m=>\033[m %s.\n' "$@"
 }
 
 pkg_lint() {
     # Check that each mandatory file in the package entry exists.
-    log "[$1]: Checking repository files..."
+    log "[$1]: Checking repository files"
 
     # Figure out *where* the repository entry for the package is located.
     repo_dir=$(pkg_search "$1")
 
     cd "$repo_dir" || die "'$repo_dir' not accessible"
-    [ -f sources ] || die "[$1]: Sources file not found."
-    [ -x build ]   || die "[$1]: Build file not found or not executable."
-    [ -s version ] || die "[$1]: Version file not found or empty."
+    [ -f sources ] || die "[$1]: Sources file not found"
+    [ -x build ]   || die "[$1]: Build file not found or not executable"
+    [ -s version ] || die "[$1]: Version file not found or empty"
 
     # Ensure that the release field in the version file is set
     # to something. The above test checks for the version field inclusively.
     read -r _ release < version
-    [ "$release" ] || die "Release field not found in version file."
+    [ "$release" ] || die "Release field not found in version file"
 }
 
 pkg_search() {
@@ -60,7 +60,7 @@ pkg_search() {
     # searching for directories matching the package name
     # in $KISS_PATH/*.
     [ "$KISS_PATH" ] || \
-        die "\$KISS_PATH needs to be set." \
+        die "\$KISS_PATH needs to be set" \
             "Example: KISS_PATH=/var/db/kiss/repo/core:/var/db/kiss/repo/extra" \
             "Repositories will be searched in the configured order." \
             "The variable should work just like \$PATH."
@@ -72,7 +72,7 @@ pkg_search() {
 
     # A package may also not be found due to a repository not being
     # readable by the current user. Either way, we need to die here.
-    [ -z "$2" ] && die "Package '$1' not in any repository."
+    [ -z "$2" ] && die "Package '$1' not in any repository"
 
     printf '%s\n' "$2"
 }
@@ -103,12 +103,12 @@ pkg_list() {
     # Also warn if a package is missing its version file.
     for pkg; do
         [ -d "$pkg" ] || {
-            log "Package '$pkg' is not installed."
+            log "Package '$pkg' is not installed"
             return 1
         }
 
         [ -f "$pkg/version" ] || {
-            log "Warning: Package '$pkg' has no version file."
+            log "Warning: Package '$pkg' has no version file"
             continue
         }
 
@@ -120,7 +120,7 @@ pkg_list() {
 pkg_sources() {
     # Download any remote package sources. The existence of local
     # files is also checked.
-    log "[$1]: Downloading sources..."
+    log "[$1]: Downloading sources"
 
     # Store each downloaded source in named after the package it
     # belongs to. This avoid conflicts between two packages having a
@@ -143,22 +143,22 @@ pkg_sources() {
             # Remote source.
             *://*)
                 [ -f "${src##*/}" ] && {
-                    log "[$1]: Found cached source '${src##*/}'."
+                    log "[$1]: Found cached source '${src##*/}'"
                     continue
                 }
 
                 wget "$src" || {
                     rm -f "${src##*/}"
-                    die "[$1]: Failed to download $src."
+                    die "[$1]: Failed to download $src"
                 }
             ;;
 
             # Local files (Any source that is non-remote is assumed to be local).
             *)
                 [ -f "$repo_dir/$src" ] ||
-                    die "[$1]: No local file '$src'."
+                    die "[$1]: No local file '$src'"
 
-                log "[$1]: Found local file '$src'."
+                log "[$1]: Found local file '$src'"
             ;;
         esac
     done < "$repo_dir/sources"
@@ -167,7 +167,7 @@ pkg_sources() {
 pkg_extract() {
     # Extract all source archives to the build directory and copy over
     # any local repository files.
-    log "[$1]: Extracting sources..."
+    log "[$1]: Extracting sources"
 
     # Store each downloaded source in named after the package it
     # belongs to. This avoid conflicts between two packages having a
@@ -193,7 +193,7 @@ pkg_extract() {
             *://*.tar*|*://*.tgz)
                 tar xf "$src_dir/$1/${src##*/}" -C "./$dest" \
                     --strip-components 1 \
-                || die "[$1]: Couldn't extract ${src##*/}."
+                || die "[$1]: Couldn't extract ${src##*/}"
             ;;
 
             # Local files (Any source that is non-remote is assumed to be local).
@@ -205,7 +205,7 @@ pkg_extract() {
                     cp -f "$src_dir/$1/${src##*/}" "./$dest"
 
                 else
-                    die "[$1]: Local file $src not found."
+                    die "[$1]: Local file $src not found"
                 fi
             ;;
         esac
@@ -258,7 +258,7 @@ pkg_verify() {
 
     # Compare the checksums using 'cmp'.
     cmp -s "$cac_dir/c-$1" "$repo_dir/checksums" || {
-        log "[$1]: Checksum mismatch."
+        log "[$1]: Checksum mismatch"
 
         # Instead of dying above, log it to the terminal. Also define a
         # variable so we *can* die after all checksum files have been
@@ -279,7 +279,7 @@ pkg_strip() {
     # Package has stripping disabled, stop here.
     [ -f "$repo_dir/nostrip" ] && return
 
-    log "[$1]: Stripping binaries and libraries..."
+    log "[$1]: Stripping binaries and libraries"
 
     # Strip only files matching the below mime-types from the package
     # directory. No alternative to 'file' here sadly.
@@ -311,7 +311,7 @@ pkg_fixdeps() {
     # redefines the argument list.
     pkg_name=$1
 
-    log "[$1]: Checking 'ldd' for missing dependencies..."
+    log "[$1]: Checking 'ldd' for missing dependencies"
 
     # Go to the directory containing the built package to
     # simplify path building.
@@ -376,7 +376,7 @@ pkg_manifest() (
     # Generate the package's manifest file. This is a list of each file
     # and directory inside the package. The file is used when uninstalling
     # packages, checking for package conflicts and for general debugging.
-    log "[$1]: Generating manifest..."
+    log "[$1]: Generating manifest"
 
     # This funcion runs as a sub-shell to avoid having to 'cd' back to the
     # prior directory before being able to continue.
@@ -388,13 +388,13 @@ pkg_manifest() (
     find . -mindepth 1 -type d -exec printf '%s/\n' {} + -or -print |
     sort -r | sed -e ss.ss > "$pkg_dir/$1/$pkg_db/$1/manifest"
 
-    log "[$1]: Generated manifest."
+    log "[$1]: Generated manifest"
 )
 
 pkg_tar() {
     # Create a tar-ball from the built package's files.
     # This tar-ball also contains the package's database entry.
-    log "[$1]: Creating tar-ball..."
+    log "[$1]: Creating tar-ball"
 
     # Find the package's repository files. This needs to keep
     # happening as we can't store this data in any kind of data
@@ -408,9 +408,9 @@ pkg_tar() {
     # is used here to correct issues with file ownership.
     fakeroot \
         tar zpcf "$bin_dir/$1#$version-$release.tar.gz" -C "$pkg_dir/$1" . ||
-            die "[$1]: Failed to create tar-ball."
+            die "[$1]: Failed to create tar-ball"
 
-    log "[$1]: Successfully created tar-ball."
+    log "[$1]: Successfully created tar-ball"
 }
 
 pkg_build() {
@@ -418,7 +418,7 @@ pkg_build() {
     # also checks checksums, downloads sources and ensure all dependencies
     # are installed.
 
-    log "Resolving dependencies..."
+    log "Resolving dependencies"
     for pkg; do pkg_depends "$pkg"; done
 
     # Store the explicit packages so we can handle them differently
@@ -448,19 +448,19 @@ pkg_build() {
     # Set the filtered dependency list as the function's arguments.
     set -- $build_packages
 
-    log "Building: $*."
+    log "Building: $*"
 
     # Only ask for confirmation if more than one package needs to be built.
     [ $# -gt 1 ] || [ "$build_prompt" ] && {
-        log "Continue?: Press Enter to continue or Ctrl+C to abort here."
+        log "Continue?: Press Enter to continue or Ctrl+C to abort here"
 
         # POSIX 'read' has none of the "nice" options like '-n', '-p'
         # etc etc. This is the most basic usage of 'read'.
         read -r REPLY || exit
     }
 
-    log "Checking to see if any dependencies have already been built..."
-    log "Installing any pre-built dependencies..."
+    log "Checking to see if any dependencies have already been built"
+    log "Installing any pre-built dependencies"
 
     # Install any pre-built dependencies if they exist in the binary
     # directory and are up to date.
@@ -490,7 +490,7 @@ pkg_build() {
         # This calls 'args' to inherit a root check and call
         # to 'sudo' to elevate permissions.
         [ -f "$bin_dir/$pkg#$version-$release.tar.gz" ] && {
-            log "[$pkg]: Found pre-built binary, installing..."
+            log "[$pkg]: Found pre-built binary, installing"
             args i "$bin_dir/$pkg#$version-$release.tar.gz"
             continue
         }
@@ -509,7 +509,7 @@ pkg_build() {
 
         # Ensure that checksums exist prior to building the package.
         [ -f "$repo_dir/checksums" ] || {
-            log "[$pkg]: Checksums are missing."
+            log "[$pkg]: Checksums are missing"
 
             # Instead of dying above, log it to the terminal. Also define a
             # variable so we *can* die after all checksum files have been
@@ -520,7 +520,7 @@ pkg_build() {
 
     # Die here as packages without checksums were found above.
     [ "$no_checkums" ] &&
-        die "Run 'kiss checksum ${no_checkums% }' to generate checksums."
+        die "Run 'kiss checksum ${no_checkums% }' to generate checksums"
 
     for pkg; do pkg_sources "$pkg"; done
     for pkg; do pkg_verify  "$pkg"; done
@@ -546,13 +546,13 @@ pkg_build() {
         # Move to the build directory and call the build script.
         cd "$mak_dir/$pkg"
         fakeroot "$repo_dir/build" "$pkg_dir/$pkg" ||
-            die "[$pkg]: Build failed."
+            die "[$pkg]: Build failed"
 
         # Copy the repository files to the package directory.
         # This acts as the database entry.
         cp -Rf "$repo_dir" "$pkg_dir/$pkg/$pkg_db/"
 
-        log "[$pkg]: Successfully built package."
+        log "[$pkg]: Successfully built package"
 
         # Create the manifest file early and make it empty.
         # This ensure that the manifest is added to the manifest...
@@ -570,7 +570,7 @@ pkg_build() {
         esac
     done
 
-    log "Successfully built package(s)."
+    log "Successfully built package(s)"
 
     # Turn the explicit packages into a 'list'.
     set -- $explicit_packages
@@ -578,7 +578,7 @@ pkg_build() {
     # Only ask for confirmation if more than one package needs to be installed.
     [ $# -gt 1 ] && {
         log "Install built packages? [$*]" \
-            "Press Enter to continue or Ctrl+C to abort here."
+            "Press Enter to continue or Ctrl+C to abort here"
 
         # POSIX 'read' has none of the "nice" options like '-n', '-p'
         # etc etc. This is the most basic usage of 'read'.
@@ -588,7 +588,7 @@ pkg_build() {
         }
     }
 
-    log "Run 'kiss i $*' to install the built package(s)."
+    log "Run 'kiss i $*' to install the built package(s)"
 }
 
 pkg_checksums() {
@@ -617,12 +617,12 @@ pkg_checksums() {
 
                 # Die here if source for some reason, doesn't exist.
                 [ "$src_path" ] ||
-                    die "[$1]: Couldn't find source '$src'."
+                    die "[$1]: Couldn't find source '$src'"
 
                 # An easy way to get 'sha256sum' to print with the 'basename'
                 # of files is to 'cd' to the file's directory beforehand.
                 (cd "$src_path" && sha256sum "${src##*/}") ||
-                    die "[$1]: Failed to generate checksums."
+                    die "[$1]: Failed to generate checksums"
 
                 # Unset this variable so it isn't used again on a failed
                 # source. There's no 'local' keyword in POSIX sh.
@@ -635,7 +635,7 @@ pkg_checksums() {
 pkg_conflicts() {
     # Check to see if a package conflicts with another.
     # This function takes a path to a KISS tar-ball as an argument.
-    log "[$2]: Checking for package conflicts."
+    log "[$2]: Checking for package conflicts"
 
     # Extract manifest from the tar-ball and only extract files entries.
     tar xf "$1" -O "./$pkg_db/$2/manifest" |
@@ -652,7 +652,7 @@ pkg_conflicts() {
         [ "$2" = "${db##*/}" ] && continue
 
         grep -Fxf "$cac_dir/manifest-$pid" "$db/manifest" 2>/dev/null &&
-            die "Package '$2' conflicts with '${db##*/}'."
+            die "Package '$2' conflicts with '${db##*/}'"
     done
 
     # Disable globbing.
@@ -669,7 +669,7 @@ pkg_remove() {
 
     # The package is not installed, don't do anything.
     pkg_list "$1" >/dev/null || {
-        log "[$1]: Not installed."
+        log "[$1]: Not installed"
         return
     }
 
@@ -688,7 +688,7 @@ pkg_remove() {
     set -f
 
     [ "$required_by" ] &&
-        die "[$1]: Package is required by ${required_by%, }." \
+        die "[$1]: Package is required by ${required_by%, }" \
             "[$1]: Aborting here..."
 
     # Block being able to abort the script with 'Ctrl+C' during removal.
@@ -705,7 +705,7 @@ pkg_remove() {
             rmdir "$KISS_ROOT/$file" 2>/dev/null || continue
         else
             rm -f -- "$KISS_ROOT/$file" ||
-                log "[$1]: Failed to remove '$file'."
+                log "[$1]: Failed to remove '$file'"
         fi
     done < "$KISS_ROOT/$pkg_db/$1/manifest"
 
@@ -713,7 +713,7 @@ pkg_remove() {
     # we no longer need to block 'Ctrl+C'.
     trap pkg_clean EXIT INT
 
-    log "[$1]: Removed successfully."
+    log "[$1]: Removed successfully"
 }
 
 pkg_install() {
@@ -738,8 +738,8 @@ pkg_install() {
             tar_name=$pkg\#$version-$release.tar.gz
 
             [ -f "$bin_dir/$tar_name" ] ||
-                die "Package '$pkg' has not been built." \
-                    "Run 'kiss build $pkg'."
+                die "Package '$pkg' has not been built" \
+                    "Run 'kiss build $pkg'"
 
             tar_file=$bin_dir/$tar_name
         fi
@@ -748,7 +748,7 @@ pkg_install() {
         # a database entry inside the tar-ball. If no database entry exists,
         # exit here as the tar-ball is *most likely* not a KISS package.
         pkg_name=$(tar tf "$tar_file" | grep -x "\./$pkg_db/.*/version") ||
-            die "'${tar_file##*/}' is not a valid KISS package."
+            die "'${tar_file##*/}' is not a valid KISS package"
 
         pkg_name=${pkg_name%/*}
         pkg_name=${pkg_name##*/}
@@ -759,9 +759,9 @@ pkg_install() {
 
         # Extract the tar-ball to catch any errors before installation begins.
         tar pxf "$tar_file" -C "$tar_dir/$pkg_name" ||
-            die "[$pkg_name]: Failed to extract tar-ball."
+            die "[$pkg_name]: Failed to extract tar-ball"
 
-        log "[$pkg_name]: Checking that all dependencies are installed..."
+        log "[$pkg_name]: Checking that all dependencies are installed"
 
         # Make sure that all run-time dependencies are installed prior to
         # installing the package.
@@ -773,10 +773,10 @@ pkg_install() {
             done < "$tar_dir/$pkg_name/$pkg_db/$pkg_name/depends"
 
         [ "$required_install" ] &&
-            die "[$1]: Package requires ${required_install%, }." \
-                "[$1]: Aborting here..."
+            die "[$1]: Package requires ${required_install%, }" \
+                "[$1]: Aborting here"
 
-        log "[$pkg_name]: Installing package..."
+        log "[$pkg_name]: Installing package"
 
         # Block being able to abort the script with 'Ctrl+C' during installation.
         # Removes all risk of the user aborting a package installation leaving
@@ -830,11 +830,11 @@ pkg_install() {
         # Run the post install script and suppress errors. If it exists,
         # it will run, else nothing will happen.
         [ -x "$KISS_ROOT/$pkg_db/$pkg_name/post-install" ] && {
-            log "[$pkg_name]: Running post-install script..."
+            log "[$pkg_name]: Running post-install script"
             "$KISS_ROOT/$pkg_db/$pkg_name/post-install" ||:
         }
 
-        log "[$pkg_name]: Installed successfully."
+        log "[$pkg_name]: Installed successfully"
     done
 }
 
@@ -843,7 +843,7 @@ pkg_updates() {
     # version and the version in the repositories differ, it's considered
     # an update.
 
-    log "Updating repositories..."
+    log "Updating repositories"
 
     # Create a list of all repositories.
     IFS=:; set -- $KISS_PATH; IFS=$old_ifs
@@ -857,7 +857,7 @@ pkg_updates() {
         cd "$(git rev-parse --show-toplevel 2>/dev/null)" 2>/dev/null ||:
 
         [ -d .git ] || {
-            log "[$repo]: Not a git repository, skipping..."
+            log "[$repo]: Not a git repository, skipping"
             continue
         }
 
@@ -867,19 +867,19 @@ pkg_updates() {
             *)
                 repos="$repos $PWD "
 
-                log "[$PWD]: Updating repository."
+                log "[$PWD]: Updating repository"
 
                 if [ -w "$PWD" ]; then
                     git pull
                 else
-                    log "[$PWD]: Need root to update."
+                    log "[$PWD]: Need root to update"
                     sudo git pull
                 fi
             ;;
         esac
     done
 
-    log "Checking for new package versions..."
+    log "Checking for new package versions"
 
     # Enable globbing.
     set +f
@@ -907,14 +907,14 @@ pkg_updates() {
 
     # End here if no packages have an update.
     [ "$outdated" ] || {
-        log "Everything is up to date."
+        log "Everything is up to date"
         return
     }
 
     # Turn the string of outdated packages into a 'list'.
     set -- $outdated
 
-    log "Packages to update: $*."
+    log "Packages to update: $*"
 
     # Tell 'pkg_build' to always prompt before build.
     build_prompt=1
@@ -952,7 +952,7 @@ args() {
 
             # If no arguments were passed, rebuild all packages.
             [ "$1" ] || {
-                cd "$KISS_ROOT/$pkg_db" || die "Failed to find package db."
+                cd "$KISS_ROOT/$pkg_db" || die "Failed to find package db"
 
                 # Use a glob after 'cd' to generate a list of all installed
                 # packages based on directory names.
@@ -968,21 +968,21 @@ args() {
         # Generate checksums for packages.
         c|ch|che|chec|check|checks|checksu|checksum|checksums)
             shift
-            [ "$1" ] || die "'kiss checksum' requires an argument."
+            [ "$1" ] || die "'kiss checksum' requires an argument"
 
             for pkg; do pkg_lint    "$pkg"; done
             for pkg; do pkg_sources "$pkg"; done
             for pkg; do
                 pkg_checksums "$pkg" > "$(pkg_search "$pkg")/checksums"
 
-                log "[$pkg]: Generated checksums."
+                log "[$pkg]: Generated checksums"
             done
         ;;
 
         # Install packages.
         i|in|ins|inst|insta|instal|install)
             shift
-            [ "$1" ] || die "'kiss install' requires an argument."
+            [ "$1" ] || die "'kiss install' requires an argument"
 
             # Rerun the script with 'sudo' if the user isn't root.
             # Cheeky but 'sudo' can't be used on shell functions
@@ -1015,7 +1015,7 @@ args() {
         # Remove packages.
         r|re|rem|remo|remov|remove)
             shift
-            [ "$1" ] || die "'kiss remove' requires an argument."
+            [ "$1" ] || die "'kiss remove' requires an argument"
 
             # Rerun the script with 'sudo' if the user isn't root.
             # Cheeky but 'sudo' can't be used on shell functions
@@ -1025,7 +1025,7 @@ args() {
                 return
             }
 
-            log "Removing packages..."
+            log "Removing packages"
 
             # Create a list of each package's dependencies.
             for pkg; do pkg_depends "$pkg"; done
@@ -1040,7 +1040,7 @@ args() {
 
             for pkg in $remove_pkgs; do
                 pkg_list "$pkg" >/dev/null ||
-                    die "[$pkg]: Not installed."
+                    die "[$pkg]: Not installed"
 
                 pkg_remove "$pkg" check
             done
@@ -1060,7 +1060,7 @@ args() {
         # Search for packages.
         s|se|sea|sear|searc|search)
             shift
-            [ "$1" ] || die "'kiss search' requires an argument."
+            [ "$1" ] || die "'kiss search' requires an argument"
 
             for pkg; do
                 # Create a list of all matching packages.
@@ -1068,7 +1068,7 @@ args() {
                                      -maxdepth 1 -name "$pkg")
 
                 # Print all matches. If there aren't any, print an error.
-                printf '%s\n' "${@:-$(log "[$pkg] Not found.")}"
+                printf '%s\n' "${@:-$(log "[$pkg] Not found")}"
 
                 # Exit with an error if a search fails.
                 [ "$1" ] || exit 1
@@ -1083,18 +1083,18 @@ args() {
         # Print usage and exit.
         h|he|hel|help|-h|--help|'')
             log "kiss [b|c|i|l|r|s|u] [pkg] [pkg] [pkg]" \
-                "build:     Build a package." \
-                "checksum:  Generate checksums." \
-                "install:   Install a package." \
-                "list:      List installed packages." \
-                "remove:    Remove a package." \
-                "search:    Search for a package." \
-                "update:    Check for updates."
+                "build:     Build a package" \
+                "checksum:  Generate checksums" \
+                "install:   Install a package" \
+                "list:      List installed packages" \
+                "remove:    Remove a package" \
+                "search:    Search for a package" \
+                "update:    Check for updates"
         ;;
 
         # Print message about invalid commands.
         *)
-            die "'kiss $1' is not a valid command."
+            die "'kiss $1' is not a valid command"
         ;;
     esac
 }
@@ -1125,7 +1125,7 @@ main() {
              "${tar_dir:=$cac_dir/extract-$pid}" \
              "${src_dir:=$cac_dir/sources}" \
              "${bin_dir:=$cac_dir/bin}" \
-        || die "Couldn't create cache directories."
+        || die "Couldn't create cache directories"
 
     args "$@"
 }
