@@ -1,12 +1,12 @@
 #!/bin/sh -ef
 #
+# This is a simple package manager written in POSIX 'sh' for
+# KISS Linux, utilizing the core UNIX utilities where needed.
+#
 # Disable warnings against word-splitting and globbing.
 # They are used *safely* throughout this script as globbing
 # is globally disabled and assumptions can be made about the input.
 # shellcheck disable=2046,2086
-#
-# This is a simple package manager written in POSIX 'sh' for
-# KISS Linux, utilizing the core UNIX utilities where needed.
 #
 # The script runs with 'set -e' enabled. It will exit on any
 # non-zero return code. This ensures that no function continues
