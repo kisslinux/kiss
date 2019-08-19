@@ -108,7 +108,7 @@ pkg_list() {
         }
 
         [ -f "$pkg/version" ] || {
-            log "Warning: Package '$pkg' has no version file"
+            log "[$pkg] Warning, package has no version file"
             continue
         }
 
@@ -153,10 +153,9 @@ pkg_sources() {
                 }
             ;;
 
-            # Local files (Any source that is non-remote is assumed to be local).
+            # Local files (sources that are non-remote are assumed to be local).
             *)
-                [ -f "$repo_dir/$src" ] ||
-                    die "[$1] No local file '$src'"
+                [ -f "$repo_dir/$src" ] || die "[$1] No local file '$src'"
 
                 log "[$1] Found local file '$src'"
             ;;
@@ -387,8 +386,6 @@ pkg_manifest() (
     # directories appearing *after* their contents.
     find . -mindepth 1 -type d -exec printf '%s/\n' {} + -or -print |
     sort -r | sed -e ss.ss > "$pkg_dir/$1/$pkg_db/$1/manifest"
-
-    log "[$1] Generated manifest"
 )
 
 pkg_tar() {
