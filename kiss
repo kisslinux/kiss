@@ -308,6 +308,77 @@ pkg_strip() {
     done
 }
 
+pkg_fixdeps() {
+    # Dynamically look for missing runtime dependencies by checking
+    # each binary and library with 'ldd'. This catches any extra
+    # libraries and or dependencies pulled in by the package's
+    # build suite.
+
+    # Store the package name in a variable as the code below
+    # redefines the argument list.
+    pkg_name=$1
+
+    log "[$1]: Checking 'ldd' for missing dependencies..."
+
+    # Go to the directory containing the built package to
+    # simplify path building.
+    cd "$pkg_dir/$1/$pkg_db/$1"
+
+    # Generate a list of binaries and libraries, false files
+    # will be found however it's faster to get 'ldd' to check
+    # them anyway than to filter them out.
+    set -- $(find "$pkg_dir/$1/usr/bin/" \
+                  "$pkg_dir/$1/usr/lib/" -type f 2>/dev/null)
+
+    # Make a copy of the depends file if it exists to have a
+    # reference to 'diff' against.
+    [ -f depends ] && cp -f depends depends-copy
+
+    for file; do
+        # Run 'ldd' on the file and parse each line. The code
+        # then checks to see which packages own the linked
+        # libraries and it prints the result.
+        ldd "$file" 2>/dev/null | while read -r dep; do
+            # Skip lines containing 'ldd'.
+            [ "${dep##*ldd*}" ] || continue
+
+            # Extract the file path from 'ldd' output.
+            dep=${dep#* => }
+            dep=${dep% *}
+
+            # Traverse symlinks to get the true path to the file.
+            dep=$(readlink -f "$KISS_ROOT/${dep##$KISS_ROOT}")
+
+            # Figure out which package owns the file.
+            dep=$(set +f; grep -lFx "${dep##$KISS_ROOT}" \
+                            "$KISS_ROOT/$pkg_db/"*/manifest)
+
+            # Extract package name from 'grep' match.
+            dep=${dep%/*}
+            dep=${dep##*/}
+
+            case $dep in
+                # Skip listing these packages as dependencies.
+                musl|gcc|$pkg_name) ;;
+                *) printf '%s\n' "$dep" ;;
+            esac
+        done ||:
+    done >> depends-copy
+
+    # Remove duplicate entries from the new depends file.
+    # This remove duplicate lines looking *only* at the
+    # first column.
+    sort -u -k1,1 depends-copy > depends-new
+
+    # Display a 'diff' of the new dependencies agaisnt
+    # the old ones. '-N' treats non-existent files as blank.
+    diff -N depends depends-new ||:
+
+    # Do some clean up as this required a few temporary files.
+    mv -f depends-new depends
+    rm -f .depends
+}
+
 pkg_manifest() (
     # Generate the package's manifest file. This is a list of each file
     # and directory inside the package. The file is used when uninstalling
@@ -495,6 +566,7 @@ pkg_build() {
         : > "$pkg_dir/$pkg/$pkg_db/$pkg/manifest"
 
         pkg_strip    "$pkg"
+        pkg_fixdeps  "$pkg"
         pkg_manifest "$pkg"
         pkg_tar      "$pkg"
 
