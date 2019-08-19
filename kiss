@@ -59,11 +59,7 @@ pkg_search() {
     # Figure out which repository a package belongs to by
     # searching for directories matching the package name
     # in $KISS_PATH/*.
-    [ "$KISS_PATH" ] || \
-        die "\$KISS_PATH needs to be set" \
-            "Example: 'KISS_PATH=/var/db/kiss/repo/core:/var/db/kiss/repo/extra'" \
-            "Repositories will be searched in the configured order" \
-            "The variable should work just like \$PATH"
+    [ "$KISS_PATH" ] || die "\$KISS_PATH needs to be set"
 
     # Find the repository containing a package.
     # Searches installed packages if the package is absent from the repositories.
@@ -937,16 +933,31 @@ args() {
     # or equivalent built in. This is rather easy to do in our case
     # since the first argument is always an "action" and the arguments
     # that follow are all package names.
+    action=$1
+    shift ||:
+
+    # Parse some arguments earlier to remove the need to duplicate code.
+    case $action in
+        c|checksums|s|search)
+            [ "$1" ] || die "'kiss $action' requires an argument"
+        ;;
+
+        i|install|r|remove)
+            [ "$1" ] || die "'kiss $action' requires an argument"
+
+            # Rerun the script with 'sudo' if the user isn't root.
+            # Cheeky but 'sudo' can't be used on shell functions themselves.
+            [ "$(id -u)" = 0 ] ||
+                exec sudo KISS_PATH=$KISS_PATH kiss "$action" "$@"
+        ;;
+    esac
 
     # Actions can be abbreviated to their first letter. This saves
     # keystrokes once you memorize the commands and it also has the
     # side-effect of "correcting" spelling mistakes (assuming the first
     # letter is right).
-    case $1 in
-        # Build the list of packages.
-        b|bu|bui|buil|build)
-            shift
-
+    case $action in
+        b|build)
             # If no arguments were passed, rebuild all packages.
             [ "$1" ] || {
                 cd "$KISS_ROOT/$pkg_db" || die "Failed to find package db"
@@ -962,11 +973,7 @@ args() {
             pkg_build "$@"
         ;;
 
-        # Generate checksums for packages.
-        c|ch|che|chec|check|checks|checksu|checksum|checksums)
-            shift
-            [ "$1" ] || die "'kiss checksum' requires an argument"
-
+        c|checksums)
             for pkg; do pkg_lint    "$pkg"; done
             for pkg; do pkg_sources "$pkg"; done
             for pkg; do
@@ -976,19 +983,7 @@ args() {
             done
         ;;
 
-        # Install packages.
-        i|in|ins|inst|insta|instal|install)
-            shift
-            [ "$1" ] || die "'kiss install' requires an argument"
-
-            # Rerun the script with 'sudo' if the user isn't root.
-            # Cheeky but 'sudo' can't be used on shell functions
-            # themselves.
-            [ "$(id -u)" != 0 ] && {
-                sudo KISS_PATH=$KISS_PATH kiss i "$@"
-                return
-            }
-
+        i|install)
             # Create a list of each package's dependencies.
             for pkg; do
                 if [ "${pkg%%*.tar.gz}" ]; then
@@ -1009,19 +1004,7 @@ args() {
             pkg_install "$@"
         ;;
 
-        # Remove packages.
-        r|re|rem|remo|remov|remove)
-            shift
-            [ "$1" ] || die "'kiss remove' requires an argument"
-
-            # Rerun the script with 'sudo' if the user isn't root.
-            # Cheeky but 'sudo' can't be used on shell functions
-            # themselves.
-            [ "$(id -u)" != 0 ] && {
-                sudo KISS_PATH=$KISS_PATH kiss r "$@"
-                return
-            }
-
+        r|remove)
             log "Removing packages"
 
             # Create a list of each package's dependencies.
@@ -1043,22 +1026,15 @@ args() {
             done
         ;;
 
-        # List installed packages.
-        l|li|lis|list)
-            shift
+        l|list)
             pkg_list "$@"
         ;;
 
-        # Upgrade packages.
-        u|up|upd|upda|updat|update)
+        u|update)
             pkg_updates
         ;;
 
-        # Search for packages.
-        s|se|sea|sear|searc|search)
-            shift
-            [ "$1" ] || die "'kiss search' requires an argument"
-
+        s|search)
             for pkg; do
                 # Create a list of all matching packages.
                 set -- $(IFS=:; find $KISS_PATH -mindepth 1 \
@@ -1072,13 +1048,11 @@ args() {
             done
         ;;
 
-        # Print version and exit.
-        v|ve|ver|vers|versi|versio|version)
+        v|version|-v|--version)
             printf 'kiss 0.7.0\n'
         ;;
 
-        # Print usage and exit.
-        h|he|hel|help|-h|--help|'')
+        h|help|-h|--help|'')
             log "kiss [b|c|i|l|r|s|u] [pkg] [pkg] [pkg]" \
                 "build:     Build a package" \
                 "checksum:  Generate checksums" \
@@ -1089,10 +1063,7 @@ args() {
                 "update:    Check for updates"
         ;;
 
-        # Print message about invalid commands.
-        *)
-            die "'kiss $1' is not a valid command"
-        ;;
+        *) die "'kiss $action' is not a valid command" ;;
     esac
 }
 
