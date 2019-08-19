@@ -54,12 +54,8 @@ pkg_lint() {
 
     # Ensure that the release field in the version file is set
     # to something. The above test checks for the version field inclusively.
-    read -r _ rel < version
-    [ "$rel" ] || die "Release field not found in version file."
-
-    # Unset this variable so it isn't used again on a failed
-    # source. There's no 'local' keyword in POSIX sh.
-    rel=
+    read -r _ release < version
+    [ "$release" ] || die "Release field not found in version file."
 }
 
 pkg_search() {
