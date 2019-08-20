@@ -798,6 +798,7 @@ pkg_install() {
         [ -f "$cac_dir/m-$pkg_name" ] && {
             awk 'NR==FNR{lines[$0];next}!($0 in lines)' \
                 "$KISS_ROOT/$pkg_db/$pkg_name/manifest" "$cac_dir/m-$pkg_name" |
+
             while read -r file; do
                 # Skip deleting some leftover files.
                 [ -f "$KISS_ROOT/$file" ] && [ ! -L "$KISS_ROOT/$file" ] &&
