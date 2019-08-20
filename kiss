@@ -278,22 +278,31 @@ pkg_strip() {
 
     # Strip only files matching the below mime-types from the package
     # directory. No alternative to 'file' here sadly.
-    find "$pkg_dir/$1" -type f | while read -r binary; do
-        case $(file -bi "$binary") in
-            application/x-sharedlib*|application/x-pie-executable*)
-                strip_opts=--strip-unneeded
-            ;;
+    find "$pkg_dir/$1" -type f -exec file -i {} + |
+        while IFS=': ' read -r bin mime; do
+            case $mime in
+                application/x-sharedlib*|\
+                application/x-pie-executable*)
+                    strip_opts=--strip-unneeded
+                ;;
 
-            application/x-archive*)    strip_opts=--strip-debug ;;
-            application/x-executable*) strip_opts=--strip-all ;;
+                application/x-archive*)
+                    strip_opts=--strip-debug
+                ;;
 
-            *) continue ;;
-        esac
+                application/x-executable*)
+                    strip_opts=--strip-all
+                ;;
 
-        # Suppress errors here as some binaries and libraries may
-        # fail to strip. This is OK.
-        strip "$strip_opts" "$binary" 2>/dev/null ||:
-    done
+                *) continue ;;
+            esac
+
+            # Suppress errors here as some binaries and libraries may
+            # fail to strip. This is OK.
+            strip "$strip_opts" "$bin" 2>/dev/null &
+        done
+
+    wait
 }
 
 pkg_fixdeps() {
