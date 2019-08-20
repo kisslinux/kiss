@@ -62,7 +62,8 @@ pkg_search() {
     [ "$KISS_PATH" ] || die "\$KISS_PATH needs to be set"
 
     # Find the repository containing a package.
-    # Searches installed packages if the package is absent from the repositories.
+    # Searches installed packages if the package is absent
+    # from the repositories.
     set -- "$1" $(IFS=:; find $KISS_PATH "$KISS_ROOT/$pkg_db" \
                               -maxdepth 1 -name "$1")
 
@@ -771,7 +772,7 @@ pkg_install() {
 
         log "[$pkg_name] Installing package"
 
-        # Block being able to abort the script with 'Ctrl+C' during installation.
+        # Block being able to abort the script with Ctrl+C during installation.
         # Removes all risk of the user aborting a package installation leaving
         # an incomplete package installed.
         trap '' INT
@@ -782,13 +783,13 @@ pkg_install() {
             cp -f "$KISS_ROOT/$pkg_db/$pkg_name/manifest" "$cac_dir/m-$pkg_name"
 
         # This is repeated multiple times. Better to make it a function.
-        rsync_pkg() {
+        pkg_rsync() {
             rsync -HKav --exclude etc -- "$tar_dir/$pkg_name/" "$KISS_ROOT/"
         }
 
         # Install the package by using 'rsync' and overwrite any existing files
         # (excluding '/etc/').
-        rsync_pkg
+        pkg_rsync
 
         # If '/etc/' exists in the package, install it but don't overwrite.
         [ -d "$tar_dir/$pkg_name/etc" ] &&
@@ -813,8 +814,8 @@ pkg_install() {
 
         # Install the package again to fix any non-leftover files being
         # removed above.
-        rsync_pkg ||:
-        rsync_pkg ||:
+        pkg_rsync ||:
+        pkg_rsync ||:
 
         # Reset 'trap' to its original value. Installation is done so
         # we no longer need to block 'Ctrl+C'.
@@ -947,8 +948,10 @@ args() {
 
             # Rerun the script with 'sudo' if the user isn't root.
             # Cheeky but 'sudo' can't be used on shell functions themselves.
-            [ "$(id -u)" = 0 ] ||
-                exec sudo KISS_PATH=$KISS_PATH kiss "$action" "$@"
+            [ "$(id -u)" = 0 ] || {
+                sudo KISS_PATH=$KISS_PATH kiss "$action" "$@"
+                return
+            }
         ;;
     esac
 
@@ -1036,15 +1039,7 @@ args() {
 
         s|search)
             for pkg; do
-                # Create a list of all matching packages.
-                set -- $(IFS=:; find $KISS_PATH -mindepth 1 \
-                                     -maxdepth 1 -name "$pkg")
-
-                # Print all matches. If there aren't any, print an error.
-                printf '%s\n' "${@:-$(log "[$pkg] Not found")}"
-
-                # Exit with an error if a search fails.
-                [ "$1" ] || exit 1
+                pkg_search "$pkg"
             done
         ;;
 
