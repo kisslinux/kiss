@@ -449,7 +449,7 @@ pkg_build() {
 
         # POSIX 'read' has none of the "nice" options like '-n', '-p'
         # etc etc. This is the most basic usage of 'read'.
-        read -r REPLY || exit
+        read -r || exit
     }
 
     log "Checking to see if any dependencies have already been built"
@@ -575,7 +575,7 @@ pkg_build() {
 
         # POSIX 'read' has none of the "nice" options like '-n', '-p'
         # etc etc. This is the most basic usage of 'read'.
-        read -r REPLY && {
+        read -r && {
             args i "$@"
             return
         }
