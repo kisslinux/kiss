@@ -639,29 +639,42 @@ pkg_conflicts() {
     # This function takes a path to a KISS tar-ball as an argument.
     log "[$2] Checking for package conflicts"
 
-    # Extract manifest from the tar-ball and only extract files entries.
-    tar xf "$1" -O "./$pkg_db/$2/manifest" |
-    while read -r line; do
-        [ "${line%%*/}" ] && printf '%s\n' "$line" >> "$cac_dir/manifest-$pid"
-    done ||:
+    # Save the package name as we modify the argument list below.
+    tar_file=$1
+    pkg_name=$2
 
     # Enable globbing.
     set +f
 
-    # Compare extracted manifest to all installed manifests.
-    # If there are matching lines (files) there is a package conflict.
-    for db in "$KISS_ROOT/$pkg_db/"*; do
-        [ "$2" = "${db##*/}" ] && continue
+    # Generate a list of all installed package manifests.
+    set -f -- "$KISS_ROOT/$pkg_db/"*/manifest
 
-        grep -Fxf "$cac_dir/manifest-$pid" "$db/manifest" 2>/dev/null &&
-            die "Package '$2' conflicts with '${db##*/}'"
+    # Go through the manifest list and filter out the
+    # package which will be installed.
+    for manifest; do
+        manifest_name=${manifest%/*}
+        manifest_name=${manifest_name##*/}
+
+        shift
+
+        [ "$manifest_name" = "$pkg_name" ] &&
+            continue
+
+        set -- "$@" "$manifest"
     done
 
-    # Disable globbing.
-    set -f
+    # Extract manifest from the tar-ball and only extract files entries.
+    tar xf "$tar_file" -O "./$pkg_db/$pkg_name/manifest" |
+        while read -r line; do
+            [ "${line%%*/}" ] && printf '%s\n' "$line"
+        done |
 
-    # Remove this temporary file as we no longer need it.
-    rm -f "$cac_dir/manifest-$pid"
+    # Compare the package's files against all owned files on the system.
+    grep -Fxf - "$@" 2>/dev/null &&
+        die "Package '$pkg_name' conflicts with another package"
+
+    # Force a '0' return code as the 'grep' above fails on success.
+    :
 }
 
 pkg_remove() {
