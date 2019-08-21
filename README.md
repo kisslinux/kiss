@@ -1,6 +1,6 @@
 # kiss
 
-Tiny package manager for KISS.
+Tiny package manager for KISS Linux.
 
 
 ## Package format
