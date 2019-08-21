@@ -965,7 +965,7 @@ args() {
 
     # Parse some arguments earlier to remove the need to duplicate code.
     case $action in
-        c|checksums|s|search)
+        c|checksum|s|search)
             [ "$1" ] || die "'kiss $action' requires an argument"
         ;;
 
@@ -1002,7 +1002,7 @@ args() {
             pkg_build "$@"
         ;;
 
-        c|checksums)
+        c|checksum)
             for pkg; do pkg_lint    "$pkg"; done
             for pkg; do pkg_sources "$pkg"; done
             for pkg; do
