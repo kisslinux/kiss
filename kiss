@@ -1066,7 +1066,7 @@ args() {
         ;;
 
         v|version|-v|--version)
-            printf 'kiss 0.7.0\n'
+            printf 'kiss 0.8.0\n'
         ;;
 
         h|help|-h|--help|'')
