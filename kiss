@@ -377,7 +377,7 @@ pkg_fixdeps() {
 
     # Do some clean up as this required a few temporary files.
     mv -f depends-new depends
-    rm -f .depends
+    rm -f depends-copy
 }
 
 pkg_manifest() (
