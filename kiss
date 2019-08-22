@@ -568,7 +568,11 @@ pkg_build() {
         # Install only dependencies of passed packages.
         case $explicit_packages in
             *" $pkg "*) continue ;;
-            *)          pkg_install "$pkg" ;;
+
+            *)
+                log "[$pkg] Needed as a dependency, installing"
+                args i "$pkg"
+            ;;
         esac
     done
 
@@ -1066,7 +1070,7 @@ args() {
         ;;
 
         v|version|-v|--version)
-            printf 'kiss 0.8.0\n'
+            printf 'kiss 0.8.1\n'
         ;;
 
         h|help|-h|--help|'')
