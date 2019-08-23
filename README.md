@@ -1,6 +1,6 @@
 # kiss
 
-Tiny package manager for KISS.
+Tiny package manager for KISS written in POSIX `sh`.
 
 
 ## Package format
