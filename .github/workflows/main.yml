@@ -10,4 +10,4 @@ jobs:
         steps:
             - uses: actions/checkout@v1
             - name: Run shellcheck.
-              run: shellcheck kiss
+              run: shellcheck -e 2030,2031 kiss
