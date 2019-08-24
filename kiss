@@ -453,7 +453,7 @@ pkg_build() {
     log "Building: $*"
 
     # Only ask for confirmation if more than one package needs to be built.
-    [ $# -gt 1 ] || [ "$build_prompt" ] && {
+    [ $# -gt 1 ] || [ "$pkg_update" ] && {
         log "Continue?: Press Enter to continue or Ctrl+C to abort here"
 
         # POSIX 'read' has none of the "nice" options like '-n', '-p'
@@ -566,14 +566,13 @@ pkg_build() {
         pkg_tar      "$pkg"
 
         # Install only dependencies of passed packages.
+        # Skip this check if this is a package update.
         case $explicit_packages in
-            *" $pkg "*) continue ;;
-
-            *)
-                log "[$pkg] Needed as a dependency, installing"
-                args i "$pkg"
-            ;;
+            *" $pkg "*) [ "$pkg_update" ] || continue ;;
         esac
+
+        log "[$pkg] Needed as a dependency or has an update, installing"
+        args i "$pkg"
     done
 
     log "Successfully built package(s)"
@@ -937,7 +936,7 @@ pkg_updates() {
     log "Packages to update: $*"
 
     # Tell 'pkg_build' to always prompt before build.
-    build_prompt=1
+    pkg_update=1
 
     # Build all packages requiring an update.
     pkg_build "$@"
