@@ -575,6 +575,9 @@ pkg_build() {
         args i "$pkg"
     done
 
+    # End here as this was a system update and all packages have been installed.
+    [ "$pkg_update" ] && return
+
     log "Successfully built package(s)"
 
     # Turn the explicit packages into a 'list'.
@@ -940,6 +943,7 @@ pkg_updates() {
 
     # Build all packages requiring an update.
     pkg_build "$@"
+    log "Updated all packages"
 }
 
 pkg_clean() {
