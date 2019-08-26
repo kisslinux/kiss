@@ -767,8 +767,11 @@ pkg_install() {
 
         # If the package is already installed (and this is an upgrade) make a
         # backup of the manifest file.
-        [ -f "$KISS_ROOT/$pkg_db/$pkg_name/manifest" ] &&
-            cp -f "$KISS_ROOT/$pkg_db/$pkg_name/manifest" "$cac_dir/m-$pkg_name"
+        if [ -f "$KISS_ROOT/$pkg_db/$pkg_name/manifest" ]; then
+            old_manifest=$(cat "$KISS_ROOT/$pkg_db/$pkg_name/manifest")
+        else
+            old_manifest=
+        fi
 
         # This is repeated multiple times. Better to make it a function.
         pkg_rsync() {
@@ -784,20 +787,34 @@ pkg_install() {
             rsync -HKav --ignore-existing "$tar_dir/$pkg_name/etc" "$KISS_ROOT/"
 
         # Remove any leftover files if this is an upgrade.
-        [ -f "$cac_dir/m-$pkg_name" ] && {
-            awk 'NR==FNR{lines[$0];next}!($0 in lines)' \
-                "$KISS_ROOT/$pkg_db/$pkg_name/manifest" "$cac_dir/m-$pkg_name" |
+        [ "$old_manifest" ] && {
+            printf '%s\n' "$old_manifest" |
+            grep -vFxf "$KISS_ROOT/$pkg_db/$pkg_name/manifest" - |
 
             while read -r file; do
                 # Skip deleting some leftover files.
-                [ -f "$KISS_ROOT/$file" ] && [ ! -L "$KISS_ROOT/$file" ] &&
-                    case $file in
-                        *bin/rm|*bin/busybox|*bin/rsync|/etc/*) ;;
-                        *) rm -f "$KISS_ROOT/$file" ;;
-                    esac
+                case $file in
+                    /etc/*|*bin/rm|*bin/busybox|*bin/rsync) continue ;;
+                esac
+
+                file=$KISS_ROOT/$file
+
+                # Remove files.
+                if [ -f "$file" ] && [ ! -L "$file" ]; then
+                    rm -f "$file"
+
+                # Remove file symlinks.
+                elif [ -L "$file" ] && [ ! -d "$file" ]; then
+                    unlink "$file" ||:
+
+                # Skip directory symlinks.
+                elif [ -L "$file" ] && [ -d "$file" ]; then
+                    :
 
                 # Remove directories if empty.
-                [ -d "$KISS_ROOT/$file" ] && rmdir "$file" 2>/dev/null ||:
+                elif [ -d "$file" ]; then
+                    rmdir "$file" 2>/dev/null ||:
+                fi
             done ||:
         }
 
@@ -911,9 +928,6 @@ pkg_clean() {
 
     # Remove temporary directories.
     rm -rf -- "$mak_dir" "$pkg_dir" "$tar_dir"
-
-    # Remove temporary files.
-    set +f; rm  -f "$cac_dir/m-"*
 }
 
 args() {
