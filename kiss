@@ -900,6 +900,7 @@ pkg_updates() {
     # Disable globbing.
     set -f
 
+    outdated="zlib xset kiss"
     # End here if no packages have an update.
     [ "$outdated" ] || {
         log "Everything is up to date"
@@ -1024,7 +1025,7 @@ args() {
                 pkg_list "$pkg" >/dev/null ||
                     die "[$pkg] Not installed"
 
-                pkg_remove "$pkg" "${KISS_FORCE:-check}"
+                pkg_remove "$pkg" check
             done
         ;;
 
