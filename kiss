@@ -184,7 +184,7 @@ pkg_extract() {
                 || die "[$1] Couldn't extract ${src##*/}"
             ;;
 
-            # Local files (Any source that is non-remote is assumed to be local).
+            # Local files (Any non-remote source is assumed to be local).
             *)
                 if [ -f "$repo_dir/$src" ]; then
                     cp -f "$repo_dir/$src" "./$dest"
@@ -232,14 +232,9 @@ pkg_verify() {
     # a new set of checksums and then comparing those with the old
     # set.
 
-    repo_dir=$(pkg_find "$1")
-
     # Generate a second set of checksums to compare against the
     # repository's checksums for the package.
-    pkg_checksums "$1" > "$cac_dir/c-$1"
-
-    # Compare the checksums using 'cmp'.
-    cmp -s "$cac_dir/c-$1" "$repo_dir/checksums" || {
+    pkg_checksums "$1" | cmp -s - "$(pkg_find "$1")/checksums" || {
         log "[$1] Checksum mismatch"
 
         # Instead of dying above, log it to the terminal. Also define a
@@ -918,7 +913,7 @@ pkg_clean() {
     rm -rf -- "$mak_dir" "$pkg_dir" "$tar_dir"
 
     # Remove temporary files.
-    set +f; rm  -f "$cac_dir/c-"* "$cac_dir/m-"*
+    set +f; rm  -f "$cac_dir/m-"*
 }
 
 args() {
