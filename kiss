@@ -41,8 +41,7 @@ pkg_lint() {
     # Check that each mandatory file in the package entry exists.
     log "[$1] Checking repository files"
 
-    # Figure out *where* the repository entry for the package is located.
-    repo_dir=$(pkg_search "$1")
+    repo_dir=$(pkg_find "$1")
 
     cd "$repo_dir" || die "'$repo_dir' not accessible"
     [ -f sources ] || die "[$1] Sources file not found"
@@ -55,7 +54,7 @@ pkg_lint() {
     [ "$release" ] || die "Release field not found in version file"
 }
 
-pkg_search() {
+pkg_find() {
     # Figure out which repository a package belongs to by
     # searching for directories matching the package name
     # in $KISS_PATH/*.
@@ -124,10 +123,7 @@ pkg_sources() {
     # source of the same name.
     mkdir -p "$src_dir/$1" && cd "$src_dir/$1"
 
-    # Find the package's repository files. This needs to keep
-    # happening as we can't store this data in any kind of data
-    # structure.
-    repo_dir=$(pkg_search "$1")
+    repo_dir=$(pkg_find "$1")
 
     while read -r src _; do
         case $src in
@@ -169,10 +165,7 @@ pkg_extract() {
     # source of the same name.
     mkdir -p "$mak_dir/$1" && cd "$mak_dir/$1"
 
-    # Find the package's repository files. This needs to keep
-    # happening as we can't store this data in any kind of data
-    # structure.
-    repo_dir=$(pkg_search "$1")
+    repo_dir=$(pkg_find "$1")
 
     while read -r src dest; do
         mkdir -p "./$dest"
@@ -210,10 +203,7 @@ pkg_extract() {
 pkg_depends() {
     # Resolve all dependencies and install them in the right order.
 
-    # Find the package's repository files. This needs to keep
-    # happening as we can't store this data in any kind of data
-    # structure.
-    repo_dir=$(pkg_search "$1")
+    repo_dir=$(pkg_find "$1")
 
     # This does a depth-first search. The deepest dependencies are
     # listed first and then the parents in reverse order.
@@ -242,10 +232,7 @@ pkg_verify() {
     # a new set of checksums and then comparing those with the old
     # set.
 
-    # Find the package's repository files. This needs to keep
-    # happening as we can't store this data in any kind of data
-    # structure.
-    repo_dir=$(pkg_search "$1")
+    repo_dir=$(pkg_find "$1")
 
     # Generate a second set of checksums to compare against the
     # repository's checksums for the package.
@@ -266,10 +253,7 @@ pkg_strip() {
     # Strip package binaries and libraries. This saves space on the
     # system as well as on the tar-balls we ship for installation.
 
-    # Find the package's repository files. This needs to keep
-    # happening as we can't store this data in any kind of data
-    # structure.
-    repo_dir=$(pkg_search "$1")
+    repo_dir=$(pkg_find "$1")
 
     # Package has stripping disabled, stop here.
     [ -f "$repo_dir/nostrip" ] && return
@@ -398,10 +382,7 @@ pkg_tar() {
     # This tar-ball also contains the package's database entry.
     log "[$1] Creating tar-ball"
 
-    # Find the package's repository files. This needs to keep
-    # happening as we can't store this data in any kind of data
-    # structure.
-    repo_dir=$(pkg_search "$1")
+    repo_dir=$(pkg_find "$1")
 
     # Read the version information to name the package.
     read -r version release < "$repo_dir/version"
@@ -477,10 +458,7 @@ pkg_build() {
             ;;
         esac
 
-        # Find the package's repository files. This needs to keep
-        # happening as we can't store this data in any kind of data
-        # structure.
-        repo_dir=$(pkg_search "$pkg")
+        repo_dir=$(pkg_find "$pkg")
 
         # Figure out the version and release.
         read -r version release < "$repo_dir/version"
@@ -504,10 +482,7 @@ pkg_build() {
 
     for pkg; do pkg_lint "$pkg"; done
     for pkg; do
-        # Find the package's repository files. This needs to keep
-        # happening as we can't store this data in any kind of data
-        # structure.
-        repo_dir=$(pkg_search "$pkg")
+        repo_dir=$(pkg_find "$pkg")
 
         # Ensure that checksums exist prior to building the package.
         [ -f "$repo_dir/checksums" ] || {
@@ -536,10 +511,7 @@ pkg_build() {
     for pkg; do
         pkg_extract "$pkg"
 
-        # Find the package's repository files. This needs to keep
-        # happening as we can't store this data in any kind of data
-        # structure.
-        repo_dir=$(pkg_search "$pkg")
+        repo_dir=$(pkg_find "$pkg")
 
         # Install built packages to a directory under the package name
         # to avoid collisions with other packages.
@@ -602,10 +574,7 @@ pkg_build() {
 pkg_checksums() {
     # Generate checksums for packages.
 
-    # Find the package's repository files. This needs to keep
-    # happening as we can't store this data in any kind of data
-    # structure.
-    repo_dir=$(pkg_search "$1")
+    repo_dir=$(pkg_find "$1")
 
     while read -r src _; do
         case $src in
@@ -747,10 +716,7 @@ pkg_install() {
             tar_file=$pkg
 
         else
-            # Find the package's repository files. This needs to keep
-            # happening as we can't store this data in any kind of data
-            # structure.
-            repo_dir=$(pkg_search "$pkg")
+            repo_dir=$(pkg_find "$pkg")
 
             # Read the version information to name the package.
             read -r version release < "$repo_dir/version"
@@ -907,10 +873,7 @@ pkg_updates() {
     set +f
 
     for pkg in "$KISS_ROOT/$pkg_db/"*; do
-        # Find the package's repository files. This needs to keep
-        # happening as we can't store this data in any kind of data
-        # structure.
-        repo_dir=$(pkg_search "${pkg##*/}")
+        repo_dir=$(pkg_find "${pkg##*/}")
 
         # Read version and release information from the installed packages
         # and repository.
@@ -1009,7 +972,7 @@ args() {
             for pkg; do pkg_lint    "$pkg"; done
             for pkg; do pkg_sources "$pkg"; done
             for pkg; do
-                pkg_checksums "$pkg" > "$(pkg_search "$pkg")/checksums"
+                pkg_checksums "$pkg" > "$(pkg_find "$pkg")/checksums"
 
                 log "[$pkg] Generated checksums"
             done
@@ -1068,7 +1031,7 @@ args() {
 
         s|search)
             for pkg; do
-                pkg_search "$pkg"
+                pkg_find "$pkg"
             done
         ;;
 
