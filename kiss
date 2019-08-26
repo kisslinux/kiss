@@ -827,8 +827,6 @@ pkg_install() {
         # we no longer need to block 'Ctrl+C'.
         trap pkg_clean EXIT INT
 
-        # Run the post install script and suppress errors. If it exists,
-        # it will run, else nothing will happen.
         [ -x "$KISS_ROOT/$pkg_db/$pkg_name/post-install" ] && {
             log "[$pkg_name] Running post-install script"
             "$KISS_ROOT/$pkg_db/$pkg_name/post-install" ||:
