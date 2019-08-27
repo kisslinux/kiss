@@ -900,7 +900,6 @@ pkg_updates() {
     # Disable globbing.
     set -f
 
-    outdated="zlib xset kiss"
     # End here if no packages have an update.
     [ "$outdated" ] || {
         log "Everything is up to date"
