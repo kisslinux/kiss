@@ -924,6 +924,9 @@ pkg_clean() {
     # to the build.
     [ "$KISS_DEBUG" = 1 ] && return
 
+    # Block 'Ctrl+C' while cache is being cleaned.
+    trap '' INT
+
     # Remove temporary directories.
     rm -rf -- "$mak_dir" "$pkg_dir" "$tar_dir"
 }
