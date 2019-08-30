@@ -257,29 +257,27 @@ pkg_strip() {
 
     # Strip only files matching the below mime-types from the package
     # directory. No alternative to 'file' here sadly.
-    find "$pkg_dir/$1" -type f -exec file -i {} + |
-        while IFS=': ' read -r bin mime; do
-            case $mime in
-                application/x-sharedlib*|\
-                application/x-pie-executable*)
-                    strip_opts=--strip-unneeded
-                ;;
+    find "$pkg_dir/$1" -type f | while read -r file; do
+        case "$(readelf -h "$file" 2>/dev/null)" in
+            *" DYN "*)
+                strip_opt=--strip-unneeded
+            ;;
 
-                application/x-archive*)
-                    strip_opts=--strip-debug
-                ;;
+            *" REL "*)
+                strip_opt=--strip-debug
+            ;;
 
-                application/x-executable*)
-                    strip_opts=--strip-all
-                ;;
+            *" EXEC "*)
+                strip_opt=--strip-all
+            ;;
 
-                *) continue ;;
-            esac
+            *) continue ;;
+        esac
 
-            # Suppress errors here as some binaries and libraries may
-            # fail to strip. This is OK.
-            strip "$strip_opts" "$bin" 2>/dev/null &
-        done
+        # Suppress errors here as some binaries and libraries may
+        # fail to strip. This is OK.
+        strip "$strip_opt" "$file" 2>/dev/null &
+    done
 
     wait
 }
