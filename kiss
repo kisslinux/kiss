@@ -382,11 +382,9 @@ pkg_tar() {
     # Read the version information to name the package.
     read -r version release < "$repo_dir/version"
 
-    # Create a tar-ball from the contents of the built package. `fakeroot`
-    # is used here to correct issues with file ownership.
-    fakeroot \
-        tar zpcf "$bin_dir/$1#$version-$release.tar.gz" -C "$pkg_dir/$1" . ||
-            die "[$1] Failed to create tar-ball"
+    # Create a tar-ball from the contents of the built package.
+    tar zpcf "$bin_dir/$1#$version-$release.tar.gz" -C "$pkg_dir/$1" . ||
+        die "[$1] Failed to create tar-ball"
 
     log "[$1] Successfully created tar-ball"
 }
@@ -514,7 +512,7 @@ pkg_build() {
 
         # Move to the build directory and call the build script.
         cd "$mak_dir/$pkg"
-        fakeroot "$repo_dir/build" "$pkg_dir/$pkg" ||
+        "$repo_dir/build" "$pkg_dir/$pkg" ||
             die "[$pkg] Build failed"
 
         # Copy the repository files to the package directory.
@@ -775,7 +773,8 @@ pkg_install() {
 
         # This is repeated multiple times. Better to make it a function.
         pkg_rsync() {
-            rsync -HKav --exclude etc -- "$tar_dir/$pkg_name/" "$KISS_ROOT/"
+            rsync --chown=root:root -HKav --exclude etc -- \
+                "$tar_dir/$pkg_name/" "$KISS_ROOT/"
         }
 
         # Install the package by using 'rsync' and overwrite any existing files
@@ -784,7 +783,8 @@ pkg_install() {
 
         # If '/etc/' exists in the package, install it but don't overwrite.
         [ -d "$tar_dir/$pkg_name/etc" ] &&
-            rsync -HKav --ignore-existing "$tar_dir/$pkg_name/etc" "$KISS_ROOT/"
+            rsync --chown=root:root -HKav --ignore-existing \
+                "$tar_dir/$pkg_name/etc" "$KISS_ROOT/"
 
         # Remove any leftover files if this is an upgrade.
         [ "$old_manifest" ] && {
