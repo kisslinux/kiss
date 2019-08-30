@@ -255,8 +255,7 @@ pkg_strip() {
 
     log "[$1] Stripping binaries and libraries"
 
-    # Strip only files matching the below mime-types from the package
-    # directory. No alternative to 'file' here sadly.
+    # Strip only files matching the below ELF types.
     find "$pkg_dir/$1" -type f | while read -r file; do
         case "$(readelf -h "$file" 2>/dev/null)" in
             *" DYN "*)
