@@ -894,6 +894,25 @@ pkg_updates() {
         }
     done
 
+    # If the package manager has an update, handle it first.
+    case $outdated in
+        *" kiss "*)
+            log "Detected package manager update" \
+                "The package manager will be updated first" \
+                "Continue?: Press Enter to continue or Ctrl+C to abort here"
+
+            read -r || exit
+
+            pkg_build kiss
+            args i kiss
+
+            log "Updated the package manager" \
+                "Re-run 'kiss update' to update your system"
+
+            exit 0
+        ;;
+    esac
+
     # Disable globbing.
     set -f
 
