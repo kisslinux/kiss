@@ -967,7 +967,7 @@ args() {
             # Rerun the script with 'sudo' if the user isn't root.
             # Cheeky but 'sudo' can't be used on shell functions themselves.
             [ "$(id -u)" = 0 ] || {
-                sudo KISS_PATH=$KISS_PATH kiss "$action" "$@"
+                sudo -E kiss "$action" "$@"
                 return
             }
         ;;
