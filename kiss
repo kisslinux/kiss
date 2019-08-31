@@ -1043,7 +1043,7 @@ args() {
                 pkg_list "$pkg" >/dev/null ||
                     die "[$pkg] Not installed"
 
-                pkg_remove "$pkg" check
+                pkg_remove "$pkg" "${KISS_FORCE:-check}"
             done
         ;;
 
