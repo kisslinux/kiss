@@ -34,7 +34,7 @@ die() {
 
 log() {
     # Print a message prettily.
-    printf '\033[1;32m=>\033[m %s.\n' "$@"
+    printf '\033[1;32m->\033[m %s.\n' "$@"
 }
 
 pkg_lint() {
