@@ -513,10 +513,10 @@ pkg_build() {
         # Call the build script and create a temporary file on error.
         # This is the simplest way to mimic "pipefail" in POSIX sh as
         # you cannot exit from within a pipe.
-        { "$repo_dir/build" "$pkg_dir/$pkg" || :> "$pkg-err"; } | tee log
+        { "$repo_dir/build" "$pkg_dir/$pkg" || :> err; } | tee log
 
         # If the file exists the build errored, die here and save the log.
-        [ -f "$pkg-err" ] && {
+        [ -f err ] && {
             cp -f log "$log_dir/$pkg-$date.log"
 
             die "[$pkg] Build failed" \
