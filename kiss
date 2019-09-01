@@ -248,10 +248,8 @@ pkg_strip() {
     # Strip package binaries and libraries. This saves space on the
     # system as well as on the tar-balls we ship for installation.
 
-    repo_dir=$(pkg_find "$1")
-
     # Package has stripping disabled, stop here.
-    [ -f "$repo_dir/nostrip" ] && return
+    [ -f "$(pkg_find "$1")/nostrip" ] && return
 
     log "[$1] Stripping binaries and libraries"
 
@@ -374,10 +372,8 @@ pkg_tar() {
     # This tar-ball also contains the package's database entry.
     log "[$1] Creating tar-ball"
 
-    repo_dir=$(pkg_find "$1")
-
     # Read the version information to name the package.
-    read -r version release < "$repo_dir/version"
+    read -r version release < "$(pkg_find "$1")/version"
 
     # Create a tar-ball from the contents of the built package.
     tar zpcf "$bin_dir/$1#$version-$release.tar.gz" -C "$pkg_dir/$1" . ||
@@ -448,10 +444,8 @@ pkg_build() {
             ;;
         esac
 
-        repo_dir=$(pkg_find "$pkg")
-
         # Figure out the version and release.
-        read -r version release < "$repo_dir/version"
+        read -r version release < "$(pkg_find "$pkg")/version"
 
         # Remove the current package from the package list.
         shift
@@ -472,10 +466,8 @@ pkg_build() {
 
     for pkg; do pkg_lint "$pkg"; done
     for pkg; do
-        repo_dir=$(pkg_find "$pkg")
-
         # Ensure that checksums exist prior to building the package.
-        [ -f "$repo_dir/checksums" ] || {
+        [ -f "$(pkg_find "$pkg")/checksums" ] || {
             log "[$pkg] Checksums are missing"
 
             # Instead of dying above, log it to the terminal. Also define a
@@ -717,10 +709,8 @@ pkg_install() {
             tar_file=$pkg
 
         else
-            repo_dir=$(pkg_find "$pkg")
-
             # Read the version information to name the package.
-            read -r version release < "$repo_dir/version"
+            read -r version release < "$(pkg_find "$pkg")/version"
 
             # Construct the name of the package tarball.
             tar_name=$pkg\#$version-$release.tar.gz
@@ -891,17 +881,17 @@ pkg_updates() {
     set +f
 
     for pkg in "$KISS_ROOT/$pkg_db/"*; do
-        repo_dir=$(pkg_find "${pkg##*/}")
+        pkg_name=${pkg##*/}
 
         # Read version and release information from the installed packages
         # and repository.
         read -r db_ver db_rel < "$pkg/version"
-        read -r re_ver re_rel < "$repo_dir/version"
+        read -r re_ver re_rel < "$(pkg_find "$pkg_name")/version"
 
         # Compare installed packages to repository packages.
         [ "$db_ver-$db_rel" != "$re_ver-$re_rel" ] && {
-            printf '%s\n' "${pkg##*/} $db_ver-$db_rel ==> $re_ver-$re_rel"
-            outdated="$outdated${pkg##*/} "
+            printf '%s\n' "$pkg_name $db_ver-$db_rel ==> $re_ver-$re_rel"
+            outdated="$outdated $pkg_name "
         }
     done
 
