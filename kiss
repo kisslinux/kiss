@@ -507,10 +507,21 @@ pkg_build() {
         # to avoid collisions with other packages.
         mkdir -p "$pkg_dir/$pkg/$pkg_db"
 
-        # Move to the build directory and call the build script.
+        # Move to the build directory.
         cd "$mak_dir/$pkg"
-        "$repo_dir/build" "$pkg_dir/$pkg" ||
-            die "[$pkg] Build failed"
+
+        # Call the build script and create a temporary file on error.
+        # This is the simplest way to mimic "pipefail" in POSIX sh as
+        # you cannot exit from within a pipe.
+        { "$repo_dir/build" "$pkg_dir/$pkg" || :> err; } | tee log
+
+        # If the file exists the build errored, die here and save the log.
+        [ -f err ] && {
+            cp -f log "$log_dir/$pkg-$date.log"
+
+            die "[$pkg] Build failed" \
+                "[$pkg] Build log saved to '$log_dir/$pkg-$date.log'"
+        }
 
         # Copy the repository files to the package directory.
         # This acts as the database entry.
@@ -1094,6 +1105,9 @@ main() {
     # variable is ever changed.
     old_ifs=$IFS
 
+    # Store the current date and time for build error logs.
+    date=$(date +%Y-%m-%d-%H:%M)
+
     # Catch errors and ensure that build files and directories are cleaned
     # up before we die. This occurs on 'Ctrl+C' as well as success and error.
     trap pkg_clean EXIT INT
@@ -1106,6 +1120,7 @@ main() {
              "${tar_dir:=$cac_dir/extract-$pid}" \
              "${src_dir:=$cac_dir/sources}" \
              "${bin_dir:=$cac_dir/bin}" \
+             "${log_dir:=$cac_dir/logs}" \
         || die "Couldn't create cache directories"
 
     args "$@"
