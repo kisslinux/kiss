@@ -1077,7 +1077,7 @@ main() {
     # to each specific KISS instance. This allows multiple package manager
     # instances to be run at once. Store the value in another variable so
     # that it doesn't change beneath us.
-    pid=$$
+    pid=${KISS_PID:-$$}
 
     # Store the original value of IFS so we can revert back to it if the
     # variable is ever changed.
