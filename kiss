@@ -1045,9 +1045,7 @@ args() {
         ;;
 
         s|search)
-            for pkg; do
-                pkg_find "$pkg"
-            done
+            for pkg; do pkg_find "$pkg"; done
         ;;
 
         v|version|-v|--version)
