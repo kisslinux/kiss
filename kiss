@@ -1051,7 +1051,7 @@ args() {
         ;;
 
         v|version|-v|--version)
-            printf 'kiss 0.11.3\n'
+            printf 'kiss 0.12.0\n'
         ;;
 
         h|help|-h|--help|'')
@@ -1089,7 +1089,7 @@ main() {
 
     # Create the required temporary directories and set the variables
     # which point to them.
-    mkdir -p "${cac_dir:=$KISS_ROOT/var/cache/kiss}" \
+    mkdir -p "${cac_dir:=$KISS_ROOT${XDG_CACHE_HOME:-$HOME/.cache}/kiss}" \
              "${mak_dir:=$cac_dir/build-$pid}" \
              "${pkg_dir:=$cac_dir/pkg-$pid}" \
              "${tar_dir:=$cac_dir/extract-$pid}" \
