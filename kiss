@@ -273,10 +273,8 @@ pkg_strip() {
 
         # Suppress errors here as some binaries and libraries may
         # fail to strip. This is OK.
-        strip "$strip_opt" "$file" 2>/dev/null &
+        strip "$strip_opt" "$file" 2>/dev/null ||:
     done
-
-    wait
 }
 
 pkg_fixdeps() {
