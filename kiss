@@ -944,9 +944,7 @@ args() {
     esac
 
     # Actions can be abbreviated to their first letter. This saves
-    # keystrokes once you memorize the commands and it also has the
-    # side-effect of "correcting" spelling mistakes (assuming the first
-    # letter is right).
+    # keystrokes once you memorize the commands.
     case $action in
         b|build)
             # If no arguments were passed, rebuild all packages.
