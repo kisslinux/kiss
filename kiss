@@ -589,13 +589,11 @@ pkg_conflicts() {
     # Go through the manifest list and filter out the
     # package which will be installed.
     for manifest; do
-        manifest_name=${manifest%/*}
-        manifest_name=${manifest_name##*/}
-
         shift
 
-        [ "$manifest_name" = "$pkg_name" ] &&
-            continue
+        case $manifest in
+            */$pkg_name/manifest) continue
+        esac
 
         set -- "$@" "$manifest"
     done
