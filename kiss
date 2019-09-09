@@ -95,20 +95,15 @@ pkg_list() {
     # packages installed.
     [ "$1" = "$KISS_ROOT/$pkg_db/"\* ] && return 1
 
-    # Loop over each version file and warn if one doesn't exist.
-    # Also warn if a package is missing its version file.
+    # Loop over each package and print its name and version.
     for pkg; do
-        if [ ! -d "$pkg" ]; then
+        [ -d "$pkg" ] || {
             log "Package '$pkg' is not installed"
             return 1
+        }
 
-        elif [ ! -f "$pkg/version" ]; then
-            log "[$pkg] Warning, package has no version file"
-            continue
-        fi
-
-        read -r version release < "$pkg/version" &&
-            printf '%s\n' "$pkg $version-$release"
+        read -r 2>/dev/null < "$pkg/version" || REPLY=null
+        printf '%s\n' "$pkg $REPLY"
     done
 }
 
