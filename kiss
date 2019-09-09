@@ -989,8 +989,7 @@ args() {
                 esac
             done
 
-            set -- $install_pkgs
-            pkg_install "$@"
+            pkg_install $install_pkgs
         ;;
 
         r|remove)
