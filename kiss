@@ -121,11 +121,6 @@ pkg_sources() {
 
     while read -r src _; do
         case $src in
-            # Git repository.
-            git:*)
-                git clone "${src##git:}" "$mak_dir"
-            ;;
-
             # Remote source.
             *://*)
                 [ -f "${src##*/}" ] && {
@@ -165,10 +160,6 @@ pkg_extract() {
         mkdir -p "./$dest"
 
         case $src in
-            # Do nothing as git repository was downloaded to the build
-            # directory directly.
-            git:*) ;;
-
             # Only 'tar' archives are currently supported for extraction.
             # Any other file-types are simply copied to '$mak_dir' which
             # allows you to extract them manually.
@@ -553,10 +544,6 @@ pkg_checksums() {
 
     while read -r src _; do
         case $src in
-            # Git repository.
-            # Skip checksums on git repositories.
-            git:*) ;;
-
             *)
                 # File is local to the package and is stored in the
                 # repository.
