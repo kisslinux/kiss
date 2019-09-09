@@ -98,15 +98,14 @@ pkg_list() {
     # Loop over each version file and warn if one doesn't exist.
     # Also warn if a package is missing its version file.
     for pkg; do
-        [ -d "$pkg" ] || {
+        if [ ! -d "$pkg" ]; then
             log "Package '$pkg' is not installed"
             return 1
-        }
 
-        [ -f "$pkg/version" ] || {
+        elif [ ! -f "$pkg/version" ]; then
             log "[$pkg] Warning, package has no version file"
             continue
-        }
+        fi
 
         read -r version release < "$pkg/version" &&
             printf '%s\n' "$pkg $version-$release"
