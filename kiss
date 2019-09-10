@@ -1027,6 +1027,10 @@ main() {
     # up before we die. This occurs on 'Ctrl+C' as well as success and error.
     trap pkg_clean EXIT INT
 
+    # This allows for automatic setup of a KISS chroot and will
+    # do nothing on a normal system.
+    mkdir -p "${sys_db:=$KISS_ROOT/$pkg_db}" 2>/dev/null ||:
+
     # Create the required temporary directories and set the variables
     # which point to them.
     mkdir -p "${cac_dir:=$KISS_ROOT${XDG_CACHE_HOME:-$HOME/.cache}/kiss}" \
@@ -1035,7 +1039,6 @@ main() {
              "${tar_dir:=$cac_dir/extract-$pid}" \
              "${src_dir:=$cac_dir/sources}" \
              "${bin_dir:=$cac_dir/bin}" \
-             "${sys_db:=$KISS_ROOT/$pkg_db}" \
         || die "Couldn't create cache directories"
 
     args "$@"
