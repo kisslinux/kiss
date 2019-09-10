@@ -63,8 +63,7 @@ pkg_find() {
     # Find the repository containing a package.
     # Searches installed packages if the package is absent
     # from the repositories.
-    set -- "$1" $(IFS=:; find $KISS_PATH "$KISS_ROOT/$pkg_db" \
-                              -maxdepth 1 -name "$1")
+    set -- "$1" $(IFS=:; find $KISS_PATH "$sys_db" -maxdepth 1 -name "$1")
 
     # A package may also not be found due to a repository not being
     # readable by the current user. Either way, we need to die here.
@@ -82,8 +81,7 @@ pkg_list() {
     # avoid having to 'basename' each path. If this fails,
     # set '$1' to mimic a failed glob which indicates that
     # nothing is installed.
-    cd "$KISS_ROOT/$pkg_db" 2>/dev/null ||
-        set -- "$KISS_ROOT/$pkg_db/"\*
+    cd "$sys_db" 2>/dev/null || set -- "$sys_db/"\*
 
     # Optional arguments can be passed to check for specific
     # packages. If no arguments are passed, list all. As we
@@ -93,7 +91,7 @@ pkg_list() {
 
     # If the 'glob' above failed, exit early as there are no
     # packages installed.
-    [ "$1" = "$KISS_ROOT/$pkg_db/"\* ] && return 1
+    [ "$1" = "$sys_db/"\* ] && return 1
 
     # Loop over each package and print its name and version.
     for pkg; do
@@ -290,8 +288,7 @@ pkg_fixdeps() {
             dep=$(readlink -f "$KISS_ROOT/${dep##$KISS_ROOT}")
 
             # Figure out which package owns the file.
-            dep=$(set +f; grep -lFx "${dep##$KISS_ROOT}" \
-                            "$KISS_ROOT/$pkg_db/"*/manifest)
+            dep=$(set +f; grep -lFx "${dep##$KISS_ROOT}" "$sys_db/"*/manifest)
 
             # Extract package name from 'grep' match.
             dep=${dep%/*}
@@ -559,7 +556,7 @@ pkg_conflicts() {
     set +f
 
     # Generate a list of all installed package manifests.
-    set -f -- "$KISS_ROOT/$pkg_db/"*/manifest
+    set -f -- "$sys_db/"*/manifest
 
     # Go through the manifest list and filter out the
     # package which will be installed.
@@ -602,7 +599,7 @@ pkg_remove() {
     set +f
 
     # Make sure that nothing depends on this package.
-    [ "$2" = check ] && for file in "$KISS_ROOT/$pkg_db/"*; do
+    [ "$2" = check ] && for file in "$sys_db/"*; do
         # Check each depends file for the package and if it's
         # a run-time dependency, append to the $required_by string.
         grep -qFx "$1" "$file/depends" 2>/dev/null &&
@@ -631,7 +628,7 @@ pkg_remove() {
         else
             rm -f -- "$KISS_ROOT/$file"
         fi
-    done < "$KISS_ROOT/$pkg_db/$1/manifest"
+    done < "$sys_db/$1/manifest"
 
     # Reset 'trap' to its original value. Removal is done so
     # we no longer need to block 'Ctrl+C'.
@@ -702,8 +699,8 @@ pkg_install() {
 
         # If the package is already installed (and this is an upgrade) make a
         # backup of the manifest file.
-        if [ -f "$KISS_ROOT/$pkg_db/$pkg_name/manifest" ]; then
-            old_manifest=$(cat "$KISS_ROOT/$pkg_db/$pkg_name/manifest")
+        if [ -f "$sys_db/$pkg_name/manifest" ]; then
+            old_manifest=$(cat "$sys_db/$pkg_name/manifest")
         else
             old_manifest=
         fi
@@ -726,7 +723,7 @@ pkg_install() {
         # Remove any leftover files if this is an upgrade.
         [ "$old_manifest" ] && {
             printf '%s\n' "$old_manifest" |
-            grep -vFxf "$KISS_ROOT/$pkg_db/$pkg_name/manifest" - |
+            grep -vFxf "$sys_db/$pkg_name/manifest" - |
 
             while read -r file; do
                 # Skip deleting some leftover files.
@@ -764,9 +761,9 @@ pkg_install() {
         # we no longer need to block 'Ctrl+C'.
         trap pkg_clean EXIT INT
 
-        [ -x "$KISS_ROOT/$pkg_db/$pkg_name/post-install" ] && {
+        [ -x "$sys_db/$pkg_name/post-install" ] && {
             log "[$pkg_name] Running post-install script"
-            "$KISS_ROOT/$pkg_db/$pkg_name/post-install" ||:
+            "$sys_db/$pkg_name/post-install" ||:
         }
 
         log "[$pkg_name] Installed successfully"
@@ -819,7 +816,7 @@ pkg_updates() {
     # Enable globbing.
     set +f
 
-    for pkg in "$KISS_ROOT/$pkg_db/"*; do
+    for pkg in "$sys_db/"*; do
         pkg_name=${pkg##*/}
 
         # Read version and release information from the installed packages
@@ -916,7 +913,7 @@ args() {
         b|build)
             # If no arguments were passed, rebuild all packages.
             [ "$1" ] || {
-                cd "$KISS_ROOT/$pkg_db" || die "Failed to find package db"
+                cd "$sys_db" || die "Failed to find package db"
 
                 # Use a glob after 'cd' to generate a list of all installed
                 # packages based on directory names.
@@ -1029,6 +1026,10 @@ main() {
     # Catch errors and ensure that build files and directories are cleaned
     # up before we die. This occurs on 'Ctrl+C' as well as success and error.
     trap pkg_clean EXIT INT
+
+    # This allows for automatic setup of a KISS chroot and will
+    # do nothing on a normal system.
+    mkdir -p "${sys_db:=$KISS_ROOT/$pkg_db}" 2>/dev/null ||:
 
     # Create the required temporary directories and set the variables
     # which point to them.
