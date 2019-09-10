@@ -531,33 +531,28 @@ pkg_build() {
 
 pkg_checksums() {
     # Generate checksums for packages.
-
     repo_dir=$(pkg_find "$1")
 
     while read -r src _; do
         case $src in
             *)
-                # File is local to the package and is stored in the
-                # repository.
-                [ -f "$repo_dir/$src" ] &&
+                # File is local to the package.
+                if [ -f "$repo_dir/$src" ]; then
                     src_path=$repo_dir/${src%/*}
 
                 # File is remote and was downloaded.
-                [ -f "$src_dir/$1/${src##*/}" ] &&
+                elif [ -f "$src_dir/$1/${src##*/}" ]; then
                     src_path=$src_dir/$1
 
                 # Die here if source for some reason, doesn't exist.
-                [ "$src_path" ] ||
+                else
                     die "[$1] Couldn't find source '$src'"
+                fi
 
                 # An easy way to get 'sha256sum' to print with the 'basename'
                 # of files is to 'cd' to the file's directory beforehand.
                 (cd "$src_path" && sha256sum "${src##*/}") ||
                     die "[$1] Failed to generate checksums"
-
-                # Unset this variable so it isn't used again on a failed
-                # source. There's no 'local' keyword in POSIX sh.
-                src_path=
             ;;
         esac
     done < "$repo_dir/sources"
