@@ -63,7 +63,7 @@ pkg_find() {
     # Find the repository containing a package.
     # Searches installed packages if the package is absent
     # from the repositories.
-    set -- "$1" $(IFS=:; find $KISS_PATH "$pkg_db" -maxdepth 1 -name "$1")
+    set -- "$1" $(IFS=:; find $KISS_PATH "$sys_db" -maxdepth 1 -name "$1")
 
     # A package may also not be found due to a repository not being
     # readable by the current user. Either way, we need to die here.
@@ -81,7 +81,7 @@ pkg_list() {
     # avoid having to 'basename' each path. If this fails,
     # set '$1' to mimic a failed glob which indicates that
     # nothing is installed.
-    cd "$pkg_db" 2>/dev/null || set -- "$pkg_db/"\*
+    cd "$sys_db" 2>/dev/null || set -- "$sys_db/"\*
 
     # Optional arguments can be passed to check for specific
     # packages. If no arguments are passed, list all. As we
@@ -91,7 +91,7 @@ pkg_list() {
 
     # If the 'glob' above failed, exit early as there are no
     # packages installed.
-    [ "$1" = "$pkg_db/"\* ] && return 1
+    [ "$1" = "$sys_db/"\* ] && return 1
 
     # Loop over each package and print its name and version.
     for pkg; do
@@ -285,10 +285,10 @@ pkg_fixdeps() {
             dep=${dep% *}
 
             # Traverse symlinks to get the true path to the file.
-            dep=$(readlink -f "/$dep")
+            dep=$(readlink -f "$KISS_ROOT/${dep##$KISS_ROOT}")
 
             # Figure out which package owns the file.
-            dep=$(set +f; grep -lFx "$dep" "$pkg_db/"*/manifest)
+            dep=$(set +f; grep -lFx "${dep##$KISS_ROOT}" "$sys_db/"*/manifest)
 
             # Extract package name from 'grep' match.
             dep=${dep%/*}
@@ -556,7 +556,7 @@ pkg_conflicts() {
     set +f
 
     # Generate a list of all installed package manifests.
-    set -f -- "$pkg_db/"*/manifest
+    set -f -- "$sys_db/"*/manifest
 
     # Go through the manifest list and filter out the
     # package which will be installed.
@@ -599,7 +599,7 @@ pkg_remove() {
     set +f
 
     # Make sure that nothing depends on this package.
-    [ "$2" = check ] && for file in "$pkg_db/"*; do
+    [ "$2" = check ] && for file in "$sys_db/"*; do
         # Check each depends file for the package and if it's
         # a run-time dependency, append to the $required_by string.
         grep -qFx "$1" "$file/depends" 2>/dev/null &&
@@ -623,12 +623,12 @@ pkg_remove() {
         # manager from removing user edited configuration files.
         [ "${file##/etc/*}" ] || continue
 
-        if [ -d "/$file" ]; then
-            rmdir "/$file" 2>/dev/null || continue
+        if [ -d "$KISS_ROOT/$file" ]; then
+            rmdir "$KISS_ROOT/$file" 2>/dev/null || continue
         else
-            rm -f -- "/$file"
+            rm -f -- "$KISS_ROOT/$file"
         fi
-    done < "$pkg_db/$1/manifest"
+    done < "$sys_db/$1/manifest"
 
     # Reset 'trap' to its original value. Removal is done so
     # we no longer need to block 'Ctrl+C'.
@@ -699,15 +699,16 @@ pkg_install() {
 
         # If the package is already installed (and this is an upgrade) make a
         # backup of the manifest file.
-        if [ -f "$pkg_db/$pkg_name/manifest" ]; then
-            old_manifest=$(cat "$pkg_db/$pkg_name/manifest")
+        if [ -f "$sys_db/$pkg_name/manifest" ]; then
+            old_manifest=$(cat "$sys_db/$pkg_name/manifest")
         else
             old_manifest=
         fi
 
         # This is repeated multiple times. Better to make it a function.
         pkg_rsync() {
-            rsync --chown=root:root -HKav --exclude etc "$tar_dir/$pkg_name/" /
+            rsync --chown=root:root -HKav --exclude etc -- \
+                "$tar_dir/$pkg_name/" "$KISS_ROOT/"
         }
 
         # Install the package by using 'rsync' and overwrite any existing files
@@ -717,18 +718,20 @@ pkg_install() {
         # If '/etc/' exists in the package, install it but don't overwrite.
         [ -d "$tar_dir/$pkg_name/etc" ] &&
             rsync --chown=root:root -HKav --ignore-existing \
-                "$tar_dir/$pkg_name/etc" /
+                "$tar_dir/$pkg_name/etc" "$KISS_ROOT/"
 
         # Remove any leftover files if this is an upgrade.
         [ "$old_manifest" ] && {
             printf '%s\n' "$old_manifest" |
-            grep -vFxf "$pkg_db/$pkg_name/manifest" - |
+            grep -vFxf "$sys_db/$pkg_name/manifest" - |
 
             while read -r file; do
                 # Skip deleting some leftover files.
                 case $file in
                     /etc/*|*bin/rm|*bin/busybox|*bin/rsync) continue ;;
                 esac
+
+                file=$KISS_ROOT/$file
 
                 # Remove files.
                 if [ -f "$file" ] && [ ! -L "$file" ]; then
@@ -758,9 +761,9 @@ pkg_install() {
         # we no longer need to block 'Ctrl+C'.
         trap pkg_clean EXIT INT
 
-        [ -x "$pkg_db/$pkg_name/post-install" ] && {
+        [ -x "$sys_db/$pkg_name/post-install" ] && {
             log "[$pkg_name] Running post-install script"
-            "$pkg_db/$pkg_name/post-install" ||:
+            "$sys_db/$pkg_name/post-install" ||:
         }
 
         log "[$pkg_name] Installed successfully"
@@ -813,7 +816,7 @@ pkg_updates() {
     # Enable globbing.
     set +f
 
-    for pkg in "$pkg_db/"*; do
+    for pkg in "$sys_db/"*; do
         pkg_name=${pkg##*/}
 
         # Read version and release information from the installed packages
@@ -910,7 +913,7 @@ args() {
         b|build)
             # If no arguments were passed, rebuild all packages.
             [ "$1" ] || {
-                cd "$pkg_db" || die "Failed to find package db"
+                cd "$sys_db" || die "Failed to find package db"
 
                 # Use a glob after 'cd' to generate a list of all installed
                 # packages based on directory names.
@@ -1008,7 +1011,7 @@ args() {
 
 main() {
     # Set the location to the repository and package database.
-    pkg_db=/var/db/kiss/installed
+    pkg_db=var/db/kiss/installed
 
     # The PID of the current shell process is used to isolate directories
     # to each specific KISS instance. This allows multiple package manager
@@ -1026,12 +1029,13 @@ main() {
 
     # Create the required temporary directories and set the variables
     # which point to them.
-    mkdir -p "${cac_dir:=${XDG_CACHE_HOME:-$HOME/.cache}/kiss}" \
+    mkdir -p "${cac_dir:=$KISS_ROOT${XDG_CACHE_HOME:-$HOME/.cache}/kiss}" \
              "${mak_dir:=$cac_dir/build-$pid}" \
              "${pkg_dir:=$cac_dir/pkg-$pid}" \
              "${tar_dir:=$cac_dir/extract-$pid}" \
              "${src_dir:=$cac_dir/sources}" \
              "${bin_dir:=$cac_dir/bin}" \
+             "${sys_db:=$KISS_ROOT/$pkg_db}" \
         || die "Couldn't create cache directories"
 
     args "$@"
