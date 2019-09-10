@@ -830,7 +830,7 @@ pkg_updates() {
         # Compare installed packages to repository packages.
         [ "$db_ver-$db_rel" != "$re_ver-$re_rel" ] && {
             printf '%s\n' "$pkg_name $db_ver-$db_rel ==> $re_ver-$re_rel"
-            outdated="$outdated $pkg_name "
+            outdated="$outdated$pkg_name "
         }
     done
 
@@ -862,16 +862,13 @@ pkg_updates() {
         return
     }
 
-    # Turn the string of outdated packages into a 'list'.
-    set -- $outdated
-
-    log "Packages to update: $*"
+    log "Packages to update: ${outdated% }"
 
     # Tell 'pkg_build' to always prompt before build.
     pkg_update=1
 
     # Build all packages requiring an update.
-    pkg_build "$@"
+    pkg_build $outdated
     log "Updated all packages"
 }
 
