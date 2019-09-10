@@ -112,9 +112,9 @@ pkg_sources() {
     # files is also checked.
     log "[$1] Downloading sources"
 
-    # Store each downloaded source in named after the package it
-    # belongs to. This avoid conflicts between two packages having a
-    # source of the same name.
+    # Store each downloaded source in a directory named after the
+    # package it belongs to. This avoid conflicts between two packages
+    # having a source of the same name.
     mkdir -p "$src_dir/$1" && cd "$src_dir/$1"
 
     repo_dir=$(pkg_find "$1")
