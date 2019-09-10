@@ -261,28 +261,20 @@ pkg_fixdeps() {
     # each binary and library with 'ldd'. This catches any extra
     # libraries and or dependencies pulled in by the package's
     # build suite.
-
-    # Store the package name in a variable as the code below
-    # redefines the argument list.
-    pkg_name=$1
-
-    log "[$1] Checking 'ldd' for missing dependencies"
+    log "[$1] Checking for missing dependencies"
 
     # Go to the directory containing the built package to
     # simplify path building.
     cd "$pkg_dir/$1/$pkg_db/$1"
 
-    # Generate a list of binaries and libraries, false files
-    # will be found however it's faster to get 'ldd' to check
-    # them anyway than to filter them out.
-    set -- $(find "$pkg_dir/$1/usr/bin/" \
-                  "$pkg_dir/$1/usr/lib/" -type f 2>/dev/null)
-
     # Make a copy of the depends file if it exists to have a
     # reference to 'diff' against.
     [ -f depends ] && cp -f depends depends-copy
 
-    for file; do
+    # Get a list of binaries and libraries, false files
+    # will be found, however it's faster to get 'ldd' to check
+    # them anyway than to filter them out.
+    find "$pkg_dir/$1" -type f 2>/dev/null | while read -r file; do
         # Run 'ldd' on the file and parse each line. The code
         # then checks to see which packages own the linked
         # libraries and it prints the result.
@@ -307,7 +299,7 @@ pkg_fixdeps() {
 
             case $dep in
                 # Skip listing these packages as dependencies.
-                musl|gcc|$pkg_name) ;;
+                musl|gcc|${PWD##*/}) ;;
                 *) printf '%s\n' "$dep" ;;
             esac
         done ||:
