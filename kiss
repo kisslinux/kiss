@@ -68,7 +68,7 @@ pkg_find() {
 
     # A package may also not be found due to a repository not being
     # readable by the current user. Either way, we need to die here.
-    [ -z "$2" ] && die "Package '$1' not in any repository"
+    [ "$2" ] || die "Package '$1' not in any repository"
 
     printf '%s\n' "$2"
 }
