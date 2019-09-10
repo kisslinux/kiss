@@ -149,33 +149,27 @@ pkg_extract() {
     # any local repository files.
     log "[$1] Extracting sources"
 
-    # Store each downloaded source in named after the package it
-    # belongs to. This avoid conflicts between two packages having a
-    # source of the same name.
-    mkdir -p "$mak_dir/$1" && cd "$mak_dir/$1"
-
     repo_dir=$(pkg_find "$1")
 
     while read -r src dest; do
-        mkdir -p "./$dest"
+        mkdir -p "$mak_dir/$1/$dest" && cd "$mak_dir/$1/$dest"
 
         case $src in
             # Only 'tar' archives are currently supported for extraction.
             # Any other file-types are simply copied to '$mak_dir' which
             # allows you to extract them manually.
             *://*.tar*|*://*.tgz)
-                tar xf "$src_dir/$1/${src##*/}" -C "./$dest" \
-                    --strip-components 1 \
+                tar xf "$src_dir/$1/${src##*/}" --strip-components 1 \
                 || die "[$1] Couldn't extract ${src##*/}"
             ;;
 
             # Local files (Any non-remote source is assumed to be local).
             *)
                 if [ -f "$repo_dir/$src" ]; then
-                    cp -f "$repo_dir/$src" "./$dest"
+                    cp -f "$repo_dir/$src" .
 
                 elif [ -f "$src_dir/$1/${src##*/}" ]; then
-                    cp -f "$src_dir/$1/${src##*/}" "./$dest"
+                    cp -f "$src_dir/$1/${src##*/}" .
 
                 else
                     die "[$1] Local file $src not found"
