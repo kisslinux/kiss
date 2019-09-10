@@ -688,12 +688,10 @@ pkg_install() {
             while read -r dep dep_type; do
                 [ "${dep##\#*}" ] || continue
                 [ "$dep_type" ]   || pkg_list "$dep" >/dev/null ||
-                    required_install="$required_install'$dep', "
+                    install_dep="$install_dep'$dep', "
             done < "$tar_dir/$pkg_name/$pkg_db/$pkg_name/depends"
 
-        [ "$required_install" ] &&
-            die "[$1] Package requires ${required_install%, }" \
-                "[$1] Aborting here"
+        [ "$install_dep" ] && die "[$1] Package requires ${install_dep%, }"
 
         log "[$pkg_name] Installing package"
 
