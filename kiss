@@ -100,8 +100,8 @@ pkg_list() {
             return 1
         }
 
-        read -r 2>/dev/null < "$pkg/version" || REPLY=null
-        printf '%s\n' "$pkg $REPLY"
+        read -r version 2>/dev/null < "$pkg/version" || version=null
+        printf '%s\n' "$pkg $version"
     done
 }
 
@@ -387,7 +387,8 @@ pkg_build() {
 
         # POSIX 'read' has none of the "nice" options like '-n', '-p'
         # etc etc. This is the most basic usage of 'read'.
-        read -r || exit
+        # '_' is used as 'dash' errors when no variable is given to 'read'.
+        read -r _ || exit
     }
 
     log "Checking to see if any dependencies have already been built"
@@ -505,7 +506,8 @@ pkg_build() {
 
         # POSIX 'read' has none of the "nice" options like '-n', '-p'
         # etc etc. This is the most basic usage of 'read'.
-        read -r && {
+        # '_' is used as 'dash' errors when no variable is given to 'read'.
+        read -r _ && {
             args i "$@"
             return
         }
@@ -838,7 +840,10 @@ pkg_updates() {
                 "The package manager will be updated first" \
                 "Continue?: Press Enter to continue or Ctrl+C to abort here"
 
-            read -r || exit
+            # POSIX 'read' has none of the "nice" options like '-n', '-p'
+            # etc etc. This is the most basic usage of 'read'.
+            # '_' is used as 'dash' errors when no variable is given to 'read'.
+            read -r _ || exit
 
             pkg_build kiss
             args i kiss
@@ -887,7 +892,10 @@ args() {
     # since the first argument is always an "action" and the arguments
     # that follow are all package names.
     action=$1
-    shift ||:
+
+    # 'dash' exits on error here if 'shift' is used and there are zero
+    # arguments despite trapping the error ('|| :').
+    shift "$(($# > 0 ? 1 : 0))"
 
     # Parse some arguments earlier to remove the need to duplicate code.
     case $action in
