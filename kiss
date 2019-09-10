@@ -629,8 +629,7 @@ pkg_remove() {
         if [ -d "$KISS_ROOT/$file" ]; then
             rmdir "$KISS_ROOT/$file" 2>/dev/null || continue
         else
-            rm -f -- "$KISS_ROOT/$file" ||
-                log "[$1] Failed to remove '$file'"
+            rm -f -- "$KISS_ROOT/$file"
         fi
     done < "$KISS_ROOT/$pkg_db/$1/manifest"
 
