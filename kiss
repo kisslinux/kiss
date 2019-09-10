@@ -450,20 +450,18 @@ pkg_build() {
             # Instead of dying above, log it to the terminal. Also define a
             # variable so we *can* die after all checksum files have been
             # checked.
-            no_checkums="$no_checkums$pkg "
+            no_sums="$no_sums$pkg "
         }
     done
 
     # Die here as packages without checksums were found above.
-    [ "$no_checkums" ] &&
-        die "Run 'kiss checksum ${no_checkums% }' to generate checksums"
+    [ "$no_sums" ] && die "Checksums missing, run 'kiss checksum ${no_sums% }'"
 
     for pkg; do pkg_sources "$pkg"; done
     for pkg; do pkg_verify  "$pkg"; done
 
     # Die here as packages with differing checksums were found above.
-    [ "$mismatch" ] &&
-        die "Checksum mismatch with: ${mismatch% }"
+    [ "$mismatch" ] && die "Checksum mismatch with: ${mismatch% }"
 
     # Finally build and create tarballs for all passed packages and
     # dependencies.
