@@ -372,15 +372,11 @@ pkg_build() {
     # are included and ensure that all installed packages are excluded.
     for pkg; do
         case $explicit_packages in
-            *" $pkg "*)
-                build_packages="$build_packages$pkg "
-            ;;
-
-            *)
-                pkg_list "$pkg" >/dev/null ||
-                    build_packages="$build_packages$pkg "
-            ;;
+            *" $pkg "*) ;;
+            *) pkg_list "$pkg" >/dev/null && continue ;;
         esac
+
+        build_packages="$build_packages$pkg "
     done
 
     # Set the filtered dependency list as the function's arguments.
