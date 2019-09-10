@@ -693,7 +693,7 @@ pkg_install() {
 
         [ "$required_install" ] &&
             die "[$1] Package requires ${required_install%, }" \
-                "[$1]: Aborting here"
+                "[$1] Aborting here"
 
         log "[$pkg_name] Installing package"
 
