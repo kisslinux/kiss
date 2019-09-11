@@ -662,7 +662,7 @@ pkg_install() {
 
     [ "$install_dep" ] && die "[$1] Package requires ${install_dep%, }"
 
-    log "[$pkg_name] Installing package"
+    log "[$pkg_name] Installing package incrementally"
 
     # Block being able to abort the script with Ctrl+C during installation.
     # Removes all risk of the user aborting a package installation leaving
@@ -679,13 +679,13 @@ pkg_install() {
 
     # This is repeated multiple times. Better to make it a function.
     pkg_rsync() {
-        rsync --chown=root:root -WhHKa "$1" --no-compress --exclude etc -- \
+        rsync --chown=root:root -WhHKa --no-compress "$1" --exclude etc -- \
             "$tar_dir/$pkg_name/" "$KISS_ROOT/"
     }
 
     # Install the package by using 'rsync' and overwrite any existing files
     # (excluding '/etc/').
-    pkg_rsync -v
+    pkg_rsync --info=progress2
 
     # If '/etc/' exists in the package, install it but don't overwrite.
     [ -d "$tar_dir/$pkg_name/etc" ] &&
