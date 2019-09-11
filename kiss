@@ -535,20 +535,27 @@ pkg_conflicts() {
     # This function takes a path to a KISS tar-ball as an argument.
     log "[$2] Checking for package conflicts"
 
-    # Extract manifest from the tar-ball and only extract files entries.
-    tar xf "$1" -O "./$pkg_db/$2/manifest" | sed '/\/$/d' > "$cac_dir/$pid-m"
-
     cd "$sys_db"
-    set +f
+    set +ef
 
-    # Iterate over each manifest and check it for conflicts.
-    for db in *; do
-        [ "$db" != "$2" ] &&
-            grep -HFxf "$cac_dir/$pid-m" "$db/manifest" 2>/dev/null &&
-                die "Package '$2' conflicts with another package"
-    done ||:
+    # Extract manifest from tarball and only print file which
+    # exist in the filesystem. It's pointless to check for conflicts
+    # with files which don't presently exist.
+    tar xf "$1" -O "./$pkg_db/$2/manifest" | while read -r file; do
+        [ -f "$KISS_ROOT/$file" ] && printf '%s\n' "$file"
+    done |
 
-    set -f
+    # Filter the existing file list through the manifest of the
+    # presently installed version of the package (if it exists).
+    grep -svFxf "$sys_db/$2/manifest" - 2>/dev/null > "$cac_dir/$pid-m"
+
+    # If the generated manifest contains matches, check the
+    # contents for conflicts.
+    [ -s "$cac_dir/$pid-m" ] &&
+        grep -Fxf "$cac_dir/$pid-m" -- */manifest &&
+            die "Package '$2' conflicts with another package"
+
+    set -ef
 }
 
 pkg_remove() {
@@ -845,7 +852,7 @@ pkg_clean() {
     # Block 'Ctrl+C' while cache is being cleaned.
     trap '' INT
 
-    # Remove temporary directories.
+    # Remove temporary items.
     rm -rf -- "$mak_dir" "$pkg_dir" "$tar_dir" "$cac_dir/$pid-m"
 }
 
