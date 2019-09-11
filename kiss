@@ -132,7 +132,7 @@ pkg_sources() {
                 }
             ;;
 
-            # Local files (sources that are non-remote are assumed to be local).
+            # Local source.
             *)
                 [ -f "$repo_dir/$src" ] || die "[$1] No local file '$src'"
 
@@ -158,10 +158,10 @@ pkg_extract() {
             # allows you to extract them manually.
             *://*.tar*|*://*.tgz)
                 tar xf "$src_dir/$1/${src##*/}" --strip-components 1 \
-                || die "[$1] Couldn't extract ${src##*/}"
+                    || die "[$1] Couldn't extract ${src##*/}"
             ;;
 
-            # Local files (Any non-remote source is assumed to be local).
+            # Local source.
             *)
                 if [ -f "$repo_dir/$src" ]; then
                     cp -f "$repo_dir/$src" .
