@@ -1,12 +1,12 @@
 # kiss
 
-Tiny package manager for KISS written in POSIX `sh`.
+Tiny and straightforward package manager for KISS written in POSIX `sh`.
 
-
-## Package format
-
-See: <https://getkiss.org/pages/package-system/>
-
+- Only 500~ lines of POSIX `sh` (*excluding blank lines and comments*).
+- Runtime dependency detection.
+- Incremental package installation.
+- Binary stripping.
+- `shellcheck` compliant.
 
 ## Usage
 
@@ -22,6 +22,13 @@ See: <https://getkiss.org/pages/package-system/>
 => update:    Check for updates.
 ```
 
+## Package format
+
+See: <https://getkiss.org/pages/package-system/>
+
+
 ## Extending the package manager.
 
 See: https://github.com/kisslinux/kiss-utils
+
+
