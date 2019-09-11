@@ -679,17 +679,17 @@ pkg_install() {
 
     # This is repeated multiple times. Better to make it a function.
     pkg_rsync() {
-        rsync --chown=root:root -HKav --exclude etc -- \
+        rsync --chown=root:root -WhHKa "$1" --no-compress --exclude etc -- \
             "$tar_dir/$pkg_name/" "$KISS_ROOT/"
     }
 
     # Install the package by using 'rsync' and overwrite any existing files
     # (excluding '/etc/').
-    pkg_rsync
+    pkg_rsync -v
 
     # If '/etc/' exists in the package, install it but don't overwrite.
     [ -d "$tar_dir/$pkg_name/etc" ] &&
-        rsync --chown=root:root -HKav --ignore-existing \
+        rsync --chown=root:root -WhHKa --no-compress --ignore-existing \
             "$tar_dir/$pkg_name/etc" "$KISS_ROOT/"
 
     # Remove any leftover files if this is an upgrade.
