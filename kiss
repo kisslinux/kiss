@@ -764,6 +764,11 @@ pkg_updates() {
             continue
         }
 
+        [ "$(git remote 2>/dev/null)" ] || {
+            log "[$repo] No remote, skipping"
+            continue
+        }
+
         case $repos in
             # If the repository has already been updated, skip it.
             *" $PWD "*) ;;
@@ -967,7 +972,7 @@ args() {
         ;;
 
         v|version|-v|--version)
-            printf 'kiss 0.20.0\n'
+            printf 'kiss 0.20.1\n'
         ;;
 
         h|help|-h|--help|'')
