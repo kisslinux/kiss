@@ -472,7 +472,7 @@ pkg_build() {
         # Install only dependencies of passed packages.
         # Skip this check if this is a package update.
         case $explicit_packages in
-            *" $pkg "*) [ "$pkg_update" ] || continue ;;
+            *" $pkg "*) [ "$pkg_update" ] || continue
         esac
 
         log "[$pkg] Needed as a dependency or has an update, installing"
@@ -694,7 +694,7 @@ pkg_install() {
         while read -r file; do
             # Skip deleting some leftover files.
             case $file in
-                /etc/*|*bin/rm|*bin/busybox|*bin/rsync) continue ;;
+                /etc/*|*bin/rm|*bin/busybox|*bin/rsync) continue
             esac
 
             file=$KISS_ROOT/$file
