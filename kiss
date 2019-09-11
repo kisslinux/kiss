@@ -510,27 +510,23 @@ pkg_checksums() {
     repo_dir=$(pkg_find "$1")
 
     while read -r src _; do
-        case $src in
-            *)
-                # File is local to the package.
-                if [ -f "$repo_dir/$src" ]; then
-                    src_path=$repo_dir/${src%/*}
+        # File is local to the package.
+        if [ -f "$repo_dir/$src" ]; then
+            src_path=$repo_dir/${src%/*}
 
-                # File is remote and was downloaded.
-                elif [ -f "$src_dir/$1/${src##*/}" ]; then
-                    src_path=$src_dir/$1
+        # File is remote and was downloaded.
+        elif [ -f "$src_dir/$1/${src##*/}" ]; then
+            src_path=$src_dir/$1
 
-                # Die here if source for some reason, doesn't exist.
-                else
-                    die "[$1] Couldn't find source '$src'"
-                fi
+        # Die here if source for some reason, doesn't exist.
+        else
+            die "[$1] Couldn't find source '$src'"
+        fi
 
-                # An easy way to get 'sha256sum' to print with the 'basename'
-                # of files is to 'cd' to the file's directory beforehand.
-                (cd "$src_path" && sha256sum "${src##*/}") ||
-                    die "[$1] Failed to generate checksums"
-            ;;
-        esac
+        # An easy way to get 'sha256sum' to print with the 'basename'
+        # of files is to 'cd' to the file's directory beforehand.
+        (cd "$src_path" && sha256sum "${src##*/}") ||
+            die "[$1] Failed to generate checksums"
     done < "$repo_dir/sources"
 }
 
