@@ -1,13 +1,9 @@
 name: Shellcheck
-
 on: [push]
-
 jobs:
     build:
-
         runs-on: ubuntu-latest
-
         steps:
             - uses: actions/checkout@v1
             - name: Run shellcheck.
-              run: shellcheck -e 2030,2031 kiss
+              run: shellcheck kiss
