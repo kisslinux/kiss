@@ -945,22 +945,19 @@ args() {
         i|install)
             # Create a list of each package's dependencies.
             for pkg; do
-                if [ "${pkg%%*.tar.gz}" ]; then
-                    pkg_depends "$pkg"
-                else
-                    missing_deps="$missing_deps $pkg "
-                fi
-            done
-
-            # Filter the list, only including explicit packages.
-            for pkg in $missing_deps; do
-                case " $* " in
-                    *" $pkg "*) install_pkgs="$install_pkgs $pkg " ;;
+                case $pkg in
+                    *.tar.gz) missing_deps="$missing_deps $pkg " ;;
+                    *)        pkg_depends "$pkg"
                 esac
             done
 
-            for pkg in $install_pkgs; do
-                pkg_install "$pkg"
+            # Filter the list, only installing explicit packages.
+            # The purpose of these two loops is to order the
+            # argument list based on dependence.
+            for pkg in $missing_deps; do
+                case " $* " in
+                    *" $pkg "*) pkg_install "$pkg" ;;
+                esac
             done
         ;;
 
