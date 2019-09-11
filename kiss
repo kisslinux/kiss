@@ -532,13 +532,12 @@ pkg_checksums() {
 
 pkg_conflicts() {
     # Check to see if a package conflicts with another.
-    # This function takes a path to a KISS tar-ball as an argument.
     log "[$2] Checking for package conflicts"
 
     cd "$sys_db"
     set +ef
 
-    # Extract manifest from tarball and only print file which
+    # Extract manifest from tarball and only print files which
     # exist in the filesystem. It's pointless to check for conflicts
     # with files which don't presently exist.
     tar xf "$1" -O "./$pkg_db/$2/manifest" | while read -r file; do
