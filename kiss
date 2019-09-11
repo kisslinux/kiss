@@ -936,7 +936,7 @@ args() {
             # not explicitly set for removal.
             for pkg in $missing_deps; do
                 case " $* " in
-                    *" $pkg "*) remove_pkgs="$pkg $remove_pkgs" ;;
+                    *" $pkg "*) remove_pkgs="$pkg $remove_pkgs"
                 esac
             done
 
