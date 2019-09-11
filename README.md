@@ -5,6 +5,8 @@ Tiny and straightforward package manager for KISS written in POSIX `sh`.
 - Only 500~ lines of POSIX `sh` (*excluding blank lines and comments*).
 - Runtime dependency detection.
 - Incremental package installation.
+- Fast dependency solver.
+- File conflict detection.
 - Binary stripping.
 - `shellcheck` compliant.
 
