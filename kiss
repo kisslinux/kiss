@@ -535,40 +535,20 @@ pkg_conflicts() {
     # This function takes a path to a KISS tar-ball as an argument.
     log "[$2] Checking for package conflicts"
 
-    # Save the package name as we modify the argument list below.
-    tar_file=$1
-    pkg_name=$2
+    # Extract manifest from the tar-ball and only extract files entries.
+    tar xf "$1" -O "./$pkg_db/$2/manifest" | sed '/\/$/d' > "$cac_dir/$pid-m"
 
-    # Enable globbing.
+    cd "$sys_db"
     set +f
 
-    # Generate a list of all installed package manifests.
-    set -f -- "$sys_db/"*/manifest
+    # Iterate over each manifest and check it for conflicts.
+    for db in *; do
+        [ "$db" != "$2" ] &&
+            grep -HFxf "$cac_dir/$pid-m" "$db/manifest" 2>/dev/null &&
+                die "Package '$2' conflicts with another package"
+    done ||:
 
-    # Go through the manifest list and filter out the
-    # package which will be installed.
-    for manifest; do
-        shift
-
-        case $manifest in
-            */$pkg_name/manifest) continue
-        esac
-
-        set -- "$@" "$manifest"
-    done
-
-    # Extract manifest from the tar-ball and only extract files entries.
-    tar xf "$tar_file" -O "./$pkg_db/$pkg_name/manifest" |
-        while read -r line; do
-            [ "${line%%*/}" ] && printf '%s\n' "$line"
-        done |
-
-    # Compare the package's files against all owned files on the system.
-    grep -Fxf - "$@" 2>/dev/null &&
-        die "Package '$pkg_name' conflicts with another package"
-
-    # Force a '0' return code as the 'grep' above fails on success.
-    :
+    set -f
 }
 
 pkg_remove() {
@@ -866,7 +846,7 @@ pkg_clean() {
     trap '' INT
 
     # Remove temporary directories.
-    rm -rf -- "$mak_dir" "$pkg_dir" "$tar_dir"
+    rm -rf -- "$mak_dir" "$pkg_dir" "$tar_dir" "$cac_dir/$pid-m"
 }
 
 args() {
