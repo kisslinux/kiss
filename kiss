@@ -148,11 +148,12 @@ pkg_extract() {
                     || die "[$1] Couldn't extract ${src##*/}"
             ;;
 
-            # Local source.
             *)
+                # Local file.
                 if [ -f "$repo_dir/$src" ]; then
                     cp -f "$repo_dir/$src" .
 
+                # Remote file.
                 elif [ -f "$src_dir/$1/${src##*/}" ]; then
                     cp -f "$src_dir/$1/${src##*/}" .
 
