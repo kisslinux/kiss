@@ -330,7 +330,7 @@ pkg_manifest() (
     # with a trailing forward slash '/'. The list is then reversed with
     # directories appearing *after* their contents.
     find . -mindepth 1 -type d -exec printf '%s/\n' {} + -or -print |
-    sort -r | sed -e ss.ss > "$pkg_dir/$1/$pkg_db/$1/manifest"
+        sort -r | sed ss.ss > "$pkg_dir/$1/$pkg_db/$1/manifest"
 )
 
 pkg_tar() {
