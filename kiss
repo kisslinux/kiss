@@ -1,4 +1,4 @@
-#!/bin/sh -ef
+#!/bin/bash -ef
 #
 # This is a simple package manager written in POSIX 'sh' for use
 # in KISS Linux (https://getkiss.org).

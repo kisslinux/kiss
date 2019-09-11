@@ -33,4 +33,10 @@ See: <https://getkiss.org/pages/package-system/>
 
 See: https://github.com/kisslinux/kiss-utils
 
+## Shell compatibility
 
+KISS is written in POSIX `sh` though each shell has its own set of quirks.Below are the currently known to work and tested shells (as `/bin/sh`).
+
+- `ash`
+- `dash`
+- `bash`
