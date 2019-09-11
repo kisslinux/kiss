@@ -506,6 +506,7 @@ pkg_build() {
 
 pkg_checksums() {
     # Generate checksums for packages.
+
     repo_dir=$(pkg_find "$1")
 
     while read -r src _; do
