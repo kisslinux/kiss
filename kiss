@@ -1,30 +1,17 @@
 #!/bin/sh -ef
 #
-# This is a simple package manager written in POSIX 'sh' for
-# KISS Linux, utilizing the core UNIX utilities where needed.
+# This is a simple package manager written in POSIX 'sh' for use
+# in KISS Linux (https://getkiss.org).
 #
-# Disable warnings against word-splitting and globbing.
-# They are used *safely* throughout this script as globbing
-# is globally disabled and assumptions can be made about the input.
+# This script runs with '-ef' meaning:
+# '-e': Abort on any non-zero exit code.
+# '-f': Disable globbing globally.
+#
+# Warnings related to word splitting and globbing are disabled.
+# All word splitting in this script is *safe* and intentional.
 # shellcheck disable=2046,2086
 #
-# The script runs with 'set -e' enabled. It will exit on any
-# non-zero return code. This ensures that no function continues
-# if it fails at any point.
-#
-# Keep in mind that this involves extra code in the case where
-# an error is optional and/or required.
-#
-# Where possible the package manager should check things first,
-# die if necessary and continue if all is well.
-#
-# The code below conforms to shellcheck's rules. However, some
-# lint errors *are* disabled as they relate to unexpected
-# behavior (which we do expect).
-#
-# KISS is available under the MIT license.
-#
-# - Dylan Araps.
+# Dylan Araps.
 
 die() {
     # Print a message and exit with '1' (error).
