@@ -534,7 +534,6 @@ pkg_conflicts() {
     # Check to see if a package conflicts with another.
     log "[$2] Checking for package conflicts"
 
-    cd "$sys_db"
     set +ef
 
     # Extract manifest from tarball and only print files which
@@ -551,7 +550,7 @@ pkg_conflicts() {
     # If the generated manifest contains matches, check the
     # contents for conflicts.
     [ -s "$cac_dir/$pid-m" ] &&
-        grep -Fxf "$cac_dir/$pid-m" -- */manifest &&
+        grep -Fxf "$cac_dir/$pid-m" -- "$sys_db"/*/manifest &&
             die "Package '$2' conflicts with another package"
 
     set -ef
@@ -679,7 +678,7 @@ pkg_install() {
 
     # This is repeated multiple times. Better to make it a function.
     pkg_rsync() {
-        rsync --chown=root:root -WhHKa --no-compress "$1" --exclude etc -- \
+        rsync --chown=root:root -WhHKa --no-compress "$1" --exclude etc \
             "$tar_dir/$pkg_name/" "$KISS_ROOT/"
     }
 
@@ -726,8 +725,8 @@ pkg_install() {
 
     # Install the package again to fix any non-leftover files being
     # removed above.
-    pkg_rsync ||:
-    pkg_rsync ||:
+    pkg_rsync -v ||:
+    pkg_rsync -v ||:
 
     # Reset 'trap' to its original value. Installation is done so
     # we no longer need to block 'Ctrl+C'.
@@ -972,7 +971,7 @@ args() {
         ;;
 
         v|version|-v|--version)
-            printf 'kiss 0.20.2\n'
+            printf 'kiss 0.21.0\n'
         ;;
 
         h|help|-h|--help|'')
