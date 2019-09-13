@@ -347,7 +347,7 @@ pkg_build() {
     # Store the explicit packages so we can handle them differently
     # below. Dependencies are automatically installed but packages
     # passed to KISS aren't.
-    explicit_packages=" $* "
+    explicit=" $* "
 
     # Set the resolved dependency list as the function's arguments.
     set -- $deps
@@ -356,7 +356,7 @@ pkg_build() {
     # whether or not they are installed. Ensure that all explicit packages
     # are included and ensure that all installed packages are excluded.
     for pkg; do
-        case $explicit_packages in
+        case $explicit in
             *" $pkg "*) ;;
             *) pkg_list "$pkg" >/dev/null && continue ;;
         esac
@@ -387,7 +387,7 @@ pkg_build() {
     for pkg; do
         # Don't check for a pre-built package if it was passed to KISS
         # directly.
-        case $explicit_packages in
+        case $explicit in
             *" $pkg "*)
                 shift
                 set -- "$@" "$pkg"
@@ -471,7 +471,7 @@ pkg_build() {
 
         # Install only dependencies of passed packages.
         # Skip this check if this is a package update.
-        case $explicit_packages in
+        case $explicit in
             *" $pkg "*) [ "$pkg_update" ] || continue
         esac
 
@@ -485,7 +485,7 @@ pkg_build() {
     log "Successfully built package(s)"
 
     # Turn the explicit packages into a 'list'.
-    set -- $explicit_packages
+    set -- $explicit
 
     # Only ask for confirmation if more than one package needs to be installed.
     [ $# -gt 1 ] && {
