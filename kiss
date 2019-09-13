@@ -354,7 +354,7 @@ pkg_build() {
         }
     done
 
-    explicit_build="$explicit"
+    explicit_build=$explicit
 
     # If an explicit package is a dependency of another explicit
     # package, remove it from the explicit list as it needs to be
