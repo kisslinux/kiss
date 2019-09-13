@@ -349,9 +349,8 @@ pkg_build() {
             *)
                 pkg_depends "$pkg" explicit
 
-                # Store the explicit packages so we can handle them differently
-                # below. Dependencies are automatically installed but packages
-                # passed to KISS aren't.
+                # Mark packages passed on the command-line
+                # separately from those detected as dependencies.
                 explicit="$explicit $pkg "
                 explicit_build="$explicit_build $pkg "
             ;;
