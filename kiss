@@ -187,7 +187,7 @@ pkg_depends() {
 
             # After child dependencies are added to the list,
             # add the package which depends on them.
-            missing_deps="$deps $1 "
+            deps="$deps $1 "
         ;;
     esac
 }
@@ -921,7 +921,7 @@ args() {
             # Create a list of each package's dependencies.
             for pkg; do
                 case $pkg in
-                    *.tar.gz) missing_deps="$deps $pkg " ;;
+                    *.tar.gz) deps="$deps $pkg " ;;
                     *)        pkg_depends "$pkg"
                 esac
             done
