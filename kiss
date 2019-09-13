@@ -344,6 +344,7 @@ pkg_build() {
     # are installed.
 
     log "Resolving dependencies"
+
     for pkg; do 
         contains "$explicit" "$pkg" || {
             pkg_depends "$pkg" explicit
