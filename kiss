@@ -355,6 +355,8 @@ pkg_build() {
     # installed as a dependency.
     for pkg; do
         case $deps in
+            # There's no better way to remove a word from a string in 
+            # POSIX 'sh' sadly.
             *" $pkg "*) explicit=$(echo "$explicit" | sed "s/ $pkg / /g")
         esac
     done
