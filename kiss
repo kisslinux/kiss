@@ -187,7 +187,7 @@ pkg_depends() {
 
             # After child dependencies are added to the list,
             # add the package which depends on them.
-            deps="$deps $1 "
+            [ "$2" ] || deps="$deps $1 "
         ;;
     esac
 }
@@ -341,23 +341,30 @@ pkg_build() {
     # also checks checksums, downloads sources and ensure all dependencies
     # are installed.
 
-    log "Resolving dependencies"
-    for pkg; do pkg_depends "$pkg"; done
-
     # Store the explicit packages so we can handle them differently
     # below. Dependencies are automatically installed but packages
     # passed to KISS aren't.
     explicit=" $* "
+    explicit_build=" $* "
+
+    log "Resolving dependencies"
+    for pkg; do pkg_depends "$pkg" explicit; done
+
+    for pkg; do
+        case $deps in
+            *" $pkg "*) explicit=$(echo "$explicit" | sed "s/ $pkg / /g")
+        esac
+    done
 
     # Set the resolved dependency list as the function's arguments.
-    set -- $deps
+    set -- $deps $explicit
 
     # The dependency solver always lists all dependencies regardless of
     # whether or not they are installed. Ensure that all explicit packages
     # are included and ensure that all installed packages are excluded.
     for pkg; do
-        case $explicit in
-            *" $pkg "*) ;;
+        case $explicit_build in
+            *" $pkg "*|-) ;;
             *) pkg_list "$pkg" >/dev/null && continue ;;
         esac
 
@@ -387,7 +394,7 @@ pkg_build() {
     for pkg; do
         # Don't check for a pre-built package if it was passed to KISS
         # directly.
-        case $explicit in
+        case $explicit_build in
             *" $pkg "*)
                 shift
                 set -- "$@" "$pkg"
