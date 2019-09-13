@@ -612,7 +612,7 @@ pkg_remove() {
         if [ -d "$KISS_ROOT/$file" ]; then
             rmdir "$KISS_ROOT/$file" 2>/dev/null || continue
         else
-            rm -f -- "$KISS_ROOT/$file"
+            rm -f "$KISS_ROOT/$file"
         fi
     done < "$sys_db/$1/manifest"
 
@@ -727,8 +727,7 @@ pkg_install() {
                 unlink "$file" ||:
 
             # Skip directory symlinks.
-            elif [ -L "$file" ] && [ -d "$file" ]; then
-                :
+            elif [ -L "$file" ] && [ -d "$file" ]; then :
 
             # Remove directories if empty.
             elif [ -d "$file" ]; then
