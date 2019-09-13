@@ -172,7 +172,7 @@ pkg_depends() {
 
     # This does a depth-first search. The deepest dependencies are
     # listed first and then the parents in reverse order.
-    case $missing_deps in
+    case $deps in
         # Dependency is already in list, skip it.
         *" $1 "*) ;;
 
@@ -187,7 +187,7 @@ pkg_depends() {
 
             # After child dependencies are added to the list,
             # add the package which depends on them.
-            missing_deps="$missing_deps $1 "
+            missing_deps="$deps $1 "
         ;;
     esac
 }
@@ -350,7 +350,7 @@ pkg_build() {
     explicit_packages=" $* "
 
     # Set the resolved dependency list as the function's arguments.
-    set -- $missing_deps
+    set -- $deps
 
     # The dependency solver always lists all dependencies regardless of
     # whether or not they are installed. Ensure that all explicit packages
@@ -921,7 +921,7 @@ args() {
             # Create a list of each package's dependencies.
             for pkg; do
                 case $pkg in
-                    *.tar.gz) missing_deps="$missing_deps $pkg " ;;
+                    *.tar.gz) missing_deps="$deps $pkg " ;;
                     *)        pkg_depends "$pkg"
                 esac
             done
@@ -929,7 +929,7 @@ args() {
             # Filter the list, only installing explicit packages.
             # The purpose of these two loops is to order the
             # argument list based on dependence.
-            for pkg in $missing_deps; do
+            for pkg in $deps; do
                 case " $* " in
                     *" $pkg "*) pkg_install "$pkg" ;;
                 esac
@@ -944,7 +944,7 @@ args() {
 
             # Reverse the list of dependencies filtering out anything
             # not explicitly set for removal.
-            for pkg in $missing_deps; do
+            for pkg in $deps; do
                 case " $* " in
                     *" $pkg "*) remove_pkgs="$pkg $remove_pkgs"
                 esac
