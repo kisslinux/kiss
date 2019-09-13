@@ -341,14 +341,22 @@ pkg_build() {
     # also checks checksums, downloads sources and ensure all dependencies
     # are installed.
 
-    # Store the explicit packages so we can handle them differently
-    # below. Dependencies are automatically installed but packages
-    # passed to KISS aren't.
-    explicit=" $* "
-    explicit_build=" $* "
-
     log "Resolving dependencies"
-    for pkg; do pkg_depends "$pkg" explicit; done
+    for pkg; do 
+        case $explicit in
+            *" $pkg "*) ;;
+
+            *)
+                pkg_depends "$pkg" explicit
+
+                # Store the explicit packages so we can handle them differently
+                # below. Dependencies are automatically installed but packages
+                # passed to KISS aren't.
+                explicit="$explicit $pkg "
+                explicit_build="$explicit_build $pkg "
+            ;;
+        esac
+    done
 
     # If an explicit package is a dependency of another explicit
     # package, remove it from the explicit list as it needs to be
