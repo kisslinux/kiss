@@ -352,10 +352,11 @@ pkg_build() {
                 # Mark packages passed on the command-line
                 # separately from those detected as dependencies.
                 explicit="$explicit $pkg "
-                explicit_build="$explicit_build $pkg "
             ;;
         esac
     done
+
+    explicit_build="$explicit"
 
     # If an explicit package is a dependency of another explicit
     # package, remove it from the explicit list as it needs to be
@@ -372,8 +373,7 @@ pkg_build() {
     set -- $deps $explicit
 
     # The dependency solver always lists all dependencies regardless of
-    # whether or not they are installed. Ensure that all explicit packages
-    # are included and ensure that all installed packages are excluded.
+    # whether or not they are installed. Filter out installed dependencies.
     for pkg; do
         case $explicit_build in
             *" $pkg "*) ;;
@@ -456,11 +456,13 @@ pkg_build() {
     # Die here as packages with differing checksums were found above.
     [ "$mismatch" ] && die "Checksum mismatch with: ${mismatch% }"
 
+    # Extract all packages before build to catch any extraction
+    # errors early.
+    for pkg; do pkg_extract "$pkg"; done
+
     # Finally build and create tarballs for all passed packages and
     # dependencies.
     for pkg; do
-        pkg_extract "$pkg"
-
         repo_dir=$(pkg_find "$pkg")
 
         # Install built packages to a directory under the package name
