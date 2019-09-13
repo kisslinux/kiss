@@ -350,6 +350,9 @@ pkg_build() {
     log "Resolving dependencies"
     for pkg; do pkg_depends "$pkg" explicit; done
 
+    # If an explicit package is a dependency of another explicit
+    # package, remove it from the explicit list as it needs to be
+    # installed as a dependency.
     for pkg; do
         case $deps in
             *" $pkg "*) explicit=$(echo "$explicit" | sed "s/ $pkg / /g")
@@ -364,7 +367,7 @@ pkg_build() {
     # are included and ensure that all installed packages are excluded.
     for pkg; do
         case $explicit_build in
-            *" $pkg "*|-) ;;
+            *" $pkg "*) ;;
             *) pkg_list "$pkg" >/dev/null && continue ;;
         esac
 
