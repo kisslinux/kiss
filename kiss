@@ -24,6 +24,13 @@ log() {
     printf '\033[1;32m->\033[m %s.\n' "$@"
 }
 
+contains() {
+    # Check if a "string list" contains a word.
+    case " $1 " in *" $2 "*) return 0; esac
+
+    return 1
+}
+
 pkg_lint() {
     # Check that each mandatory file in the package entry exists.
     log "[$1] Checking repository files"
@@ -172,24 +179,19 @@ pkg_depends() {
 
     # This does a depth-first search. The deepest dependencies are
     # listed first and then the parents in reverse order.
-    case $deps in
-        # Dependency is already in list, skip it.
-        *" $1 "*) ;;
+    contains "$deps" "$1" || {
+        # Recurse through the dependencies of the child
+        # packages. Keep doing this.
+        [ -f "$repo_dir/depends" ] &&
+            while read -r dep _; do
+                [ "${dep##\#*}" ] || continue
+                pkg_depends "$dep" ||:
+            done < "$repo_dir/depends"
 
-        *)
-            # Recurse through the dependencies of the child
-            # packages. Keep doing this.
-            [ -f "$repo_dir/depends" ] &&
-                while read -r dep _; do
-                    [ "${dep##\#*}" ] || continue
-                    pkg_depends "$dep" ||:
-                done < "$repo_dir/depends"
-
-            # After child dependencies are added to the list,
-            # add the package which depends on them.
-            deps="$deps $1 "
-        ;;
-    esac
+        # After child dependencies are added to the list,
+        # add the package which depends on them.
+        [ "$2" ] || deps="$deps $1 "
+    }
 }
 
 pkg_verify() {
@@ -342,30 +344,40 @@ pkg_build() {
     # are installed.
 
     log "Resolving dependencies"
-    for pkg; do pkg_depends "$pkg"; done
 
-    # Store the explicit packages so we can handle them differently
-    # below. Dependencies are automatically installed but packages
-    # passed to KISS aren't.
-    explicit=" $* "
+    for pkg; do 
+        contains "$explicit" "$pkg" || {
+            pkg_depends "$pkg" explicit
 
-    # Set the resolved dependency list as the function's arguments.
-    set -- $deps
-
-    # The dependency solver always lists all dependencies regardless of
-    # whether or not they are installed. Ensure that all explicit packages
-    # are included and ensure that all installed packages are excluded.
-    for pkg; do
-        case $explicit in
-            *" $pkg "*) ;;
-            *) pkg_list "$pkg" >/dev/null && continue ;;
-        esac
-
-        build_packages="$build_packages$pkg "
+            # Mark packages passed on the command-line
+            # separately from those detected as dependencies.
+            explicit="$explicit $pkg "
+        }
     done
 
-    # Set the filtered dependency list as the function's arguments.
-    set -- $build_packages
+    explicit_build=$explicit
+
+    # If an explicit package is a dependency of another explicit
+    # package, remove it from the explicit list as it needs to be
+    # installed as a dependency.
+    for pkg; do
+        # There's no better way to remove a word from a string in 
+        # POSIX 'sh' sadly.
+        contains "$deps" "$pkg" && 
+            explicit=$(echo "$explicit" | sed "s/ $pkg / /g")
+    done
+
+    # The dependency solver always lists all dependencies regardless of
+    # whether or not they are installed. Filter out installed dependencies.
+    for pkg in $deps $explicit; do
+        contains "$explicit_build" "$pkg" || {
+           pkg_list "$pkg" >/dev/null && continue
+        }
+
+        build="$build$pkg "
+    done
+
+    set -- $build
 
     log "Building: $*"
 
@@ -387,13 +399,11 @@ pkg_build() {
     for pkg; do
         # Don't check for a pre-built package if it was passed to KISS
         # directly.
-        case $explicit in
-            *" $pkg "*)
-                shift
-                set -- "$@" "$pkg"
-                continue
-            ;;
-        esac
+        contains "$explicit_build" "$pkg" && {
+            shift
+            set -- "$@" "$pkg"
+            continue
+        }
 
         # Figure out the version and release.
         read -r version release < "$(pkg_find "$pkg")/version"
@@ -437,11 +447,13 @@ pkg_build() {
     # Die here as packages with differing checksums were found above.
     [ "$mismatch" ] && die "Checksum mismatch with: ${mismatch% }"
 
+    # Extract all packages before build to catch any extraction
+    # errors early.
+    for pkg; do pkg_extract "$pkg"; done
+
     # Finally build and create tarballs for all passed packages and
     # dependencies.
     for pkg; do
-        pkg_extract "$pkg"
-
         repo_dir=$(pkg_find "$pkg")
 
         # Install built packages to a directory under the package name
@@ -471,9 +483,7 @@ pkg_build() {
 
         # Install only dependencies of passed packages.
         # Skip this check if this is a package update.
-        case $explicit in
-            *" $pkg "*) [ "$pkg_update" ] || continue
-        esac
+        contains "$explicit" "$pkg" && [ -z "$pkg_update" ] && continue
 
         log "[$pkg] Needed as a dependency or has an update, installing"
         args i "$pkg"
@@ -598,7 +608,7 @@ pkg_remove() {
         if [ -d "$KISS_ROOT/$file" ]; then
             rmdir "$KISS_ROOT/$file" 2>/dev/null || continue
         else
-            rm -f -- "$KISS_ROOT/$file"
+            rm -f "$KISS_ROOT/$file"
         fi
     done < "$sys_db/$1/manifest"
 
@@ -713,8 +723,7 @@ pkg_install() {
                 unlink "$file" ||:
 
             # Skip directory symlinks.
-            elif [ -L "$file" ] && [ -d "$file" ]; then
-                :
+            elif [ -L "$file" ] && [ -d "$file" ]; then :
 
             # Remove directories if empty.
             elif [ -d "$file" ]; then
@@ -768,22 +777,18 @@ pkg_updates() {
             continue
         }
 
-        case $repos in
-            # If the repository has already been updated, skip it.
-            *" $PWD "*) ;;
-            *)
-                repos="$repos $PWD "
+        contains "$repos" "$PWD" || {
+            repos="$repos $PWD "
 
-                log "[$PWD] Updating repository"
+            log "[$PWD] Updating repository"
 
-                if [ -w "$PWD" ]; then
-                    git pull
-                else
-                    log "[$PWD] Need root to update"
-                    sudo git pull
-                fi
-            ;;
-        esac
+            if [ -w "$PWD" ]; then
+                git pull
+            else
+                log "[$PWD] Need root to update"
+                sudo git pull
+            fi
+        }
     done
 
     log "Checking for new package versions"
@@ -807,26 +812,24 @@ pkg_updates() {
     done
 
     # If the package manager has an update, handle it first.
-    case $outdated in
-        *" kiss "*)
-            log "Detected package manager update" \
-                "The package manager will be updated first" \
-                "Continue?: Press Enter to continue or Ctrl+C to abort here"
+    contains "$outdated" kiss && {
+        log "Detected package manager update" \
+            "The package manager will be updated first" \
+            "Continue?: Press Enter to continue or Ctrl+C to abort here"
 
-            # POSIX 'read' has none of the "nice" options like '-n', '-p'
-            # etc etc. This is the most basic usage of 'read'.
-            # '_' is used as 'dash' errors when no variable is given to 'read'.
-            read -r _ || exit
+        # POSIX 'read' has none of the "nice" options like '-n', '-p'
+        # etc etc. This is the most basic usage of 'read'.
+        # '_' is used as 'dash' errors when no variable is given to 'read'.
+        read -r _ || exit
 
-            pkg_build kiss
-            args i kiss
+        pkg_build kiss
+        args i kiss
 
-            log "Updated the package manager" \
-                "Re-run 'kiss update' to update your system"
+        log "Updated the package manager" \
+            "Re-run 'kiss update' to update your system"
 
-            exit 0
-        ;;
-    esac
+        exit 0
+    }
 
     # Disable globbing.
     set -f
@@ -930,9 +933,7 @@ args() {
             # The purpose of these two loops is to order the
             # argument list based on dependence.
             for pkg in $deps; do
-                case " $* " in
-                    *" $pkg "*) pkg_install "$pkg" ;;
-                esac
+                contains "$*" "$pkg" && pkg_install "$pkg"
             done
         ;;
 
@@ -945,9 +946,7 @@ args() {
             # Reverse the list of dependencies filtering out anything
             # not explicitly set for removal.
             for pkg in $deps; do
-                case " $* " in
-                    *" $pkg "*) remove_pkgs="$pkg $remove_pkgs"
-                esac
+                contains "$*" "$pkg" && remove_pkgs="$pkg $remove_pkgs"
             done
 
             for pkg in $remove_pkgs; do
