@@ -397,19 +397,12 @@ pkg_build() {
     # Install any pre-built dependencies if they exist in the binary
     # directory and are up to date.
     for pkg; do
-        # Don't check for a pre-built package if it was passed to KISS
-        # directly.
-        contains "$explicit_build" "$pkg" && {
-            shift
-            set -- "$@" "$pkg"
-            continue
-        }
+        # Don't check for a pre-built package if it was passed 
+        # to KISS directly.
+        contains "$explicit_build" "$pkg" && continue
 
         # Figure out the version and release.
         read -r version release < "$(pkg_find "$pkg")/version"
-
-        # Remove the current package from the package list.
-        shift
 
         # Install any pre-built binaries if they exist.
         # This calls 'args' to inherit a root check and call
@@ -417,12 +410,11 @@ pkg_build() {
         [ -f "$bin_dir/$pkg#$version-$release.tar.gz" ] && {
             log "[$pkg] Found pre-built binary, installing"
             args i "$bin_dir/$pkg#$version-$release.tar.gz"
-            continue
-        }
 
-        # Add the removed package back to the list if it doesn't
-        # have a pre-built binary.
-        set -- "$@" "$pkg"
+            # Remove the now installed package from the build
+            # list. No better way than using 'sed' in POSIX 'sh'.
+            set -- $(echo " $* " | sed "s/ $pkg / /")
+        }
     done
 
     for pkg; do pkg_lint "$pkg"; done
