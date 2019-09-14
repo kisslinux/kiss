@@ -668,11 +668,7 @@ pkg_install() {
 
     # If the package is already installed (and this is an upgrade) make a
     # backup of the manifest file.
-    if [ -f "$sys_db/$pkg_name/manifest" ]; then
-        old_manifest=$(cat "$sys_db/$pkg_name/manifest")
-    else
-        old_manifest=
-    fi
+    old_manifest=$(cat "$sys_db/$pkg_name/manifest" 2>/dev/null ||:)
 
     # This is repeated multiple times. Better to make it a function.
     pkg_rsync() {
