@@ -652,6 +652,7 @@ pkg_install() {
     # Make sure that all run-time dependencies are installed prior to
     # installing the package.
     [ -f "$tar_dir/$pkg_name/$pkg_db/$pkg_name/depends" ] &&
+    [ -z "$KISS_FORCE" ] &&
         while read -r dep dep_type; do
             [ "${dep##\#*}" ] || continue
             [ "$dep_type" ]   || pkg_list "$dep" >/dev/null ||
