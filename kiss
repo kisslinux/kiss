@@ -175,18 +175,15 @@ pkg_extract() {
 pkg_depends() {
     # Resolve all dependencies and install them in the right order.
 
-    repo_dir=$(pkg_find "$1")
-
     # This does a depth-first search. The deepest dependencies are
     # listed first and then the parents in reverse order.
     contains "$deps" "$1" || {
         # Recurse through the dependencies of the child
         # packages. Keep doing this.
-        [ -f "$repo_dir/depends" ] &&
-            while read -r dep _; do
-                [ "${dep##\#*}" ] || continue
-                pkg_depends "$dep" ||:
-            done < "$repo_dir/depends"
+        while read -r dep _; do
+            [ "${dep##\#*}" ] || continue
+            pkg_depends "$dep" ||:
+        done 2>/dev/null < "$(pkg_find "$1")/depends" ||:
 
         # After child dependencies are added to the list,
         # add the package which depends on them.
