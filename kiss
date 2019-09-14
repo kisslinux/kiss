@@ -174,6 +174,8 @@ pkg_extract() {
 pkg_depends() {
     # Resolve all dependencies and install them in the right order.
 
+    repo_dir=$(pkg_find "$1")
+
     # This does a depth-first search. The deepest dependencies are
     # listed first and then the parents in reverse order.
     contains "$deps" "$1" || {
@@ -181,7 +183,7 @@ pkg_depends() {
         # packages. Keep doing this.
         while read -r dep _; do
             [ "${dep##\#*}" ] && pkg_depends "$dep"
-        done 2>/dev/null < "$(pkg_find "$1")/depends" ||:
+        done 2>/dev/null < "$repo_dir/depends" ||:
 
         # After child dependencies are added to the list,
         # add the package which depends on them.
@@ -908,7 +910,7 @@ args() {
             for pkg; do
                 case $pkg in
                     *.tar.gz) deps="$deps $pkg " ;;
-                    *)        pkg_depends "$pkg" 2>/dev/null
+                    *)        pkg_depends "$pkg"
                 esac
             done
 
