@@ -181,8 +181,7 @@ pkg_depends() {
         # Recurse through the dependencies of the child
         # packages. Keep doing this.
         while read -r dep _; do
-            [ "${dep##\#*}" ] || continue
-            pkg_depends "$dep" ||:
+            [ "${dep##\#*}" ] && pkg_depends "$dep"
         done 2>/dev/null < "$(pkg_find "$1")/depends" ||:
 
         # After child dependencies are added to the list,
