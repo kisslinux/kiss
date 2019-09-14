@@ -396,21 +396,21 @@ pkg_build() {
     for pkg; do
         # Don't check for a pre-built package if it was passed 
         # to KISS directly.
-        contains "$explicit_build" "$pkg" && continue
+        contains "$explicit_build" "$pkg" || {
+            # Figure out the version and release.
+            read -r version release < "$(pkg_find "$pkg")/version"
 
-        # Figure out the version and release.
-        read -r version release < "$(pkg_find "$pkg")/version"
+            # Install any pre-built binaries if they exist.
+            # This calls 'args' to inherit a root check and call
+            # to 'sudo' to elevate permissions.
+            [ -f "$bin_dir/$pkg#$version-$release.tar.gz" ] && {
+                log "[$pkg] Found pre-built binary, installing"
+                (KISS_FORCE=1 args i "$bin_dir/$pkg#$version-$release.tar.gz")
 
-        # Install any pre-built binaries if they exist.
-        # This calls 'args' to inherit a root check and call
-        # to 'sudo' to elevate permissions.
-        [ -f "$bin_dir/$pkg#$version-$release.tar.gz" ] && {
-            log "[$pkg] Found pre-built binary, installing"
-            args i "$bin_dir/$pkg#$version-$release.tar.gz"
-
-            # Remove the now installed package from the build
-            # list. No better way than using 'sed' in POSIX 'sh'.
-            set -- $(echo " $* " | sed "s/ $pkg / /")
+                # Remove the now installed package from the build
+                # list. No better way than using 'sed' in POSIX 'sh'.
+                set -- $(echo " $* " | sed "s/ $pkg / /")
+            }
         }
     done
 
@@ -443,6 +443,7 @@ pkg_build() {
     # Finally build and create tarballs for all passed packages and
     # dependencies.
     for pkg; do
+        log "[$pkg] Starting build"
         repo_dir=$(pkg_find "$pkg")
 
         # Install built packages to a directory under the package name
@@ -475,7 +476,7 @@ pkg_build() {
         contains "$explicit" "$pkg" && [ -z "$pkg_update" ] && continue
 
         log "[$pkg] Needed as a dependency or has an update, installing"
-        args i "$pkg"
+        (KISS_FORCE=1 args i "$pkg")
     done
 
     # End here as this was a system update and all packages have been installed.
@@ -871,7 +872,7 @@ args() {
             # Rerun the script with 'sudo' if the user isn't root.
             # Cheeky but 'sudo' can't be used on shell functions themselves.
             [ "$(id -u)" = 0 ] || {
-                sudo -E kiss "$action" "$@"
+                sudo -E KISS_FORCE="$KISS_FORCE" kiss "$action" "$@"
                 return
             }
         ;;
