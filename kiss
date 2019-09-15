@@ -180,7 +180,8 @@ pkg_depends() {
     # listed first and then the parents in reverse order.
     contains "$deps" "$1" || {
         # Filter out non-explicit, aleady installed dependencies.
-        [ -z "$2" ] && (pkg_list "$1" >/dev/null) && return
+        [ -z "${action##b*}" ] && [ -z "$2" ] &&
+            (pkg_list "$1" >/dev/null) && return
 
         # Recurse through the dependencies of the child
         # packages. Keep doing this.
