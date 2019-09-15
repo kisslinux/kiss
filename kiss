@@ -368,9 +368,6 @@ pkg_build() {
     done
 
     set -- $deps $explicit
-    echo "$explicit_build"
-    echo "$deps - $explicit"
-
     log "Building: $*"
 
     # Only ask for confirmation if more than one package needs to be built.
