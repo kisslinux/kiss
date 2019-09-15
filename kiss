@@ -179,6 +179,9 @@ pkg_depends() {
     # This does a depth-first search. The deepest dependencies are
     # listed first and then the parents in reverse order.
     contains "$deps" "$1" || {
+        # Filter out non-explicit and aleady installed dependencies.
+        [ -z "$2" ] && (pkg_list "$1" >/dev/null) && return
+
         # Recurse through the dependencies of the child
         # packages. Keep doing this.
         while read -r dep _; do
@@ -364,17 +367,7 @@ pkg_build() {
             explicit=$(echo "$explicit" | sed "s/ $pkg / /g")
     done
 
-    # The dependency solver always lists all dependencies regardless of
-    # whether or not they are installed. Filter out installed dependencies.
-    for pkg in $deps $explicit; do
-        contains "$explicit_build" "$pkg" || {
-           pkg_list "$pkg" >/dev/null && continue
-        }
-
-        build="$build$pkg "
-    done
-
-    set -- $build
+    set -- $deps $explicit
 
     log "Building: $*"
 
@@ -908,35 +901,22 @@ args() {
         ;;
 
         i|install)
-            # Create a list of each package's dependencies.
-            for pkg; do
-                case $pkg in
-                    *.tar.gz) deps="$deps $pkg " ;;
-                    *)        pkg_depends "$pkg"
-                esac
-            done
-
-            # Filter the list, only installing explicit packages.
-            # The purpose of these two loops is to order the
-            # argument list based on dependence.
-            for pkg in $deps; do
-                contains "$*" "$pkg" && pkg_install "$pkg"
-            done
+            for pkg; do pkg_install "$pkg"; done
         ;;
 
         r|remove)
             log "Removing packages"
 
             # Create a list of each package's dependencies.
-            for pkg; do pkg_depends "$pkg"; done
+            # for pkg; do pkg_depends "$pkg"; done
 
             # Reverse the list of dependencies filtering out anything
             # not explicitly set for removal.
-            for pkg in $deps; do
-                contains "$*" "$pkg" && remove_pkgs="$pkg $remove_pkgs"
-            done
+            # for pkg in $deps; do
+            #     contains "$*" "$pkg" && remove_pkgs="$pkg $remove_pkgs"
+            # done
 
-            for pkg in $remove_pkgs; do
+            for pkg; do
                 pkg_list "$pkg" >/dev/null ||
                     die "[$pkg] Not installed"
 
