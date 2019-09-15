@@ -172,7 +172,7 @@ pkg_extract() {
 }
 
 pkg_depends() {
-    # Resolve all dependencies and install them in the right order.
+    # Resolve all dependencies and generate an ordered list.
 
     repo_dir=$(pkg_find "$1")
 
@@ -190,7 +190,7 @@ pkg_depends() {
 
         # After child dependencies are added to the list,
         # add the package which depends on them.
-        [ "$2" ] || deps="$deps $1 "
+        [ "$2" = explicit ] || deps="$deps $1 "
     }
 }
 
@@ -901,13 +901,35 @@ args() {
         ;;
 
         i|install)
-            for pkg; do pkg_install "$pkg"; done
+            # Create a list of each package's dependencies.
+            for pkg; do
+                case $pkg in
+                    *.tar.gz) deps="$deps $pkg " ;;
+                    *)        pkg_depends "$pkg" install
+                esac
+            done
+
+            # Filter the list, only installing explicit packages.
+            # The purpose of these two loops is to order the
+            # argument list based on dependence.
+            for pkg in $deps; do
+                contains "$*" "$pkg" && pkg_install "$pkg"
+            done
         ;;
 
         r|remove)
             log "Removing packages"
 
-            for pkg; do
+            # Create a list of each package's dependencies.
+            for pkg; do pkg_depends "$pkg" remove; done
+
+            # Reverse the list of dependencies filtering out anything
+            # not explicitly set for removal.
+            for pkg in $deps; do
+                contains "$*" "$pkg" && remove_pkgs="$pkg $remove_pkgs"
+            done
+
+            for pkg in $remove_pkgs; do
                 pkg_list "$pkg" >/dev/null ||
                     die "[$pkg] Not installed"
 
