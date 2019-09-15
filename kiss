@@ -907,15 +907,6 @@ args() {
         r|remove)
             log "Removing packages"
 
-            # Create a list of each package's dependencies.
-            # for pkg; do pkg_depends "$pkg"; done
-
-            # Reverse the list of dependencies filtering out anything
-            # not explicitly set for removal.
-            # for pkg in $deps; do
-            #     contains "$*" "$pkg" && remove_pkgs="$pkg $remove_pkgs"
-            # done
-
             for pkg; do
                 pkg_list "$pkg" >/dev/null ||
                     die "[$pkg] Not installed"
