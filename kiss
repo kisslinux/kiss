@@ -148,7 +148,7 @@ pkg_extract() {
         case $src in
             # Only 'tar' archives are currently supported for extraction.
             # Any other file-types are simply copied to '$mak_dir' which
-            # allows you to extract them manually.
+            # allows for manual extraction.
             *://*.tar*|*://*.tgz)
                 tar xf "$src_dir/$1/${src##*/}" --strip-components 1 \
                     || die "[$1] Couldn't extract ${src##*/}"
@@ -180,11 +180,11 @@ pkg_depends() {
     # listed first and then the parents in reverse order.
     contains "$deps" "$1" || {
         # Filter out non-explicit, aleady installed dependencies.
+        # Only filter installed if called from 'pkg_build()'.
         [ -z "${action##b*}" ] && [ -z "$2" ] &&
             (pkg_list "$1" >/dev/null) && return
 
-        # Recurse through the dependencies of the child
-        # packages. Keep doing this.
+        # Recurse through the dependencies of the child packages.
         while read -r dep _; do
             [ "${dep##\#*}" ] && pkg_depends "$dep"
         done 2>/dev/null < "$repo_dir/depends" ||:
@@ -192,23 +192,6 @@ pkg_depends() {
         # After child dependencies are added to the list,
         # add the package which depends on them.
         [ "$2" = explicit ] || deps="$deps $1 "
-    }
-}
-
-pkg_verify() {
-    # Verify all package checksums. This is achieved by generating
-    # a new set of checksums and then comparing those with the old
-    # set.
-
-    # Generate a second set of checksums to compare against the
-    # repository's checksums for the package.
-    pkg_checksums "$1" | cmp -s - "$(pkg_find "$1")/checksums" || {
-        log "[$1] Checksum mismatch"
-
-        # Instead of dying above, log it to the terminal. Also define a
-        # variable so we *can* die after all checksum files have been
-        # checked.
-        mismatch="$mismatch$1 "
     }
 }
 
@@ -424,7 +407,20 @@ pkg_build() {
     [ "$no_sums" ] && die "Checksums missing, run 'kiss checksum ${no_sums% }'"
 
     for pkg; do pkg_sources "$pkg"; done
-    for pkg; do pkg_verify  "$pkg"; done
+
+    # Verify all package checksums. This is achieved by generating
+    # a new set of checksums and then comparing those with the old
+    # set.
+    for pkg; do
+        pkg_checksums "$pkg" | cmp -s - "$(pkg_find "$pkg")/checksums" || {
+            log "[$pkg] Checksum mismatch"
+
+            # Instead of dying above, log it to the terminal. Also define a
+            # variable so we *can* die after all checksum files have been
+            # checked.
+            mismatch="$mismatch$pkg "
+        }
+    done
 
     # Die here as packages with differing checksums were found above.
     [ "$mismatch" ] && die "Checksum mismatch with: ${mismatch% }"
