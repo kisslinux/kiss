@@ -206,7 +206,7 @@ pkg_strip() {
 
     # Strip only files matching the below ELF types.
     find "$pkg_dir/$1" -type f | while read -r file; do
-        case "$(readelf -h "$file" 2>/dev/null)" in
+        case $(readelf -h "$file" 2>/dev/null) in
             *" DYN "*)
                 strip_opt=--strip-unneeded
             ;;
