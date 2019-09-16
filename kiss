@@ -207,19 +207,10 @@ pkg_strip() {
     # Strip only files matching the below ELF types.
     find "$pkg_dir/$1" -type f | while read -r file; do
         case $(readelf -h "$file" 2>/dev/null) in
-            *" DYN "*)
-                strip_opt=--strip-unneeded
-            ;;
-
-            *" REL "*)
-                strip_opt=--strip-debug
-            ;;
-
-            *" EXEC "*)
-                strip_opt=--strip-all
-            ;;
-
-            *) continue ;;
+            *" DYN "*)  strip_opt=--strip-unneeded ;;
+            *" EXEC "*) strip_opt=--strip-all ;;
+            *" REL "*)  strip_opt=--strip-debug ;;
+            *) continue
         esac
 
         # Suppress errors here as some binaries and libraries may
