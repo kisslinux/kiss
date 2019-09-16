@@ -181,7 +181,7 @@ pkg_depends() {
     contains "$deps" "$1" || {
         # Filter out non-explicit, aleady installed dependencies.
         # Only filter installed if called from 'pkg_build()'.
-        [ -z "${action##b*}" ] && [ -z "$2" ] &&
+        [ "$pkg_build" ] && [ -z "$2" ] &&
             (pkg_list "$1" >/dev/null) && return
 
         # Recurse through the dependencies of the child packages.
@@ -317,6 +317,7 @@ pkg_build() {
     # Build packages and turn them into packaged tar-balls. This function
     # also checks checksums, downloads sources and ensure all dependencies
     # are installed.
+    pkg_build=1
 
     log "Resolving dependencies"
 
@@ -933,7 +934,7 @@ args() {
         ;;
 
         v|version|-v|--version)
-            printf 'kiss 0.30.0\n'
+            printf 'kiss 0.30.1\n'
         ;;
 
         h|help|-h|--help|'')
