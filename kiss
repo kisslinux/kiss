@@ -7,9 +7,8 @@
 # '-e': Abort on any non-zero exit code.
 # '-f': Disable globbing globally.
 #
-# Warnings related to word splitting and globbing are disabled.
+# [1] Warnings related to word splitting and globbing are disabled.
 # All word splitting in this script is *safe* and intentional.
-# shellcheck disable=2046,2086
 #
 # Dylan Araps.
 
@@ -56,6 +55,7 @@ pkg_find() {
     # Find the repository containing a package.
     # Searches installed packages if the package is absent
     # from the repositories.
+    # shellcheck disable=2046,2086 # See [1]
     set -- "$1" $(IFS=:; find $KISS_PATH "$sys_db" -maxdepth 1 -name "$1")
 
     # A package may also not be found due to a repository not being
@@ -343,7 +343,9 @@ pkg_build() {
             explicit=$(echo "$explicit" | sed "s/ $pkg / /g")
     done
 
+    # shellcheck disable=2046,2086 # See [1]
     set -- $deps $explicit
+
     log "Building: $*"
 
     # Only ask for confirmation if more than one package needs to be built.
@@ -377,6 +379,7 @@ pkg_build() {
 
                 # Remove the now installed package from the build
                 # list. No better way than using 'sed' in POSIX 'sh'.
+                # shellcheck disable=2046,2086 # See [1]
                 set -- $(echo " $* " | sed "s/ $pkg / /")
             }
         }
@@ -462,6 +465,7 @@ pkg_build() {
     log "Successfully built package(s)"
 
     # Turn the explicit packages into a 'list'.
+    # shellcheck disable=2046,2086 # See [1]
     set -- $explicit
 
     # Only ask for confirmation if more than one package needs to be installed.
@@ -721,7 +725,8 @@ pkg_updates() {
     log "Updating repositories"
 
     # Create a list of all repositories.
-    IFS=:; set -- $KISS_PATH; IFS=$old_ifs
+    # shellcheck disable=2046,2086 # See [1]
+    { IFS=:; set -- $KISS_PATH; IFS=$old_ifs; }
 
     # Update each repository in '$KISS_PATH'. It is assumed that
     # each repository is 'git' tracked.
@@ -810,7 +815,9 @@ pkg_updates() {
     pkg_update=1
 
     # Build all packages requiring an update.
+    # shellcheck disable=2046,2086 # See [1]
     pkg_build $outdated
+
     log "Updated all packages"
 }
 
