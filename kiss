@@ -713,10 +713,10 @@ pkg_install() {
     # we no longer need to block 'Ctrl+C'.
     trap pkg_clean EXIT INT
 
-    [ -x "$sys_db/$pkg_name/post-install" ] && {
+    if [ -x "$sys_db/$pkg_name/post-install" ]; then
         log "[$pkg_name] Running post-install script"
         "$sys_db/$pkg_name/post-install" ||:
-    }
+    fi
 
     log "[$pkg_name] Installed successfully"
 }
@@ -830,7 +830,7 @@ pkg_updates() {
 pkg_clean() {
     # Clean up on exit or error. This removes everything related
     # to the build.
-    [ "$KISS_DEBUG" = 1 ] && return
+    [ "$KISS_DEBUG" != 1 ] || return
 
     # Block 'Ctrl+C' while cache is being cleaned.
     trap '' INT
@@ -910,7 +910,7 @@ args() {
             # The purpose of these two loops is to order the
             # argument list based on dependence.
             for pkg in $deps; do
-                contains "$*" "$pkg" && pkg_install "$pkg"
+                ! contains "$*" "$pkg" || pkg_install "$pkg"
             done
         ;;
 
@@ -947,7 +947,7 @@ args() {
         ;;
 
         v|version|-v|--version)
-            printf 'kiss 0.30.1\n'
+            printf 'kiss 0.30.2\n'
         ;;
 
         h|help|-h|--help|'')
