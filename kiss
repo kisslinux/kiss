@@ -292,9 +292,10 @@ pkg_manifest() (
     # prior directory before being able to continue.
     cd "$pkg_dir/$1"
 
-    # Find all files and directories in the package. Directories are printed
-    # with a trailing forward slash '/'. The list is then reversed with
-    # directories appearing *after* their contents.
+    # find: Print all files and directories and append '/' to directories.
+    # sort: Sort the output in *reverse*. Directories appear *after* their
+    #       contents.
+    # sed:  Remove the first character in each line (./dir -> /dir).
     find . -mindepth 1 -type d -exec printf '%s/\n' {} + -or -print |
         sort -r | sed ss.ss > "$pkg_dir/$1/$pkg_db/$1/manifest"
 )
