@@ -14,6 +14,11 @@
 
 log() {
     # Print a message prettily.
+    #
+    # This function uses the literal escape character (Ctrl+V+Escape) as
+    # a simple way of *safely* bypassing the escape sequence restrictions
+    # on 'printf %s'. Cheeky, I know.
+    #
     # '\033[1;32m'    Set text to color '2' and make it bold.
     # '\033[m':       Reset text formatting.
     # '${3:-->}':     If the 3rd argument is missing, set prefix to '->'.
