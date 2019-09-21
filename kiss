@@ -40,8 +40,6 @@ pkg_lint() {
     [ -x build ]   || die "[$1] Build file not found or not executable"
     [ -s version ] || die "[$1] Version file not found or empty"
 
-    # Ensure that the release field in the version file is set
-    # to something. The above test checks for the version field inclusively.
     read -r _ release < version
     [ "$release" ] || die "Release field not found in version file"
 }
