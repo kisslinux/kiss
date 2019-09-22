@@ -42,7 +42,7 @@ contains() {
 }
 
 prompt() {
-    # As the user for some input.
+    # Ask the user for some input.
     log "Continue?: Press Enter to continue or Ctrl+C to abort here"
 
     # POSIX 'read' has none of the "nice" options like '-n', '-p'
