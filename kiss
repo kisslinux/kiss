@@ -797,7 +797,7 @@ pkg_updates() {
         log "Detected package manager update"
         log "The package manager will be updated first"
 
-        prompt || exit
+        prompt
 
         pkg_build kiss
         args i kiss
