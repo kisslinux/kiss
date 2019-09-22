@@ -497,7 +497,7 @@ pkg_build() {
         }
     }
 
-    log "Run 'kiss i $*' to install the built package(s)"
+    log "Run 'kiss i $*' to install the package"
 }
 
 pkg_checksums() {
