@@ -41,6 +41,16 @@ contains() {
     return 1
 }
 
+prompt() {
+    # As the user for some input.
+    log "Continue?: Press Enter to continue or Ctrl+C to abort here"
+
+    # POSIX 'read' has none of the "nice" options like '-n', '-p'
+    # etc etc. This is the most basic usage of 'read'.
+    # '_' is used as 'dash' errors when no variable is given to 'read'.
+    read -r _
+}
+
 pkg_lint() {
     # Check that each mandatory file in the package entry exists.
     log "$1" "Checking repository files"
@@ -362,14 +372,7 @@ pkg_build() {
     log "Building: $*"
 
     # Only ask for confirmation if more than one package needs to be built.
-    [ $# -gt 1 ] || [ "$pkg_update" ] && {
-        log "Continue?: Press Enter to continue or Ctrl+C to abort here"
-
-        # POSIX 'read' has none of the "nice" options like '-n', '-p'
-        # etc etc. This is the most basic usage of 'read'.
-        # '_' is used as 'dash' errors when no variable is given to 'read'.
-        read -r _ || exit
-    }
+    [ $# -gt 1 ] || [ "$pkg_update" ] && { prompt || exit; }
 
     log "Checking to see if any dependencies have already been built"
     log "Installing any pre-built dependencies"
@@ -486,18 +489,14 @@ pkg_build() {
     # Only ask for confirmation if more than one package needs to be installed.
     [ $# -gt 1 ] && {
         log "Install built packages? [$*]"
-        log "Press Enter to continue or Ctrl+C to abort here"
 
-        # POSIX 'read' has none of the "nice" options like '-n', '-p'
-        # etc etc. This is the most basic usage of 'read'.
-        # '_' is used as 'dash' errors when no variable is given to 'read'.
-        read -r _ && {
+        prompt && {
             args i "$@"
             return
         }
     }
 
-    log "Run 'kiss i $*' to install the package"
+    log "Run 'kiss i $*' to install the package(s)"
 }
 
 pkg_checksums() {
@@ -797,12 +796,8 @@ pkg_updates() {
     contains "$outdated" kiss && {
         log "Detected package manager update"
         log "The package manager will be updated first"
-        log "Continue?: Press Enter to continue or Ctrl+C to abort here"
 
-        # POSIX 'read' has none of the "nice" options like '-n', '-p'
-        # etc etc. This is the most basic usage of 'read'.
-        # '_' is used as 'dash' errors when no variable is given to 'read'.
-        read -r _ || exit
+        prompt || exit
 
         pkg_build kiss
         args i kiss
