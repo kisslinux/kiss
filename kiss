@@ -132,27 +132,24 @@ pkg_sources() {
     repo_dir=$(pkg_find "$1")
 
     while read -r src _; do
-        case $src in
-            # Remote source.
-            *://*)
-                [ -f "${src##*/}" ] && {
-                    log "$1" "Found cached source '${src##*/}'"
-                    continue
-                }
+        # Remote source (cached).
+        if [ -f "${src##*/}" ]; then
+            log "$1" "Found cached source '${src##*/}'"
 
-                wget "$src" || {
-                    rm -f "${src##*/}"
-                    die "$1" "Failed to download $src"
-                }
-            ;;
+        # Remote source.
+        elif [ -z "${src##*://*}" ]; then
+            wget "$src" || {
+                rm -f "${src##*/}"
+                die "$1" "Failed to download $src"
+            }
 
-            # Local source.
-            *)
-                [ -f "$repo_dir/$src" ] || die "$1" "No local file '$src'"
+        # Local source.
+        elif [ -f "$repo_dir/$src" ]; then
+            log "$1" "Found local file '$src'"
 
-                log "$1" "Found local file '$src'"
-            ;;
-        esac
+        else
+            die "$1" "No local file '$src'"
+        fi
     done < "$repo_dir/sources"
 }
 
@@ -166,29 +163,24 @@ pkg_extract() {
     while read -r src dest; do
         mkdir -p "$mak_dir/$1/$dest" && cd "$mak_dir/$1/$dest"
 
-        case $src in
-            # Only 'tar' archives are currently supported for extraction.
-            # Any other file-types are simply copied to '$mak_dir' which
-            # allows for manual extraction.
-            *://*.tar*|*://*.tgz)
-                tar xf "$src_dir/$1/${src##*/}" --strip-components 1 \
-                    || die "$1" "Couldn't extract ${src##*/}"
-            ;;
+        # Only 'tar' archives are currently supported for extraction.
+        # Any other file-types are simply copied to '$mak_dir' which
+        # allows for manual extraction.
+        if [ -z "${src##*.tar*}" ]; then
+            tar xf "$src_dir/$1/${src##*/}" --strip-components 1 \
+                || die "$1" "Couldn't extract ${src##*/}"
 
-            *)
-                # Local file.
-                if [ -f "$repo_dir/$src" ]; then
-                    cp -f "$repo_dir/$src" .
+        # Local file.
+        elif [ -f "$repo_dir/$src" ]; then
+            cp -f "$repo_dir/$src" .
 
-                # Remote file.
-                elif [ -f "$src_dir/$1/${src##*/}" ]; then
-                    cp -f "$src_dir/$1/${src##*/}" .
+        # Remote file.
+        elif [ -f "$src_dir/$1/${src##*/}" ]; then
+            cp -f "$src_dir/$1/${src##*/}" .
 
-                else
-                    die "$1" "Local file $src not found"
-                fi
-            ;;
-        esac
+        else
+            die "$1" "Local file $src not found"
+        fi
     done < "$repo_dir/sources"
 }
 
