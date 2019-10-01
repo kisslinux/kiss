@@ -72,18 +72,28 @@ pkg_find() {
     # in $KISS_PATH/*.
     [ "$KISS_PATH" ] || die "\$KISS_PATH needs to be set"
 
+    # Turn the argument list into variables as we reset
+    # the list below.
+    query=$1
+    match=$2
+
     # Find the repository containing a package.
     # Searches installed packages if the package is absent
     # from the repositories.
     # See [1] at top of script.
     # shellcheck disable=2046,2086
-    set -- "$1" $(IFS=:; find $KISS_PATH "$sys_db" -maxdepth 1 -name "$1")
+    set -- $(IFS=:; find $KISS_PATH "$sys_db" -maxdepth 1 -name "$1")
 
     # A package may also not be found due to a repository not being
     # readable by the current user. Either way, we need to die here.
-    [ "$2" ] || die "Package '$1' not in any repository"
+    [ "$1" ] || die "Package '$query' not in any repository"
 
-    printf '%s\n' "$2"
+    # Show all search results if called from 'kiss search', else
+    # print only the first match.
+    case $match in
+        all) printf '%s\n' "$@" ;;
+        *)   printf '%s\n' "$1" ;;
+    esac
 }
 
 pkg_list() {
@@ -949,7 +959,7 @@ args() {
         ;;
 
         s|search)
-            for pkg; do pkg_find "$pkg"; done
+            for pkg; do pkg_find "$pkg" all; done
         ;;
 
         v|version|-v|--version)
