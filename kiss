@@ -858,9 +858,12 @@ args() {
     # Unless this is a search, sanitize the user's input. The call to
     # 'pkg_find()' supports basic globbing, ensure input doesn't expand
     # to anything except for when this behavior is needed.
+    #
+    # This handles the globbing characters '*', '!', '[' and ']' as per:
+    # https://pubs.opengroup.org/onlinepubs/009695399/utilities/xcu_chap02.html
     [ "$action" != search ] && [ "$action" != s ] &&
         case $* in
-            *[!a-zA-Z0-9_-]*)
+            *'*'*|*'!'*|*'['*|*']'*)
                 log kiss "$action $*"
                 die "Arguments contain invalid characters"
             ;;
