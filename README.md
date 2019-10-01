@@ -29,13 +29,13 @@ Tiny and straightforward package manager for KISS written in POSIX `sh`.
 See: <https://getkiss.org/pages/package-system/>
 
 
-## Extending the package manager.
+## Extending the package manager
 
 See: https://github.com/kisslinux/kiss-utils
 
 ## Shell compatibility
 
-KISS is written in POSIX `sh` though each shell has its own set of quirks.Below are the currently known to work and tested shells (as `/bin/sh`).
+KISS is written in POSIX `sh` though each shell has its own set of quirks. Below are the currently known to work and tested shells (as `/bin/sh`).
 
 - `ash`
 - `dash`
