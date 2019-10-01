@@ -862,10 +862,9 @@ args() {
     # This handles the globbing characters '*', '!', '[' and ']' as per:
     # https://pubs.opengroup.org/onlinepubs/009695399/utilities/xcu_chap02.html
     [ "$action" != search ] && [ "$action" != s ] &&
-        case $* in
+        case $@ in
             *'*'*|*'!'*|*'['*|*']'*)
-                log kiss "$action $*"
-                die "Arguments contain invalid characters"
+                die "Arguments contain invalid characters: '!*[]'"
             ;;
         esac
 
