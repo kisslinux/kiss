@@ -766,7 +766,8 @@ pkg_updates() {
             log "$PWD" "Updating repository"
 
             if [ -w "$PWD" ]; then
-                git pull
+                git fetch
+                git merge
             else
                 log "$PWD" "Need root to update"
                 sudo git pull
