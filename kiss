@@ -770,7 +770,8 @@ pkg_updates() {
                 git merge
             else
                 log "$PWD" "Need root to update"
-                sudo git pull
+                sudo git fetch
+                sudo git merge
             fi
         }
     done
@@ -966,7 +967,7 @@ args() {
         ;;
 
         v|version|-v|--version)
-            log kiss 0.41.0
+            log kiss 0.41.1
         ;;
 
         h|help|-h|--help|'')
