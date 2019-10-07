@@ -333,6 +333,29 @@ pkg_junk() (
     done ||:
 )
 
+pkg_patch() (
+    # Apply all patches prior to building the package. This
+    # is as simple as looping over every existing '.patch'
+    # file in the source directory.
+    set +f
+
+    # This funcion runs as a sub-shell to avoid having to 'cd'
+    # back to the prior directory before being able to continue.
+    cd "$mak_dir/$pkg"
+
+    for patch in *.patch; do
+        [ -f "$patch" ] && {
+            log "$pkg" "Applying $patch"
+
+            # Try three different trimming numbers falling back
+            # to the next value on a failure.
+            patch -p0 < "$patch" 2>/dev/null ||
+            patch -p1 < "$patch" 2>/dev/null ||
+            patch -p2 < "$patch"
+        }
+    done
+)
+
 pkg_manifest() (
     # Generate the package's manifest file. This is a list of each file
     # and directory inside the package. The file is used when uninstalling
@@ -480,6 +503,10 @@ pkg_build() {
 
         # Move to the build directory.
         cd "$mak_dir/$pkg"
+
+        pkg_patch
+
+        log "$pkg" "Starting build"
 
         # Call the build script.
         "$repo_dir/build" "$pkg_dir/$pkg" || die "$pkg" "Build failed"
