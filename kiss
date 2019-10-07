@@ -481,6 +481,8 @@ pkg_build() {
         # Move to the build directory.
         cd "$mak_dir/$pkg"
 
+        log "$pkg" "Starting build"
+
         # Call the build script.
         "$repo_dir/build" "$pkg_dir/$pkg" || die "$pkg" "Build failed"
 
