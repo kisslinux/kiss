@@ -324,7 +324,7 @@ pkg_junk() (
     # list. This works exactly like '$KISS_PATH'.
     #
     # shellcheck disable=2046,2086
-    { IFS=:; set -- ${KISS_RM:-$rm_default}; IFS=$old_ifs; }
+    { IFS=:; set -- ${KISS_RM-$rm_default}; IFS=$old_ifs; }
 
     # Loop over each junk entry and delete it if it exists.
     for junk; do
