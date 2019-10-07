@@ -328,7 +328,7 @@ pkg_junk() (
 
     # Loop over each junk entry and delete it if it exists.
     for junk; do
-        [ -e "./$junk" ] && find "./$junk" -delete &&
+        [ -e "./$junk" ] && rm -rf "./$junk" &&
             log "${PWD##*/}" "Removed $junk"
     done ||:
 )
