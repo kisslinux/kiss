@@ -419,7 +419,7 @@ pkg_build() {
 
             # Install any pre-built binaries if they exist.
             # This calls 'args' to inherit a root check and call
-            # to 'sudo' to elevate permissions.
+            # to 'su' to elevate permissions.
             [ -f "$bin_dir/$pkg#$version-$release.tar.gz" ] && {
                 log "$pkg" "Found pre-built binary, installing"
                 (KISS_FORCE=1 args i "$bin_dir/$pkg#$version-$release.tar.gz")
@@ -811,8 +811,13 @@ pkg_updates() {
                 git merge
             else
                 log "$PWD" "Need root to update"
-                sudo git fetch
-                sudo git merge
+
+                if command -v sudo >/dev/null; then
+                    sudo git fetch
+                    sudo git merge
+                else
+                    su -c 'git fetch && git merge'
+                fi
             fi
         }
     done
@@ -920,10 +925,15 @@ args() {
         i|install|r|remove)
             [ "$1" ] || die "'kiss $action' requires an argument"
 
-            # Rerun the script with 'sudo' if the user isn't root.
-            # Cheeky but 'sudo' can't be used on shell functions themselves.
+            # Rerun the script with 'su' if the user isn't root.
+            # Cheeky but 'su' can't be used on shell functions themselves.
             [ "$(id -u)" = 0 ] || {
-                sudo -E KISS_FORCE="$KISS_FORCE" kiss "$action" "$@"
+                if command -v sudo >/dev/null; then
+                    sudo -E KISS_FORCE="$KISS_FORCE" kiss "$action" "$@"
+                else
+                    su -pc "KISS_FORCE=$KISS_FORCE kiss $action $*"
+                fi
+
                 return
             }
         ;;
@@ -1008,7 +1018,7 @@ args() {
         ;;
 
         v|version|-v|--version)
-            log kiss 0.50.0
+            log kiss 0.51.0
         ;;
 
         h|help|-h|--help|'')
