@@ -701,7 +701,7 @@ pkg_install() {
 
     # This is repeated multiple times. Better to make it a function.
     pkg_rsync() {
-        rsync --chown=root:root -WhHKa --no-compress "$1" --exclude etc \
+        rsync --chown=root:root -WhHKa --no-compress "$1" --exclude /etc \
             "$tar_dir/$pkg_name/" "$KISS_ROOT/"
     }
 
@@ -1018,7 +1018,7 @@ args() {
         ;;
 
         v|version|-v|--version)
-            log kiss 0.51.0
+            log kiss 0.52.0
         ;;
 
         h|help|-h|--help|'')
