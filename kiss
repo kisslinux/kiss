@@ -316,16 +316,16 @@ pkg_junk() (
     # Default list of directories and their contents to be removed from
     # built packages. This default assumes a prefix of '/usr' though the
     # user can further configure it to search whatever paths they desire.
-    rm_default=usr/share/doc:usr/share/gtk-doc:usr/share/info:usr/share/polkit-1
-    rm_default=$rm_default:usr/share/gettext:usr/share/locale
-    rm_default=$rm_default:etc/bash_completion.d:usr/share/applications
-    rm_default=$rm_default:usr/lib/charset.alias
+    rm=usr/share/doc:usr/share/gtk-doc:usr/share/info:usr/share/polkit-1
+    rm=$rm:usr/share/gettext:usr/share/locale:usr/lib/charset.alias
+    rm=$rm:etc/bash_completion.d:usr/share/applications
+    rm=$rm:usr/share/zsh/site-functions:usr/share/zsh/vendor-completions
 
     # Split the environment variable on ':' and turn it into an argument
     # list. This works exactly like '$KISS_PATH'.
     #
     # shellcheck disable=2046,2086
-    { IFS=:; set -- ${KISS_RM-$rm_default}; IFS=$old_ifs; }
+    { IFS=:; set -- ${KISS_RM-$rm}; IFS=$old_ifs; }
 
     # Loop over each junk entry and delete it if it exists.
     for junk; do
@@ -1019,7 +1019,7 @@ args() {
         ;;
 
         v|version|-v|--version)
-            log kiss 0.53.0
+            log kiss 0.53.1
         ;;
 
         h|help|-h|--help|'')
