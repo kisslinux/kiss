@@ -322,7 +322,7 @@ pkg_junk() (
     # built packages. This default assumes a prefix of '/usr' though the
     # user can further configure it to search whatever paths they desire.
     rm=usr/share/doc:usr/share/gtk-doc:usr/share/info:usr/share/polkit-1
-    rm=$rm:usr/share/gettext:usr/share/locale
+    rm=$rm:usr/share/gettext:usr/share/locale:usr/share/bash-completion
     rm=$rm:etc/bash_completion.d:usr/share/applications
     rm=$rm:usr/share/zsh/site-functions:usr/share/zsh/vendor-completions
 
