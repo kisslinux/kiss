@@ -1,0 +1,25 @@
+#!/bin/sh -e
+#
+# kiss-owns - Check which package owns a file.
+
+# Strip 'KISS_ROOT' from the file path if passed and
+# follow symlinks.
+file=$(readlink -f "$KISS_ROOT/${1##$KISS_ROOT}")
+
+# Check if the file exists and exit if it is not.
+[ -f "$file" ] || {
+    printf '%s\n' "error: file '$1' doesn't exist." >&2
+    exit 1
+}
+
+# Print the full path to the manifest file which contains
+# the match to our search.
+pkg_owns=$(grep -lFx "${file##$KISS_ROOT}" \
+                     "$KISS_ROOT/var/db/kiss/installed/"*/manifest)
+
+
+# Extract the package name from the path above.
+pkg_owns=${pkg_owns%/*}
+pkg_owns=${pkg_owns##*/}
+
+printf '%s\n' "[$pkg_owns] owns '$1'"

@@ -1,0 +1,21 @@
+#!/bin/sh -ef
+#
+# kiss-size - Show the size on disk for a package.
+
+db_dir=$KISS_ROOT/var/db/kiss/installed/${1-null}
+
+# Check if package is installed and exit if it is not.
+[ -d "$db_dir" ] || {
+    printf '%s\n' "error: '$1' not installed." >&2
+    exit 1
+}
+
+# Filter directories from manifest and leave only files.
+# Directories in the manifest end in a trailing '/'.
+files=$(sed 's|.*/$||' "$db_dir/manifest")
+
+# Send the file list to 'du'.
+# This unquoted variable is safe as word splitting is intended
+# and globbing is globally disabled in this script.
+# shellcheck disable=2086
+du -shc -- $files 2>/dev/null

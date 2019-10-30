@@ -1,0 +1,13 @@
+#!/bin/sh -ef
+#
+# kiss-depends - Display a package's dependencies.
+
+db_dir=$KISS_ROOT/var/db/kiss/installed/${1-null}
+
+# Check if package is installed and exit if it is not.
+[ -d "$db_dir" ] || {
+    printf '%s\n' "error: '$1' not installed." >&2
+    exit 1
+}
+
+[ -f "$db_dir/depends" ] && cat "$db_dir/depends"

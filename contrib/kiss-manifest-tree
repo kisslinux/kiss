@@ -1,0 +1,14 @@
+#!/bin/sh -ef
+#
+# kiss-manifest-tree - Display all files owned by a package.
+
+db_dir=$KISS_ROOT/var/db/kiss/installed/${1-null}
+
+# Check if package is installed and exit if it is not.
+[ -d "$db_dir" ] || {
+    printf '%s\n' "error: '$1' not installed." >&2
+    exit 1
+}
+
+printf '%s\n' "[$1]:"
+tree -C --fromfile "$db_dir/manifest" | tail -n +2

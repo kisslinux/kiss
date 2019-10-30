@@ -1,0 +1,17 @@
+#!/bin/sh -ef
+#
+# kiss-export - Turn an installed package into a KISS tarball.
+
+read -r ver rel 2>/dev/null < "$KISS_ROOT/var/db/kiss/installed/$1/version" || {
+    printf '%s\n' "error: '$1' is not installed." >&2
+    exit 1
+}
+
+# This warning is safe to ignore as globs are disabled and
+# word splitting is intentional.
+# shellcheck disable=2046
+tar czvf "$1#$ver-$rel.tar.gz" -C / -- $(
+    while read -r file; do
+        [ -d "$KISS_ROOT/$file" ] || printf '%s\n' ".$file"
+    done < "$KISS_ROOT/var/db/kiss/installed/$1/manifest"
+)

@@ -134,4 +134,16 @@ export MAKEFLAGS=
 
 ## Extending the package manager
 
-See: https://github.com/kisslinux/kiss-utils
+The `contrib` directory contains a set of simple scripts to extend the package manager.
+
+- `kiss-chroot`: Enter a KISS `chroot`.
+- `kiss-depends-finder`: Find missing dependencies by parsing 'ldd'.
+- `kiss-depends`: Display a package's dependencies.
+- `kiss-export`: Turn an installed package into a KISS tarball.
+- `kiss-manifest-tree`: Display all files as tree owned by a package.
+- `kiss-manifest`: Display all files owned by a package.
+- `kiss-maintainer`: Display the package maintainers.
+- `kiss-orphans`: List orphaned packages.
+- `kiss-owns`: Check which package owns a file.
+- `kiss-revdepends`: Display packages which depend on package.
+- `kiss-size`: Show the size on disk for an installed package.

@@ -1,0 +1,58 @@
+#!/bin/sh -e
+#
+# kiss-chroot: Enter a chroot.
+
+log() {
+    printf '\033[32m->\033[m %s.\n' "$*"
+}
+
+die() {
+    log "$*" >&2
+    exit 1
+}
+
+clean() {
+    log Unmounting /dev, /proc and /sys from chroot; {
+        umount "$1/dev"  ||:
+        umount "$1/proc" ||:
+        umount "$1/sys"  ||:
+    }
+
+    log Cleaning leftover host files; {
+        rm -f "$1/root/.ash_history"
+        rm -f "$1/etc/resolv.conf"
+    }
+}
+
+main() {
+    [ -z "$1" ]        && die Need a path to the chroot
+    [ -d "$1" ]        || die Given path does not exist
+    [ "$(id -u)" = 0 ] || die Script needs to be run as root
+
+    trap 'clean "$1"' EXIT INT
+
+    log Mounting /dev, /proc and /sys from host; {
+        mountpoint -q "$1/dev"  || mount -o bind /dev "$1/dev"
+        mountpoint -q "$1/proc" || mount -t proc proc "$1/proc"
+        mountpoint -q "$1/sys"  || mount -t sysfs sys "$1/sys"
+
+    }
+
+    log Copying /etc/resolv.conf from host; {
+        cp /etc/resolv.conf "$1/etc"
+    }
+
+    log Entering chroot; {
+        chroot "$1" /usr/bin/env -i \
+            HOME=/root \
+            TERM="$TERM" \
+            SHELL=/bin/sh \
+            USER=root \
+            CFLAGS="-march=x86-64 -mtune=generic -pipe -Os" \
+            CXXFLAGS="-march=x86-64 -mtune=generic -pipe -Os" \
+            MAKEFLAGS="-j$(nproc 2>/dev/null || echo 1)" \
+            /bin/sh -l
+    }
+}
+
+main "$@"

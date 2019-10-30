@@ -1,0 +1,8 @@
+#!/bin/sh
+#
+# kiss-repodepends
+
+# Disable this warning as the output
+# from 'kiss s' is intended to be split.
+# shellcheck disable=2046
+cat $(kiss s "$1")/depends 2>/dev/null

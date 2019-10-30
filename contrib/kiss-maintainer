@@ -1,0 +1,8 @@
+#!/bin/sh -e
+#
+# kiss-maintainer - find the maintainer of a package.
+
+kiss s "$1" >/dev/null && {
+    cd "$(kiss s "$1")"
+    git log . 2>/dev/null | grep -F Author: | sort -u
+}
