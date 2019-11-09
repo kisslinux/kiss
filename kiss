@@ -228,7 +228,7 @@ pkg_strip() {
     # system as well as on the tar-balls we ship for installation.
 
     # Package has stripping disabled, stop here.
-    [ -f "$(pkg_find "$1")/nostrip" ] && return
+    [ -f "$mak_dir/$pkg/nostrip" ] && return
 
     log "$1" "Stripping binaries and libraries"
 
@@ -1027,7 +1027,7 @@ args() {
         ;;
 
         v|version|-v|--version)
-            log kiss 0.53.4
+            log kiss 0.53.5
         ;;
 
         h|help|-h|--help|'')
