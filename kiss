@@ -82,7 +82,8 @@ pkg_find() {
     # from the repositories.
     # See [1] at top of script.
     # shellcheck disable=2046,2086
-    set -- $(IFS=:; find $KISS_PATH "$sys_db" -maxdepth 1 -name "$1")
+    set -- $(IFS=:
+        find $KISS_PATH "$sys_db" -mindepth 1 -maxdepth 1 -name "$1")
 
     # A package may also not be found due to a repository not being
     # readable by the current user. Either way, we need to die here.
@@ -1027,7 +1028,7 @@ args() {
         ;;
 
         v|version|-v|--version)
-            log kiss 0.53.5
+            log kiss 0.53.6
         ;;
 
         h|help|-h|--help|'')
