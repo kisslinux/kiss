@@ -1032,7 +1032,7 @@ args() {
         ;;
 
         h|help|-h|--help|'')
-            log 'kiss [b|c|i|l|r|s|u] [pkg] [pkg] [pkg]'
+            log 'kiss [b|c|i|l|r|s|u|v] [pkg] [pkg] [pkg]'
             log 'build:     Build a package'
             log 'checksum:  Generate checksums'
             log 'install:   Install a package'
