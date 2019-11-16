@@ -130,11 +130,16 @@ export LDFLAGS=
 # Make flags.
 # Good value: MAKEFLAGS='-j 4' (number of cores).
 export MAKEFLAGS=
+
+# Cmake Generator.
+# Good value (Ninja):     export CMAKE_GENERATOR=Ninja
+# Good value (Makefiles): export CMAKE_GENERATOR=
+export CMAKE_GENERATOR=
 ```
 
 ## Extending the package manager
 
-The `contrib` directory contains a set of simple scripts to extend the package manager.
+The `contrib` directory contains a set of simple scripts to extend the package manager. These scripts can be installed through the `kiss-utils` package.
 
 - `kiss-chroot`: Enter a KISS `chroot`.
 - `kiss-depends-finder`: Find missing dependencies by parsing 'ldd'.
