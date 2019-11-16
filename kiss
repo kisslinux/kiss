@@ -142,7 +142,7 @@ pkg_sources() {
 
     repo_dir=$(pkg_find "$1")
 
-    while read -r src _ || [ -n "$src" ]; do
+    while read -r src _ || [ "$src" ]; do
         # Remote source (cached).
         if [ -f "${src##*/}" ]; then
             log "$1" "Found cached source '${src##*/}'"
@@ -171,7 +171,7 @@ pkg_extract() {
 
     repo_dir=$(pkg_find "$1")
 
-    while read -r src dest || [ -n "$src" ]; do
+    while read -r src dest || [ "$src" ]; do
         mkdir -p "$mak_dir/$1/$dest" && cd "$mak_dir/$1/$dest"
 
         case $src in
@@ -214,7 +214,7 @@ pkg_depends() {
             (pkg_list "$1" >/dev/null) && return
 
         # Recurse through the dependencies of the child packages.
-        while read -r dep _ || [ -n "$dep" ]; do
+        while read -r dep _ || [ "$dep" ]; do
             [ "${dep##\#*}" ] && pkg_depends "$dep"
         done 2>/dev/null < "$repo_dir/depends" ||:
 
@@ -548,7 +548,7 @@ pkg_checksums() {
 
     repo_dir=$(pkg_find "$1")
 
-    while read -r src _ || [ -n "$src" ]; do
+    while read -r src _ || [ "$src" ]; do
         # File is local to the package.
         if [ -f "$repo_dir/$src" ]; then
             src_path=$repo_dir/${src%/*}
@@ -690,7 +690,7 @@ pkg_install() {
     # installing the package.
     [ -f "$tar_dir/$pkg_name/$pkg_db/$pkg_name/depends" ] &&
     [ -z "$KISS_FORCE" ] &&
-        while read -r dep dep_type || [ -n "$dep" ]; do
+        while read -r dep dep_type || [ "$dep" ]; do
             [ "${dep##\#*}" ] || continue
             [ "$dep_type" ]   || pkg_list "$dep" >/dev/null ||
                 install_dep="$install_dep'$dep', "
