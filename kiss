@@ -579,7 +579,11 @@ pkg_conflicts() {
     # exist in the filesystem. It's pointless to check for conflicts
     # with files which don't presently exist.
     tar xf "$1" -O "./$pkg_db/$2/manifest" | while read -r file; do
-        [ -f "$KISS_ROOT/$file" ] && printf '%s\n' "$file"
+        [ -f "$KISS_ROOT/$file" ] && {
+            printf '%s\n' "$file"
+
+            (cd "$KISS_ROOT/"; readlink -f "./$file")
+        }
     done |
 
     # Filter the existing file list through the manifest of the
@@ -588,9 +592,10 @@ pkg_conflicts() {
 
     # If the generated manifest contains matches, check the
     # contents for conflicts.
-    [ -s "$cac_dir/$pid-m" ] &&
+    if [ -s "$cac_dir/$pid-m" ]; then
         grep -Fxf "$cac_dir/$pid-m" -- "$sys_db"/*/manifest &&
             die "Package '$2' conflicts with another package"
+    fi
 
     set -ef
 }
