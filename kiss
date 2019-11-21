@@ -588,8 +588,7 @@ pkg_conflicts() {
 
     # Filter the existing file list through the manifest of the
     # presently installed version of the package (if it exists).
-    grep -svFxf "$KISS_ROOT/$sys_db/$2/manifest" - \
-        2>/dev/null > "$cac_dir/$pid-m"
+    grep -svFxf "$sys_db/$2/manifest" - 2>/dev/null > "$cac_dir/$pid-m"
 
     # If the generated manifest contains matches, check the
     # contents for conflicts.
