@@ -575,27 +575,27 @@ pkg_conflicts() {
 
     set +ef
 
-    # Extract manifest from tarball and only print files which
-    # exist in the filesystem. It's pointless to check for conflicts
-    # with files which don't presently exist.
+    # Filter the tarball's manifest and select only files
+    # and any files they resolve to on the filesystem \
+    # (/bin/ls -> /usr/bin/ls).
     tar xf "$1" -O "./$pkg_db/$2/manifest" | while read -r file; do
-        [ -f "$KISS_ROOT/$file" ] && {
-            printf '%s\n' "$file"
+        case $file in */) continue; esac
 
-            (cd "$KISS_ROOT/"; readlink -f "./$file")
-        }
+        printf '%s\n' "$file"
+
+        (cd "$KISS_ROOT/" && readlink -f "./$file") ||:
     done |
 
     # Filter the existing file list through the manifest of the
     # presently installed version of the package (if it exists).
-    grep -svFxf "$sys_db/$2/manifest" - 2>/dev/null > "$cac_dir/$pid-m"
+    grep -svFxf "$KISS_ROOT/$sys_db/$2/manifest" - \
+        2>/dev/null > "$cac_dir/$pid-m"
 
     # If the generated manifest contains matches, check the
     # contents for conflicts.
-    if [ -s "$cac_dir/$pid-m" ]; then
+    [ -s "$cac_dir/$pid-m" ] &&
         grep -Fxf "$cac_dir/$pid-m" -- "$sys_db"/*/manifest &&
             die "Package '$2' conflicts with another package"
-    fi
 
     set -ef
 }
