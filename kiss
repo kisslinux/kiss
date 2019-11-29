@@ -37,8 +37,7 @@ die() {
 
 contains() {
     # Check if a "string list" contains a word.
-    case " $1 " in *" $2 "*) return 0; esac
-    return 1
+    case " $1 " in *" $2 "*) return 0; esac; return 1
 }
 
 prompt() {
@@ -236,15 +235,15 @@ pkg_strip() {
     # Strip only files matching the below ELF types.
     find "$pkg_dir/$1" -type f | while read -r file; do
         case $(readelf -h "$file" 2>/dev/null) in
-            *" DYN "*)  strip_opt=--strip-unneeded ;;
-            *" EXEC "*) strip_opt=--strip-all ;;
-            *" REL "*)  strip_opt=--strip-debug ;;
+            *" DYN "*)  strip_opt=unneeded ;;
+            *" EXEC "*) strip_opt=all ;;
+            *" REL "*)  strip_opt=debug ;;
             *) continue
         esac
 
         # Suppress errors here as some binaries and libraries may
         # fail to strip. This is OK.
-        strip "$strip_opt" "$file" 2>/dev/null ||:
+        strip "--strip-$strip_opt" "$file" 2>/dev/null ||:
     done
 }
 
