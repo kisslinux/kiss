@@ -38,7 +38,7 @@ main() {
     }
 
     log Copying /etc/resolv.conf from host; {
-         [ ! -f "/$1/etc/resolv.conf" ] && cp /etc/resolv.conf "$1/etc"
+         [ -f "/$1/etc/resolv.conf" ] || cp /etc/resolv.conf "$1/etc"
     }
 
     log Entering chroot; {
