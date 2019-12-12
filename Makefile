@@ -51,4 +51,4 @@ uninstall-utils:
 	@rm -f ${DESTDIR}${PREFIX}/bin/kiss-revdepends
 	@rm -f ${DESTDIR}${PREFIX}/bin/kiss-size
 
-.PHONY: all option install install-utils uninstall uninstall-utils
+.PHONY: all options install install-utils uninstall uninstall-utils
