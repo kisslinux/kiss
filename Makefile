@@ -13,11 +13,14 @@ options:
 install:
 	@mkdir -p ${DESTDIR}${PREFIX}/bin
 	@mkdir -p ${DESTDIR}${MANPREFIX}/man1
+	@echo "Installing KISS to ${DESTDIR}${PREFIX}/bin"
 	@install -Dm755 kiss ${DESTDIR}${PREFIX}/bin/kiss
+	@echo "Installing manpages to ${DESTDIR}${MANPREFIX}"
 	@install -Dm644 kiss.1 ${DESTDIR}${MANPREFIX}/man1/kiss.1
 
 install-utils:
 	@mkdir -p ${DESTDIR}${PREFIX}/usr/bin
+	@echo "Installing kiss-utils to ${DESTDIR}${PREFIX}/bin"
 	@install -Dm755 contrib/kiss-manifest ${DESTDIR}${PREFIX}/bin/kiss-manifest
 	@install -Dm755 contrib/kiss-chroot ${DESTDIR}${PREFIX}/bin/kiss-chroot
 	@install -Dm755 contrib/kiss-reset ${DESTDIR}${PREFIX}/bin/kiss-reset
@@ -33,10 +36,13 @@ install-utils:
 	@install -Dm755 contrib/kiss-depends ${DESTDIR}${PREFIX}/bin/kiss-depends
 
 uninstall:
+	@echo "Removing KISS from ${DESTDIR}${PREFIX}/bin"
 	@rm -f ${DESTDIR}${PREFIX}/bin/kiss
+	@echo "Removing KISS manpage from ${DESTDIR}${MANPREFIX}"
 	@rm -f ${DESTDIR}${MANPREFIX}/man1/kiss.1
 
 uninstall-utils:
+	@echo "Removing kiss-utils from ${DESTDIR}${PREFIX}/bin"
 	@rm -f ${DESTDIR}${PREFIX}/bin/kiss-chroot
 	@rm -f ${DESTDIR}${PREFIX}/bin/kiss-depends
 	@rm -f ${DESTDIR}${PREFIX}/bin/kiss-depends-finder
