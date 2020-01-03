@@ -480,6 +480,8 @@ pkg_build() {
     # Finally build and create tarballs for all passed packages and
     # dependencies.
     for pkg; do
+        log "$pkg" "Building package ($((in = in + 1))/$#)"
+
         pkg_extract "$pkg"
         repo_dir=$(pkg_find "$pkg")
 
