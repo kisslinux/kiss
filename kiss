@@ -148,7 +148,7 @@ pkg_sources() {
 
         # Remote source.
         elif [ -z "${src##*://*}" ]; then
-            curl "$src" -Lo "${src##*/}" || {
+            curl "$src" -fLo "${src##*/}" || {
                 rm -f "${src##*/}"
                 die "$1" "Failed to download $src"
             }
