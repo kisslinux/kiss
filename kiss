@@ -495,7 +495,7 @@ pkg_build() {
         log "$pkg" "Starting build"
 
         # Call the build script.
-        "$repo_dir/build" "$pkg_dir/$pkg" >"${KISS_BFD:=/dev/fd/0}" 2>&1 ||
+        "$repo_dir/build" "$pkg_dir/$pkg" >>"${KISS_BFD:=/dev/fd/0}" 2>&1 ||
             die "$pkg" "Build failed"
 
         # Copy the repository files to the package directory.
