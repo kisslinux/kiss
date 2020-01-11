@@ -414,6 +414,9 @@ pkg_build() {
     # Only ask for confirmation if more than one package needs to be built.
     [ $# -gt 1 ] || [ "$pkg_update" ] && prompt
 
+    # Treat all packages as implicit if this is an update.
+    [ "$pkg_update" ] && explicit=
+
     log "Checking to see if any dependencies have already been built"
     log "Installing any pre-built dependencies"
 
@@ -427,7 +430,7 @@ pkg_build() {
             read -r version release < "$(pkg_find "$pkg")/version"
 
             # Install any pre-built binaries if they exist.
-            # This calls 'args' to inherit a root check and call
+            # This calls 'args' to inherit a root check
             # to 'su' to elevate permissions.
             [ -f "$bin_dir/$pkg#$version-$release.tar.gz" ] && {
                 log "$pkg" "Found pre-built binary, installing"
