@@ -393,7 +393,7 @@ pkg_build() {
         }
     done
 
-    explicit_build=$explicit
+    [ "$pkg_update" ] || explicit_build=$explicit
 
     # If an explicit package is a dependency of another explicit
     # package, remove it from the explicit list as it needs to be
@@ -413,9 +413,6 @@ pkg_build() {
 
     # Only ask for confirmation if more than one package needs to be built.
     [ $# -gt 1 ] || [ "$pkg_update" ] && prompt
-
-    # Treat all packages as implicit if this is an update.
-    [ "$pkg_update" ] && explicit=
 
     log "Checking to see if any dependencies have already been built"
     log "Installing any pre-built dependencies"
