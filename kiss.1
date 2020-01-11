@@ -69,6 +69,12 @@ export KISS_FORCE=0
 # This can be used to have the package manager run in a "fake root".
 export KISS_ROOT=/
 
+# Redirect build output to a file or /dev/null.
+#
+# Set it to '/dev/null' to disable build output.
+# Set it to '/path/to/file' to log build output to a file.
+export KISS_BFD=/dev/fd/0
+
 # Keep build, package and extraction cache directories for debugging
 # purposes.
 #
