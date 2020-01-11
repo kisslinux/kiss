@@ -1,4 +1,4 @@
-#!/bin/sh -ef
+#!/bin/dash -ef
 #
 # This is a simple package manager written in POSIX 'sh' for use
 # in KISS Linux (https://getkiss.org).
@@ -495,7 +495,8 @@ pkg_build() {
         log "$pkg" "Starting build"
 
         # Call the build script.
-        "$repo_dir/build" "$pkg_dir/$pkg" || die "$pkg" "Build failed"
+        "$repo_dir/build" "$pkg_dir/$pkg" >"${KISS_BFD:=/dev/fd/0}" 2>&1 ||
+            die "$pkg" "Build failed"
 
         # Copy the repository files to the package directory.
         # This acts as the database entry.
