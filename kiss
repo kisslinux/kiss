@@ -202,6 +202,9 @@ pkg_extract() {
 pkg_depends() {
     # Resolve all dependencies and generate an ordered list.
 
+    # Package has dependency checking disabled, stop here.
+    [ -f "$mak_dir/$pkg/nodepends" ] && return
+
     repo_dir=$(pkg_find "$1")
 
     # This does a depth-first search. The deepest dependencies are
