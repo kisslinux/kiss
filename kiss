@@ -277,9 +277,6 @@ pkg_fixdeps() {
             dep=${dep#* => }
             dep=${dep% *}
 
-            # Traverse symlinks to get the true path to the file.
-            dep=$(readlink -f "$KISS_ROOT/${dep##$KISS_ROOT}")
-
             # Figure out which package owns the file.
             dep=$(set +f; grep -lFx "${dep##$KISS_ROOT}" "$sys_db/"*/manifest)
 
