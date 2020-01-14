@@ -1091,7 +1091,7 @@ main() {
     # Prefer GNU grep if installed as it is much much faster than busybox's
     # implementation. Very much worth it if you value performance over
     # POSIX correctness.
-    grep=$(command -v ggrep 2>/dev/null) || grep='grep'
+    grep=$(command -v ggrep 2>/dev/null) || grep='grep'; : "${grep:=grep}"
 
     # This allows for automatic setup of a KISS chroot and will
     # do nothing on a normal system.
