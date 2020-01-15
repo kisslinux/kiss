@@ -852,6 +852,9 @@ pkg_updates() {
                 if command -v sudo >/dev/null; then
                     sudo git fetch
                     sudo git merge
+                elif command -v doas >/dev/null; then
+                    doas git fetch
+                    doas git merge
                 else
                     su -c 'git fetch && git merge'
                 fi
@@ -967,6 +970,8 @@ args() {
             [ "$(id -u)" = 0 ] || {
                 if command -v sudo >/dev/null; then
                     sudo -E KISS_FORCE="$KISS_FORCE" kiss "$action" "$@"
+                elif command -v doas >/dev/null; then
+                    doas KISS_FORCE="$KISS_FORCE" kiss "$action" "$@"
                 else
                     su -pc "KISS_FORCE=$KISS_FORCE kiss $action $*"
                 fi
