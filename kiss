@@ -150,12 +150,18 @@ pkg_sources() {
             # This is a checksums check, skip it.
             [ "$2" ] && continue
 
-            repo_src=${src##git+}
-
             mkdir -p "$mak_dir/$1/$dest"
 
-            (cd "$mak_dir/$1/$dest" && git clone "${repo_src%#*}" .) ||
-                die "$1" "Failed to clone $src"
+            # Run in a subshell to keep variables local.
+            (
+                repo_src=${src##git+}
+
+                [ "${src##*#*}" ] && shallow=--depth=1
+
+                cd "$mak_dir/$1/$dest" &&
+                    git clone "${shallow:---}" "${repo_src%#*}" .
+
+            ) || die "$1" "Failed to clone $src"
 
         # Remote source.
         elif [ -z "${src##*://*}" ]; then
