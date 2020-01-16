@@ -187,6 +187,8 @@ pkg_extract() {
         case $src in
             # Git repository with supplied commit hash.
             git+*\#*)
+                log "Checking out ${src##*#}"
+
                 git reset --hard "${src##*#}" ||
                     die "Commit hash ${src##*#} doesn't exist"
             ;;
