@@ -1,5 +1,8 @@
 #!/bin/sh -e
 
+# shellcheck disable=SC2015
+# shellcheck disable=SC2059
+
 out() { printf "=> $1\n" ;}
 die() { printf "error: $1\n" ; exit 1 ;}
 [ -z "$1" ] && { out "${0##*/} <package> [version] [sources]"; exit ;}
