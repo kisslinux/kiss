@@ -599,7 +599,7 @@ pkg_checksums() {
 
         # File is a git repository.
         elif [ -z "${src##git+*}" ]; then
-            printf '%-64s  %s\n' git "${src##*/}"
+            printf 'git  %s\n' "$src"
             continue
 
         # Die here if source for some reason, doesn't exist.
@@ -1096,7 +1096,7 @@ args() {
         ;;
 
         v|version|-v|--version)
-            log kiss 0.60.0
+            log kiss 0.60.1
         ;;
 
         h|help|-h|--help|'')
