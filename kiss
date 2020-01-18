@@ -597,8 +597,9 @@ pkg_checksums() {
         elif [ -f "$src_dir/$1/${src##*/}" ]; then
             src_path=$src_dir/$1
 
-        # File is a git repository, skip checksums.
+        # File is a git repository.
         elif [ -z "${src##git+*}" ]; then
+            printf '%-64s  %s\n' git "${src##*/}"
             continue
 
         # Die here if source for some reason, doesn't exist.
