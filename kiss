@@ -140,10 +140,28 @@ pkg_sources() {
 
     repo_dir=$(pkg_find "$1")
 
-    while read -r src _ || [ "$src" ]; do
+    while read -r src dest || [ "$src" ]; do
         # Remote source (cached).
         if [ -f "${src##*/}" ]; then
             log "$1" "Found cached source '${src##*/}'"
+
+        # Remote git repository.
+        elif [ -z "${src##git+*}" ]; then
+            # This is a checksums check, skip it.
+            [ "$2" ] && continue
+
+            mkdir -p "$mak_dir/$1/$dest"
+
+            # Run in a subshell to keep variables local.
+            (
+                repo_src=${src##git+}
+
+                [ "${src##*#*}" ] && shallow=--depth=1
+
+                cd "$mak_dir/$1/$dest" &&
+                    git clone "${shallow:---}" "${repo_src%#*}" .
+
+            ) || die "$1" "Failed to clone $src"
 
         # Remote source.
         elif [ -z "${src##*://*}" ]; then
@@ -173,6 +191,19 @@ pkg_extract() {
         mkdir -p "$mak_dir/$1/$dest" && cd "$mak_dir/$1/$dest"
 
         case $src in
+            # Git repository with supplied commit hash.
+            git+*\#*)
+                log "Checking out ${src##*#}"
+
+                git reset --hard "${src##*#}" ||
+                    die "Commit hash ${src##*#} doesn't exist"
+            ;;
+
+            # Git repository.
+            git+*)
+                continue
+            ;;
+
             # Only 'tar' archives are currently supported for extraction.
             # Any other file-types are simply copied to '$mak_dir' which
             # allows for manual extraction.
@@ -565,6 +596,11 @@ pkg_checksums() {
         # File is remote and was downloaded.
         elif [ -f "$src_dir/$1/${src##*/}" ]; then
             src_path=$src_dir/$1
+
+        # File is a git repository.
+        elif [ -z "${src##git+*}" ]; then
+            printf '%-64s  %s\n' git "${src##*/}"
+            continue
 
         # Die here if source for some reason, doesn't exist.
         else
@@ -997,7 +1033,7 @@ args() {
 
         c|checksum)
             for pkg; do pkg_lint    "$pkg"; done
-            for pkg; do pkg_sources "$pkg"; done
+            for pkg; do pkg_sources "$pkg" c; done
             for pkg; do
                 pkg_checksums "$pkg" > "$(pkg_find "$pkg")/checksums"
 
