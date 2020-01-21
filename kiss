@@ -774,8 +774,9 @@ pkg_install() {
 
     # This is repeated multiple times. Better to make it a function.
     pkg_rsync() {
-        rsync --chown=root:root -WhHKa --no-compress "$1" --exclude /etc \
-            "$tar_dir/$pkg_name/" "$KISS_ROOT/"
+        rsync --chown=root:root --chmod=Du-s,Dg-s,Do-s \
+              -WhHKa --no-compress "$1" --exclude /etc \
+              "$tar_dir/$pkg_name/" "$KISS_ROOT/"
     }
 
     # Install the package by using 'rsync' and overwrite any existing files
