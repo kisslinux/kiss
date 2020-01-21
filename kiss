@@ -1008,7 +1008,7 @@ args() {
                 if command -v sudo >/dev/null; then
                     sudo -E KISS_FORCE="$KISS_FORCE" kiss "$action" "$@"
                 elif command -v doas >/dev/null; then
-                    doas KISS_FORCE="$KISS_FORCE" kiss "$action" "$@"
+                    KISS_FORCE="$KISS_FORCE" doas kiss "$action" "$@"
                 else
                     su -pc "KISS_FORCE=$KISS_FORCE kiss $action $*"
                 fi
