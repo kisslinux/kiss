@@ -325,7 +325,7 @@ pkg_fixdeps() {
 
             case $dep in
                 # Skip listing these packages as dependencies.
-                musl|gcc|${PWD##*/}) ;;
+                musl|gcc|${PWD##*/}|"") ;;
                 *) printf '%s\n' "$dep" ;;
             esac
         done ||:
