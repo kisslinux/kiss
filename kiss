@@ -346,7 +346,7 @@ pkg_junk() (
     # files, 'man' pages, gettext files, etc. This is configurable by the
     # user.
     #
-    # This funcion runs as a sub-shell to avoid having to 'cd' back to the
+    # This function runs as a sub-shell to avoid having to 'cd' back to the
     # prior directory before being able to continue.
     cd "$pkg_dir/$1"
 
