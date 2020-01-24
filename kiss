@@ -879,7 +879,7 @@ pkg_updates() {
             # Lower permissions to the owner of the repository
             # to prevent changing permissions of files during
             # the pull process.
-            su -c 'git fetch && git merge' - "$(stat -c %U "$PWD")"
+            su -c 'git fetch && git merge' "$(stat -c %U "$PWD")"
         }
     done
 
