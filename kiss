@@ -467,8 +467,7 @@ pkg_build() {
             # to 'su' to elevate permissions.
             [ -f "$bin_dir/$pkg#$version-$release.tar.gz" ] && {
                 log "$pkg" "Found pre-built binary, installing"
-                (KISS_FORCE=1 \
-                    pkg_install "$bin_dir/$pkg#$version-$release.tar.gz")
+                (KISS_FORCE=1 args i "$bin_dir/$pkg#$version-$release.tar.gz")
 
                 # Remove the now installed package from the build
                 # list. No better way than using 'sed' in POSIX 'sh'.
@@ -555,7 +554,7 @@ pkg_build() {
         contains "$explicit" "$pkg" && [ -z "$pkg_update" ] && continue
 
         log "$pkg" "Needed as a dependency or has an update, installing"
-        (KISS_FORCE=1 pkg_install "$pkg")
+        (KISS_FORCE=1 args i "$pkg")
     done
 
     # End here as this was a system update and all packages have been installed.
@@ -573,7 +572,7 @@ pkg_build() {
         log "Install built packages? [$*]"
 
         prompt && {
-            pkg_install "$@"
+            args i "$@"
             return
         }
     }
