@@ -996,7 +996,12 @@ args() {
             # Rerun the script with 'su' if the user isn't root.
             # Cheeky but 'su' can't be used on shell functions themselves.
             [ "$(id -u)" = 0 ] || {
-                su -pc "OLDUSER=$OLDUSER KISS_FORCE=$KISS_FORCE kiss $action $*"
+                log "Elevating permissions from ($USER -> root)"
+
+                su -pc "OLDUSER=\"$OLDUSER\" \
+                        KISS_FORCE=\"$KISS_FORCE\" \
+                        KISS_PATH=\"$KISS_PATH\"
+                        kiss $action $*"
                 return
             }
         ;;
