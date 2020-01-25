@@ -49,14 +49,10 @@ drop_root() {
     drop_to=$1
     shift
 
-    case $(id -u) in
-        0)
-            log "Lowering permissions from (root -> $drop_to)"
-            su -c "$*" "$drop_to"
-        ;;
+    [ "$(id -u)" = 0 ] || { "$@"; return; }
 
-        *) "$@" ;;
-    esac
+    log "Lowering permissions from (root -> $drop_to)"
+    su -c "$*" "$drop_to"
 }
 
 pkg_lint() {
