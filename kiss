@@ -45,6 +45,20 @@ prompt() {
     read -r _
 }
 
+drop_root() {
+    drop_to=$1
+    shift
+
+    case $(id -u) in
+        0)
+            log "Lowering permissions from (root -> $drop_to)"
+            su -c "$*" "$drop_to"
+        ;;
+
+        *) "$@" ;;
+    esac
+}
+
 pkg_lint() {
     # Check that each mandatory file in the package entry exists.
     log "$1" "Checking repository files"
@@ -530,8 +544,10 @@ pkg_build() {
 
         log "$pkg" "Starting build"
 
-        # Call the build script.
-        "$repo_dir/build" "$pkg_dir/$pkg" || die "$pkg" "Build failed"
+        # Call the build script and drop permissions to the
+        # original caller if needed.
+        drop_root "$OLDUSER" "$repo_dir/build" "$pkg_dir/$pkg" ||
+            die "$pkg" "Build failed"
 
         # Copy the repository files to the package directory.
         # This acts as the database entry.
@@ -876,10 +892,15 @@ pkg_updates() {
 
             log "$PWD" "$signed "
 
+            # Find out the owner of the repository and spawn
+            # git as this user below.
+            repo_owner=$(stat -c %U "$PWD")
+
             # Lower permissions to the owner of the repository
             # to prevent changing permissions of files during
             # the pull process.
-            su -c 'git fetch && git merge' "$(stat -c %U "$PWD")"
+            drop_root "$repo_owner" git fetch
+            drop_root "$repo_owner" git merge
         }
     done
 
@@ -912,7 +933,7 @@ pkg_updates() {
 
         # Lower permissions to the original caller of kiss
         # to prevent builds from happening as root.
-        su -c 'kiss b kiss' "$OLDUSER"
+        drop_root "$OLDUSER" kiss b kiss
         pkg_install kiss
 
         log "Updated the package manager"
