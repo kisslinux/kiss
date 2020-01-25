@@ -997,17 +997,7 @@ args() {
             # Rerun the script with 'su' if the user isn't root.
             # Cheeky but 'su' can't be used on shell functions themselves.
             [ "$(id -u)" = 0 ] || {
-                if command -v sudo >/dev/null; then
-                    sudo -E OLDUSER="$OLDUSER" KISS_FORCE="$KISS_FORCE" \
-                        kiss "$action" "$@"
-
-                elif command -v doas >/dev/null; then
-                    OLDUSER="$OLDUSER" KISS_FORCE="$KISS_FORCE" \
-                        doas kiss "$action" "$@"
-                else
-                    su -pc "OLDUSER=$OLDUSER KISS_FORCE=$KISS_FORCE kiss $action $*"
-                fi
-
+                su -pc "OLDUSER=$OLDUSER KISS_FORCE=$KISS_FORCE kiss $action $*"
                 return
             }
         ;;
