@@ -911,9 +911,8 @@ pkg_updates() {
 
         prompt
 
-        # Lower permissions to the owner of the repository
-        # to prevent changing permissions of files during
-        # the pull process.
+        # Lower permissions to the original caller of kiss
+        # to prevent builds from happening as root.
         su -c 'kiss b kiss' "$OLDUSER"
         pkg_install kiss
 
