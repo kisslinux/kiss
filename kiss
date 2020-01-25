@@ -467,7 +467,8 @@ pkg_build() {
             # to 'su' to elevate permissions.
             [ -f "$bin_dir/$pkg#$version-$release.tar.gz" ] && {
                 log "$pkg" "Found pre-built binary, installing"
-                (KISS_FORCE=1 args i "$bin_dir/$pkg#$version-$release.tar.gz")
+                (KISS_FORCE=1 \
+                    pkg_install "$bin_dir/$pkg#$version-$release.tar.gz")
 
                 # Remove the now installed package from the build
                 # list. No better way than using 'sed' in POSIX 'sh'.
@@ -554,7 +555,7 @@ pkg_build() {
         contains "$explicit" "$pkg" && [ -z "$pkg_update" ] && continue
 
         log "$pkg" "Needed as a dependency or has an update, installing"
-        (KISS_FORCE=1 args i "$pkg")
+        (KISS_FORCE=1 pkg_install "$pkg")
     done
 
     # End here as this was a system update and all packages have been installed.
@@ -572,7 +573,7 @@ pkg_build() {
         log "Install built packages? [$*]"
 
         prompt && {
-            args i "$@"
+            pkg_install "$@"
             return
         }
     }
@@ -910,8 +911,11 @@ pkg_updates() {
 
         prompt
 
-        pkg_build kiss
-        args i kiss
+        # Lower permissions to the owner of the repository
+        # to prevent changing permissions of files during
+        # the pull process.
+        su -c 'kiss b kiss' "$OLDUSER"
+        pkg_install kiss
 
         log "Updated the package manager"
         log "Re-run 'kiss update' to update your system"
@@ -987,15 +991,22 @@ args() {
             [ "$1" ] || [ -z "${action##u*}" ] ||
                 die "'kiss $action' requires an argument"
 
+            # Keep track of the original user to drop root permissions
+            # during builds. OLDUSER kinda mimics OLDPWD here.
+            [ "$OLDUSER" ] || OLDUSER=$USER
+
             # Rerun the script with 'su' if the user isn't root.
             # Cheeky but 'su' can't be used on shell functions themselves.
             [ "$(id -u)" = 0 ] || {
                 if command -v sudo >/dev/null; then
-                    sudo -E KISS_FORCE="$KISS_FORCE" kiss "$action" "$@"
+                    sudo -E OLDUSER="$OLDUSER" KISS_FORCE="$KISS_FORCE" \
+                        kiss "$action" "$@"
+
                 elif command -v doas >/dev/null; then
-                    KISS_FORCE="$KISS_FORCE" doas kiss "$action" "$@"
+                    OLDUSER="$OLDUSER" KISS_FORCE="$KISS_FORCE" \
+                        doas kiss "$action" "$@"
                 else
-                    su -pc "KISS_FORCE=$KISS_FORCE kiss $action $*"
+                    su -pc "OLDUSER=$OLDUSER KISS_FORCE=$KISS_FORCE kiss $action $*"
                 fi
 
                 return
