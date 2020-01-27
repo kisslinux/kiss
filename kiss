@@ -45,6 +45,33 @@ prompt() {
     read -r _
 }
 
+root_cache() {
+    # This function simply mimics a 'su' prompt to then store
+    # the user's root password for the lifetime of the package
+    # manager.
+    #
+    # Think of this as the simplest method of "elevating"
+    # permissions where needed without the endless stream of
+    # password prompts.
+    printf 'Password: '
+    stty -echo
+    read -r pass || read -r pass ||:
+    stty echo
+    printf '\n'
+
+    # Validate the password now with a simple 'true' command
+    # as we don't yet need to elevate permissions.
+    root_run true
+}
+
+root_run() {
+    # Run a command as root using the cached password. The 'su'
+    # command allows you to input a password via stdin. To hide
+    # the prompt, the command's output is sent to '/dev/tty'
+    # and the output of 'su' is sent to '/dev/null'.
+    echo "$pass" | su -c "$* >/dev/tty" >/dev/null
+}
+
 pkg_lint() {
     # Check that each mandatory file in the package entry exists.
     log "$1" "Checking repository files"
@@ -880,17 +907,8 @@ pkg_updates() {
                 git fetch
                 git merge
             else
-                log "$PWD" "Need root to update"
-
-                if command -v sudo >/dev/null; then
-                    sudo git fetch
-                    sudo git merge
-                elif command -v doas >/dev/null; then
-                    doas git fetch
-                    doas git merge
-                else
-                    su -c 'git fetch && git merge'
-                fi
+                root_run git fetch
+                root_run git merge
             fi
         }
     done
@@ -995,22 +1013,12 @@ args() {
             [ "$1" ] || die "'kiss $action' requires an argument"
         ;;
 
-        i|install|r|remove)
-            [ "$1" ] || die "'kiss $action' requires an argument"
+        i|install|r|remove|u|update)
+            [ "$1" ] || [ -z "${action##u*}" ] ||
+                die "'kiss $action' requires an argument"
 
-            # Rerun the script with 'su' if the user isn't root.
-            # Cheeky but 'su' can't be used on shell functions themselves.
-            [ "$(id -u)" = 0 ] || {
-                if command -v sudo >/dev/null; then
-                    sudo -E KISS_FORCE="$KISS_FORCE" kiss "$action" "$@"
-                elif command -v doas >/dev/null; then
-                    KISS_FORCE="$KISS_FORCE" doas kiss "$action" "$@"
-                else
-                    su -pc "KISS_FORCE=$KISS_FORCE kiss $action $*"
-                fi
-
-                return
-            }
+            # Cache the root password for use where needed.
+            [ "$(id -u)" = 0 ] || root_cache
         ;;
     esac
 
