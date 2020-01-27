@@ -1139,6 +1139,10 @@ main() {
     # from leaking to stdout.
     set +x
 
+    # Prevent the package manager from running as root. The package
+    # manager will elevate permissions where needed.
+    [ "$(id -u)" != 0 ] || die "kiss must be run as a normal user"
+
     # Set the location to the repository and package database.
     pkg_db=var/db/kiss/installed
 
