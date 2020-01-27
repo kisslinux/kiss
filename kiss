@@ -804,9 +804,9 @@ pkg_remove() {
         [ "${file##/etc/*}" ] || continue
 
         if [ -d "$KISS_ROOT/$file" ]; then
-            dosu rmdir "$KISS_ROOT/$file" 2>/dev/null || continue
+            dosu rmdir "'$KISS_ROOT/$file'" 2>/dev/null || continue
         else
-            dosu rm -f "$KISS_ROOT/$file"
+            dosu rm -f "'$KISS_ROOT/$file'"
         fi
     done < "$sys_db/$1/manifest"
 
@@ -884,7 +884,7 @@ pkg_install() {
     pkg_rsync() {
         dosu rsync --chown=root:root --chmod=Du-s,Dg-s,Do-s \
               -WhHKa --no-compress "$1" --exclude /etc \
-              "$tar_dir/$pkg_name/" "$KISS_ROOT/"
+              "'$tar_dir/$pkg_name/'" "'$KISS_ROOT/'"
     }
 
     # Install the package by using 'rsync' and overwrite any existing files
@@ -894,7 +894,7 @@ pkg_install() {
     # If '/etc/' exists in the package, install it but don't overwrite.
     [ -d "$tar_dir/$pkg_name/etc" ] &&
         dosu rsync --chown=root:root -WhHKa --no-compress --ignore-existing \
-            "$tar_dir/$pkg_name/etc" "$KISS_ROOT/"
+            "'$tar_dir/$pkg_name/etc'" "'$KISS_ROOT/'"
 
     # Remove any leftover files if this is an upgrade.
     [ "$old_manifest" ] && {
@@ -911,18 +911,18 @@ pkg_install() {
 
             # Remove files.
             if [ -f "$file" ] && [ ! -L "$file" ]; then
-                dosu rm -f "$file"
+                dosu rm -f "'$file'"
 
             # Remove file symlinks.
             elif [ -L "$file" ] && [ ! -d "$file" ]; then
-                dosu unlink "$file" ||:
+                dosu unlink "'$file'" ||:
 
             # Skip directory symlinks.
             elif [ -L "$file" ] && [ -d "$file" ]; then :
 
             # Remove directories if empty.
             elif [ -d "$file" ]; then
-                dosu rmdir "$file" 2>/dev/null ||:
+                dosu rmdir "'$file'" 2>/dev/null ||:
             fi
         done ||:
     }
@@ -938,7 +938,7 @@ pkg_install() {
 
     if [ -x "$sys_db/$pkg_name/post-install" ]; then
         log "$pkg_name" "Running post-install script"
-        dosu "$sys_db/$pkg_name/post-install" ||:
+        dosu "'$sys_db/$pkg_name/post-install'" ||:
     fi
 
     log "$pkg_name" "Installed successfully"
