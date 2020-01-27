@@ -76,6 +76,10 @@ root_cache() {
     # Disable echoing to the terminal while the password is inputted
     # by the user. The below commands read from '/dev/tty' to ensure
     # they work when run from a subshell.
+    #
+    # The variable '$cached' is used to check if we've been here
+    # before. We cannot check whether or not '$pass' is empty as the
+    # '[' command may be external which would result in /proc leakage.
     stty -F /dev/tty -echo
     read -r pass < /dev/tty && cached=1
     stty -F /dev/tty echo
