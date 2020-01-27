@@ -71,7 +71,7 @@ dosu() {
     # command allows you to input a password via stdin. To hide
     # the prompt, the command's output is sent to '/dev/tty'
     # and the output of 'su' is sent to '/dev/null'.
-    echo "$pass" | su -c "$* >/dev/tty" >/dev/null
+    echo "$pass" | su "${drop_to:-root}" -c "$* >/dev/tty" >/dev/null
 }
 
 pkg_lint() {
@@ -912,9 +912,16 @@ pkg_updates() {
             if [ -w "$PWD" ]; then
                 git fetch
                 git merge
+
             else
+                log "$PWD" "Need root to update"
+
+                # Find out the owner of the repository and spawn
+                # git as this user below.
+                (drop_to=$(stat -c %U "$PWD")
+
                 dosu git fetch
-                dosu git merge
+                dosu git merge)
             fi
         }
     done
