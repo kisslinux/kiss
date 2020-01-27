@@ -479,7 +479,11 @@ pkg_build() {
     log "Building: $*"
 
     # Only ask for confirmation if more than one package needs to be built.
-    [ $# -gt 1 ] || [ "$pkg_update" ] && prompt
+    [ $# -gt 1 ] || [ "$pkg_update" ] && {
+        prompt
+
+        [ "$pass" ] || root_cache
+    }
 
     log "Checking to see if any dependencies have already been built"
     log "Installing any pre-built dependencies"
