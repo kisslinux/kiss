@@ -497,8 +497,8 @@ pkg_build() {
             [ -f "$bin_dir/$pkg#$version-$release.tar.gz" ] && {
                 log "$pkg" "Found pre-built binary, installing"
 
-                dosu KISS_FORCE=1 \
-                    kiss i "$bin_dir/$pkg#$version-$release.tar.gz" ||:
+                KISS_FORCE=1 \
+                    pkg_install "$bin_dir/$pkg#$version-$release.tar.gz"
 
                 # Remove the now installed package from the build
                 # list. No better way than using 'sed' in POSIX 'sh'.
@@ -586,7 +586,8 @@ pkg_build() {
 
         log "$pkg" "Needed as a dependency or has an update, installing"
 
-        dosu KISS_FORCE=1 kiss i "$bin_dir/$pkg#$version-$release.tar.gz" ||:
+        KISS_FORCE=1 \
+            pkg_install "$bin_dir/$pkg#$version-$release.tar.gz"
     done
 
     # End here as this was a system update and all packages have been installed.
@@ -604,7 +605,7 @@ pkg_build() {
         log "Install built packages? [$*]"
 
         prompt && {
-            dosu kiss i "$@" ||:
+            dosu kiss i "$@"
             return
         }
     }
@@ -945,8 +946,8 @@ pkg_updates() {
 
         prompt
 
-        pkg_build kiss
-        dosu kiss i kiss ||:
+        pkg_build   kiss
+        pkg_install kiss
 
         log "Updated the package manager"
         log "Re-run 'kiss update' to update your system"
