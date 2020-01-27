@@ -497,8 +497,8 @@ pkg_build() {
             [ -f "$bin_dir/$pkg#$version-$release.tar.gz" ] && {
                 log "$pkg" "Found pre-built binary, installing"
 
-                KISS_FORCE=1 \
-                    pkg_install "$bin_dir/$pkg#$version-$release.tar.gz"
+                (KISS_FORCE=1 \
+                    pkg_install "$bin_dir/$pkg#$version-$release.tar.gz")
 
                 # Remove the now installed package from the build
                 # list. No better way than using 'sed' in POSIX 'sh'.
@@ -586,8 +586,8 @@ pkg_build() {
 
         log "$pkg" "Needed as a dependency or has an update, installing"
 
-        KISS_FORCE=1 \
-            pkg_install "$bin_dir/$pkg#$version-$release.tar.gz"
+        (KISS_FORCE=1 \
+            pkg_install "$bin_dir/$pkg#$version-$release.tar.gz")
     done
 
     # End here as this was a system update and all packages have been installed.
@@ -1129,6 +1129,11 @@ args() {
 }
 
 main() {
+    # Ensure that debug mode is never enabled to
+    # prevent internal package manager information
+    # from leaking to stdout.
+    set +x
+
     # Set the location to the repository and package database.
     pkg_db=var/db/kiss/installed
 
