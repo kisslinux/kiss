@@ -47,33 +47,98 @@ prompt() {
 
 root_cache() {
     # This function simply mimics a 'su' prompt to then store
-    # the user's root password for the lifetime of the package
-    # manager.
+    # the root password for the lifetime of the package manager.
     #
-    # Think of this as the simplest method of "elevating"
-    # permissions where needed without the endless stream of
-    # password prompts.
+    # This function is called once when needed to cache the
+    # password. The password is not accessible to any subprocesses
+    # and should never leave the package manager's process.
+    #
+    # This behavior is needed as there is no POSIX shell method
+    # of running a shell function as a different user. We can't
+    # selectively lower or raise permissions in a seamless way
+    # through "normal" means.
+    #
+    # Root is only needed when installing/removing packages whereas
+    # non-root permissions are needed in countless places throughout.
+    #
+    # This is the only *workable* solution to 1) not run the entire
+    # package manager as root and 2) avoid prompting for password
+    # before, during and after builds numerous times.
+    #
+    # NOTE: Careful consideration has been taken in regards to this
+    #       change and I would have loved an inconspicuous solution
+    #       to this problem... but it doesn't exist.
+    #
+    # This change was needed as the existing behavior was not ideal
+    # in any way and needed to be fixed.
     printf 'Password: '
+
+    # Disable echoing to the terminal while the password is inputted
+    # by the user. The below commands read from '/dev/tty' to ensure
+    # they work when run from a subshell.
     stty -F /dev/tty -echo
-    read -r pass </dev/tty ||:
+    read -r pass < /dev/tty ||:
     stty -F /dev/tty echo
+
     printf '\n'
 
-    # Validate the password now with a simple 'true' command
-    # as we don't yet need to elevate permissions.
+    # Validate the password now with a simple 'true' command as we
+    # don't yet need to elevate permissions.
     dosu /bin/true
 }
 
 dosu() {
     [ "$pass" ] || root_cache
 
+    # Declare this as a function to avoid repeating it twice
+    # below. Great naming of functions all around.
+    #
     # Run a command as root using the cached password. The 'su'
     # command allows you to input a password via stdin. To hide
     # the prompt, the command's output is sent to '/dev/tty'
     # and the output of 'su' is sent to '/dev/null'.
-    su "${drop_to:-root}" -c "$* >/dev/tty" <<-EOF >/dev/null
-		$pass
-	EOF
+    dosudo() { su "${drop_to:-root}" -c "$* >/dev/tty" >/dev/null; }
+
+    # The code below uses the most secure method of sending
+    # data over stdin based on what is available in the system.
+    #
+    # The great debate: Use a heredoc or echo+pipe for password
+    # input over stdin? Time to explain.
+    #
+    # 1) 'printf | cmd' is the most secure IF 'printf' is built
+    #    into the shell and NOT an external command. When 'printf'
+    #    is external, the password WILL be leaked over '/proc'.
+    #
+    #    Safe shells here are anything with a builtin 'printf',
+    #    'ash', 'dash', 'bash' and most other shells.
+    #
+    # 2) Using a heredoc is as secure as the above method (when
+    #    builtin) IF and only IF the user's shell implements
+    #    heredocs WITHOUT the use of temporary files (See bash!).
+    #
+    #    When using heredocs and a temporary file the risk is a
+    #    tiny window in which the input is available inside of
+    #    a temporary file.
+    #
+    #    'ash' and 'dash' are safe here, 'bash' is not ('bash'
+    #    falls under (1) however).
+    #
+    # Which is best? (order is best to worst)
+    #
+    # 1) builtin 'printf'.
+    # 2) heredocs with no temporary file.
+    # 3) heredocs with a temporary file.
+    #
+    # This code below follows the above ordering when deciding
+    # which method to use. The '$heredocs' variable is declared
+    # in 'main()' after a check to see if 'printf' is builtin.
+    if [ "$heredocs" ]; then
+        dosudo "$@" <<-EOF
+			$pass
+		EOF
+    else
+        printf '%s\n' "$pass" | dosudo "$@"
+    fi
 }
 
 pkg_lint() {
@@ -1142,6 +1207,10 @@ main() {
     # Prevent the package manager from running as root. The package
     # manager will elevate permissions where needed.
     [ "$(id -u)" != 0 ] || die "kiss must be run as a normal user"
+
+    # Use the most secure method of sending data over stdin based on
+    # whether or not the 'printf' command is built into the shell.
+    [ "$(command -v printf)" = printf ] || heredocs=1
 
     # Set the location to the repository and package database.
     pkg_db=var/db/kiss/installed
