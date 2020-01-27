@@ -65,6 +65,8 @@ root_cache() {
 }
 
 dosu() {
+    [ "$pass" ] || root_cache
+
     # Run a command as root using the cached password. The 'su'
     # command allows you to input a password via stdin. To hide
     # the prompt, the command's output is sent to '/dev/tty'
@@ -494,7 +496,9 @@ pkg_build() {
             # to 'su' to elevate permissions.
             [ -f "$bin_dir/$pkg#$version-$release.tar.gz" ] && {
                 log "$pkg" "Found pre-built binary, installing"
-                (KISS_FORCE=1 args i "$bin_dir/$pkg#$version-$release.tar.gz")
+
+                dosu KISS_FORCE=1 \
+                    kiss i "$bin_dir/$pkg#$version-$release.tar.gz" ||:
 
                 # Remove the now installed package from the build
                 # list. No better way than using 'sed' in POSIX 'sh'.
@@ -581,7 +585,8 @@ pkg_build() {
         contains "$explicit" "$pkg" && [ -z "$pkg_update" ] && continue
 
         log "$pkg" "Needed as a dependency or has an update, installing"
-        (KISS_FORCE=1 args i "$pkg")
+
+        dosu KISS_FORCE=1 kiss i "$bin_dir/$pkg#$version-$release.tar.gz" ||:
     done
 
     # End here as this was a system update and all packages have been installed.
@@ -599,7 +604,7 @@ pkg_build() {
         log "Install built packages? [$*]"
 
         prompt && {
-            args i "$@"
+            dosu kiss i "$@" ||:
             return
         }
     }
@@ -941,7 +946,7 @@ pkg_updates() {
         prompt
 
         pkg_build kiss
-        args i kiss
+        dosu kiss i kiss ||:
 
         log "Updated the package manager"
         log "Re-run 'kiss update' to update your system"
@@ -974,6 +979,8 @@ pkg_updates() {
 pkg_clean() {
     # Clean up on exit or error. This removes everything related
     # to the build.
+    stty echo 2>/dev/null
+
     [ "$KISS_DEBUG" != 1 ] || return
 
     # Block 'Ctrl+C' while cache is being cleaned.
