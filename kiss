@@ -54,9 +54,9 @@ root_cache() {
     # permissions where needed without the endless stream of
     # password prompts.
     printf 'Password: '
-    stty -echo
-    read -r pass || read -r pass ||:
-    stty echo
+    stty -F /dev/tty -echo
+    read -r pass </dev/tty ||:
+    stty -F /dev/tty echo
     printf '\n'
 
     # Validate the password now with a simple 'true' command
@@ -980,7 +980,7 @@ pkg_updates() {
 pkg_clean() {
     # Clean up on exit or error. This removes everything related
     # to the build.
-    stty echo 2>/dev/null
+    stty -F /dev/tty echo 2>/dev/null
 
     [ "$KISS_DEBUG" != 1 ] || return
 
@@ -1017,16 +1017,8 @@ args() {
 
     # Parse some arguments earlier to remove the need to duplicate code.
     case $action in
-        c|checksum|s|search)
+        c|checksum|s|search|i|install|r|remove)
             [ "$1" ] || die "'kiss $action' requires an argument"
-        ;;
-
-        i|install|r|remove|u|update)
-            [ "$1" ] || [ -z "${action##u*}" ] ||
-                die "'kiss $action' requires an argument"
-
-            # Cache the root password for use where needed.
-            [ "$(id -u)" = 0 ] || root_cache
         ;;
     esac
 
