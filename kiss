@@ -77,22 +77,18 @@ root_cache() {
     # by the user. The below commands read from '/dev/tty' to ensure
     # they work when run from a subshell.
     stty -F /dev/tty -echo
-    read -r pass < /dev/tty ||:
+    read -r pass < /dev/tty && cached=1
     stty -F /dev/tty echo
 
     printf '\n'
 
     # Validate the password now with a simple 'true' command as we
     # don't yet need to elevate permissions.
-    #
-    # Rather than checking if the '$pass' variable is non-empty,
-    # use an additional variable. The '[' command can be external
-    # which would result in '/proc' leakage.
-    dosu /bin/true && have_pw=1
+    dosu /bin/true
 }
 
 dosu() {
-    [ "$have_pw" ] || root_cache
+    [ "$cached" ] || root_cache
 
     # Declare this as a function to avoid repeating it twice
     # below. Great naming of functions all around.
@@ -551,7 +547,7 @@ pkg_build() {
     [ $# -gt 1 ] || [ "$pkg_update" ] && {
         prompt
 
-        [ "$have_pw" ] || root_cache
+        [ "$cached" ] || root_cache
     }
 
     log "Checking to see if any dependencies have already been built"
