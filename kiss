@@ -504,7 +504,8 @@ pkg_build() {
     # Die here as packages without checksums were found above.
     [ "$no_sums" ] && die "Checksums missing, run 'kiss checksum ${no_sums% }'"
 
-    for pkg; do pkg_sources "$pkg"; done
+    # Download all sources using the original calling user.
+    drop_root "$OLDUSER" kiss sources "$@"
 
     # Verify all package checksums. This is achieved by generating
     # a new set of checksums and then comparing those with the old
@@ -848,7 +849,6 @@ pkg_updates() {
     # Check all installed packages for updates. So long as the installed
     # version and the version in the repositories differ, it's considered
     # an update.
-
     log "Updating repositories"
 
     # Create a list of all repositories.
@@ -1100,6 +1100,10 @@ args() {
 
         s|search)
             for pkg; do pkg_find "$pkg" all; done
+        ;;
+
+        sources)
+            for pkg; do pkg_sources "$pkg"; done
         ;;
 
         v|version|-v|--version)
