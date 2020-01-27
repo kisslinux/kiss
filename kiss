@@ -71,7 +71,9 @@ dosu() {
     # command allows you to input a password via stdin. To hide
     # the prompt, the command's output is sent to '/dev/tty'
     # and the output of 'su' is sent to '/dev/null'.
-    echo "$pass" | su "${drop_to:-root}" -c "$* >/dev/tty" >/dev/null
+    su "${drop_to:-root}" -c "$* >/dev/tty" <<-EOF >/dev/null
+		$pass
+	EOF
 }
 
 pkg_lint() {
