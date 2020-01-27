@@ -81,7 +81,7 @@ root_cache() {
     # before. We cannot check whether or not '$pass' is empty as the
     # '[' command may be external which would result in /proc leakage.
     stty -F /dev/tty -echo
-    read -r pass < /dev/tty && cached=1
+    IFS= read -r pass < /dev/tty && cached=1
     stty -F /dev/tty echo
 
     printf '\n'
