@@ -1102,10 +1102,6 @@ args() {
             for pkg; do pkg_find "$pkg" all; done
         ;;
 
-        sources)
-            for pkg; do pkg_sources "$pkg"; done
-        ;;
-
         v|version|-v|--version)
             log kiss 0.70.0
         ;;
@@ -1121,6 +1117,10 @@ args() {
             log 'update:    Check for updates'
             log 'version:   Package manager version'
         ;;
+
+        # These are more or less for internal use. You may
+        # find them useful, however.
+        sources) for pkg; do pkg_sources "$pkg"; done ;;
 
         *) die "'kiss $action' is not a valid command" ;;
     esac
