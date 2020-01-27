@@ -605,7 +605,7 @@ pkg_build() {
         log "Install built packages? [$*]"
 
         prompt && {
-            dosu kiss i "$@"
+            args i "$@"
             return
         }
     }
