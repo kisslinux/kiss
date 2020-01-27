@@ -61,7 +61,7 @@ root_cache() {
 
     # Validate the password now with a simple 'true' command
     # as we don't yet need to elevate permissions.
-    dosu true
+    dosu /bin/true
 }
 
 dosu() {
