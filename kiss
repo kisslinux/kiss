@@ -1199,9 +1199,8 @@ args() {
 }
 
 main() {
-    # Ensure that debug mode is never enabled to
-    # prevent internal package manager information
-    # from leaking to stdout.
+    # Ensure that debug mode is never enabled to prevent internal
+    # package manager information from leaking to stdout.
     set +x
 
     # Prevent the package manager from running as root. The package
