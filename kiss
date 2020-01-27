@@ -551,6 +551,10 @@ pkg_build() {
     [ $# -gt 1 ] || [ "$pkg_update" ] && {
         prompt
 
+        # Prompt for password prior to the build if more than one package
+        # will be built and installed. No use in forcing the user to wait
+        # for the first password prompt (before caching) if it may take a
+        # long long while.
         [ "$cached" ] || root_cache
     }
 
