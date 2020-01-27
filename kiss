@@ -997,6 +997,10 @@ pkg_updates() {
 
                 # Find out the owner of the repository and spawn
                 # git as this user below.
+                #
+                # This prevents 'git' from changing the original
+                # ownership of files and directories in the rare
+                # case that the repository is owned by a 3rd user.
                 (drop_to=$(stat -c %U "$PWD")
 
                 dosu git fetch
