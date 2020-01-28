@@ -152,8 +152,8 @@ regex_escape() {
     # Escape all required characters in both the search and
     # replace portions of two strings for use in a 'sed' call
     # as "plain-text".
-    sea=$(echo "$1" | sed 's/[]\/$*.^[]/\\&/g')
-    rep=$(echo "$2" | sed 's/[\/&]/\\&/g')
+    sea=$(printf %s "$1" | sed 's/[]\/$*.^[]/\\&/g')
+    rep=$(printf %s "$2" | sed 's/[\/&]/\\&/g')
 }
 
 pkg_lint() {
@@ -556,7 +556,7 @@ pkg_build() {
         # There's no better way to remove a word from a string in
         # POSIX 'sh' sadly.
         contains "$deps" "$pkg" &&
-            explicit=$(echo "$explicit" | sed "s/ $pkg / /g")
+            explicit=$(printf %s "$explicit" | sed "s/ $pkg / /g")
     done
 
     # See [1] at top of script.
@@ -601,7 +601,7 @@ pkg_build() {
                 # list. No better way than using 'sed' in POSIX 'sh'.
                 # See [1] at top of script.
                 # shellcheck disable=2046,2086
-                set -- $(echo " $* " | sed "s/ $pkg / /")
+                set -- $(printf %s " $* " | sed "s/ $pkg / /")
             }
         }
     done
@@ -825,7 +825,7 @@ pkg_conflicts() {
 
             # Construct the file name of the "db" entry of the
             # conflicting file. (pkg_name>usr>bin>ls)
-            con_name=$(echo "$con" | sed 's|/|>|g')
+            con_name=$(printf %s "$con" | sed 's|/|>|g')
 
             # Move the conflicting file to the choices directory
             # and name it according to the format above.
