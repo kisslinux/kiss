@@ -814,12 +814,12 @@ pkg_conflicts() {
             # conflicting file. (pkg_name>usr>bin>ls)
             con_name=$(echo "$con" | sed 's|/|>|g')
 
-            regex_escape "$con" "/$cho_dir/$p_name$con_name"
-
             # Move the conflicting file to the choices directory
             # and name it according to the format above.
             mv -f "$tar_dir/$p_name/$con" \
                   "$tar_dir/$p_name/$cho_dir/$p_name$con_name"
+
+            regex_escape "$con" "/$cho_dir/$p_name$con_name"
 
             # Rewrite the package's manifest to update its location
             # to its new spot (and name) in the choices directory.
