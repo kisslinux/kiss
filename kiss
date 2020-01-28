@@ -875,7 +875,7 @@ pkg_swap() {
 
         # Convert the current owner to an alternative and rewrite
         # its manifest file to reflect this.
-        dosu mv  -f "'$2'"           "'$pkg_owns>${alt#*>}'"
+        dosu cp  -f "'$2'"           "'$pkg_owns>${alt#*>}'"
         dosu sed -i "'s/$sea/$rep/'" "'../installed/$pkg_owns/manifest'"
     fi
 
