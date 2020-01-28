@@ -778,10 +778,14 @@ pkg_conflicts() {
 
     [ -s "$cac_dir/$pid-m" ] || return 0
 
+    # Count the total conflicts to determine when to
+    # automatically enable the alternatives feature.
+    con_total=$("$grep" -Fxf "$cac_dir/$pid-m" -- "$@" | wc -l)
+
     # Use 'grep' to list matching lines between the to
     # be installed package's manifest and the above filtered
     # list.
-    if [ "$KISS_CHOICE" ]; then
+    if [ "$KISS_CHOICE" ] || [ "$con_total" -le 10 ]; then
         "$grep" -Fxf "$cac_dir/$pid-m" -- "$@" |
 
         # This is a novel way of offering an "alternatives" system.
