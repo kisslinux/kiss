@@ -829,7 +829,7 @@ pkg_conflicts() {
 
             # Rewrite the package's manifest to update its location
             # to its new spot (and name) in the choices directory.
-            sed -i "s/$sea/$rep/" \
+            sed -i "s/^$sea\$/$rep/" \
                    "$tar_dir/$p_name/$pkg_db/$p_name/manifest"
         done
     else
@@ -875,8 +875,8 @@ pkg_swap() {
 
         # Convert the current owner to an alternative and rewrite
         # its manifest file to reflect this.
-        dosu cp  -f "'$2'"           "'$pkg_owns>${alt#*>}'"
-        dosu sed -i "'s/$sea/$rep/'" "'../installed/$pkg_owns/manifest'"
+        dosu cp  -f "'$2'" "'$pkg_owns>${alt#*>}'"
+        dosu sed -i "'s/^$sea\$/$rep/'" "'../installed/$pkg_owns/manifest'"
     fi
 
     regex_escape "$PWD/$alt" "$2"
@@ -884,7 +884,7 @@ pkg_swap() {
     # Convert the desired alternative to a real file and rewrite
     # the manifest file to reflect this. The reverse of above.
     dosu mv  -f "'$alt'" "'$2'"
-    dosu sed -i "'s/$sea/$rep/'" "'../installed/$1/manifest'"
+    dosu sed -i "'s/^$sea\$/$rep/'" "'../installed/$1/manifest'"
 }
 
 pkg_remove() {
