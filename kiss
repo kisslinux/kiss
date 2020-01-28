@@ -1254,9 +1254,8 @@ args() {
                 # Go over each alternative and format the file
                 # name for listing. (pkg_name>usr>bin>ls)
                 for pkg in *; do
-                    [ "$pkg" = '*' ] ||
-                        printf '%s\n' "$pkg" | sed 's|>| /|;s|>|/|g'
-                done
+                    [ "$pkg" = '*' ] || printf '%s\n' "$pkg"
+                done | sed 's|>| /|;s|>|/|g'
             fi
         ;;
 
