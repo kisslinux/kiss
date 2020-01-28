@@ -771,15 +771,17 @@ pkg_conflicts() {
 
         shift "$(($# ? 1 : 0))"
 
-        [ "$p_name" != "$i_name" ] || continue
+        [ "$p_name" = "$i_name" ] && continue
 
         set -- "$@" "$pkg"
     done
 
+    [ -s "$cac_dir/$pid-m" ] || return 0
+
     # Use 'grep' to list matching lines between the to
     # be installed package's manifest and the above filtered
     # list.
-    [ -s "$cac_dir/$pid-m" ] && {
+    if [ "$KISS_CHOICE" ]; then
         "$grep" -Fxf "$cac_dir/$pid-m" -- "$@" |
 
         # This is a novel way of offering an "alternatives" system.
@@ -826,7 +828,13 @@ pkg_conflicts() {
             sed -i "s/$sea/$rep/" \
                    "$tar_dir/$p_name/$pkg_db/$p_name/manifest"
         done
-    }
+    else
+        if "$grep" -Fxf "$cac_dir/$pid-m" -- "$@"; then
+            log "Package '$p_name' conflicts with another package" "" "!>"
+            log "Run 'KISS_CHOICE=1 kiss i $p_name' to add conflicts" "" "!>"
+            die "as alternatives."
+        fi
+    fi
 }
 
 pkg_swap() {
