@@ -182,13 +182,19 @@ pkg_find() {
     query=$1
     match=$2
 
+    # This ugly mess appends '/.' to the end of each path in
+    # '$KISS_PATH' as POSIX 'find' has no '-mindepth'/'-maxdepth'.
+    # See: https://unix.stackexchange.com/a/330372
+    IFS=:; set --
+    for path in $KISS_PATH; do set "$@" "$path/."; done
+    IFS=$old_ifs
+
     # Find the repository containing a package.
     # Searches installed packages if the package is absent
     # from the repositories.
     # See [1] at top of script.
     # shellcheck disable=2046,2086
-    set -- $(IFS=:
-        find $KISS_PATH "$sys_db" -mindepth 1 -maxdepth 1 -name "$1")
+    set -- $(find "$@" "$sys_db/." \( ! -name . -prune \) -name "$query")
 
     # A package may also not be found due to a repository not being
     # readable by the current user. Either way, we need to die here.
