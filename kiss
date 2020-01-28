@@ -148,24 +148,12 @@ dosu() {
     fi
 }
 
-ssed() {
-    # Simple wrapper around 'sed' to handle in-place
-    # replacements in a portable way.
-
+regex_escape() {
     # Escape all required characters in both the search and
     # replace portions of two strings for use in a 'sed' call
     # as "plain-text".
     sea=$(echo "$1" | sed 's/[]\/$*.^[]/\\&/g')
     rep=$(echo "$2" | sed 's/[\/&]/\\&/g')
-
-    # Save the replacement result to a temporary file and then
-    # overwrite the original file with it.
-    #
-    # The '$4' equates to a 'sudo'/'su' equivalent when parts
-    # of the function's body must run as 'root'. Globbing is
-    # disabled and the input hardcoded so this is fine.
-    $4 sed "s/$sea/$rep/" "$3" > "$3.bak"
-    $4 mv -f "$3.bak" "$3"
 }
 
 pkg_lint() {
@@ -837,10 +825,12 @@ pkg_conflicts() {
             mv -f "$tar_dir/$p_name/$con" \
                   "$tar_dir/$p_name/$cho_dir/$p_name$con_name"
 
+            regex_escape "$con" "/$cho_dir/$p_name$con_name"
+
             # Rewrite the package's manifest to update its location
             # to its new spot (and name) in the choices directory.
-            ssed "$con" "/$cho_dir/$p_name$con_name" \
-                "$tar_dir/$p_name/$pkg_db/$p_name/manifest"
+            sed -i "s/$sea/$rep/" \
+                   "$tar_dir/$p_name/$pkg_db/$p_name/manifest"
         done
     else
         if "$grep" -Fxf "$cac_dir/$pid-m" -- "$@"; then
@@ -881,19 +871,20 @@ pkg_swap() {
 
         log "Swapping '$2' from '$pkg_owns' to '$1'"
 
+        regex_escape "$2" "$PWD/$pkg_owns>${alt#*>}"
 
         # Convert the current owner to an alternative and rewrite
         # its manifest file to reflect this.
-        dosu cp -f "'$2'" "'$pkg_owns>${alt#*>}'"
-        ssed  "'$2'" "'$PWD/$pkg_owns>${alt#*>}'" \
-            "'../installed/$pkg_owns/manifest'" dosu
+        dosu cp  -f "'$2'"           "'$pkg_owns>${alt#*>}'"
+        dosu sed -i "'s/$sea/$rep/'" "'../installed/$pkg_owns/manifest'"
     fi
 
+    regex_escape "$PWD/$alt" "$2"
 
     # Convert the desired alternative to a real file and rewrite
     # the manifest file to reflect this. The reverse of above.
-    dosu mv -f "'$alt'" "'$2'"
-    ssed  "'$PWD/$alt'" "'$2'" "'../installed/$1/manifest'" dosu
+    dosu mv  -f "'$alt'" "'$2'"
+    dosu sed -i "'s/$sea/$rep/'" "'../installed/$1/manifest'"
 }
 
 pkg_remove() {
