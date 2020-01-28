@@ -785,7 +785,7 @@ pkg_conflicts() {
     # Use 'grep' to list matching lines between the to
     # be installed package's manifest and the above filtered
     # list.
-    if [ "$KISS_CHOICE" ] || [ "$con_total" -le 10 ]; then
+    if [ "$KISS_CHOICE" = 1 ] || [ "$con_total" -le 10 ]; then
         "$grep" -Fxf "$cac_dir/$pid-m" -- "$@" |
 
         # This is a novel way of offering an "alternatives" system.
