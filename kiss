@@ -821,6 +821,17 @@ pkg_conflicts() {
     set -e
 }
 
+pkg_swap() {
+    # Check to see if the package is installed. This
+    # will exit with an error if it is not.
+    pkg_list "$1" >/dev/null
+
+    alt=$(printf %s "$1$2" | sed 's|/|>|g')
+
+    [ -f "$sys_db/../choices/$alt" ] ||
+        die "Alternative '$1 $2' doesn't exist"
+}
+
 pkg_remove() {
     # Remove a package and all of its files. The '/etc' directory
     # is handled differently and configuration files are *not*
@@ -1170,11 +1181,8 @@ args() {
     case $action in
         a|alternatives)
             if [ "$1" ]; then
-                # Check to see if the package is installed. This
-                # will exit with an error if it is not.
-                pkg_list "$1" >/dev/null
+                pkg_swap "$@"
 
-                [ "$2" ] || die "No alternative chosen"
             else
                 log "Alternatives:"
 
@@ -1188,7 +1196,7 @@ args() {
                 # name for listing. (pkg_name>usr>bin>ls)
                 for pkg in *; do
                     [ -f "$pkg" ] &&
-                        printf '%s\n' "$pkg" | sed 's|>|: /|;s|>|/|g'
+                        printf '%s\n' "$pkg" | sed 's|>| /|;s|>|/|g'
                 done
             fi
         ;;
