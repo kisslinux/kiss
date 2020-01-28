@@ -752,7 +752,7 @@ pkg_conflicts() {
     p_name=$2
 
     # Generate a list of all installed package manifests.
-    set +ef
+    set +f
     set -f -- "$sys_db"/*/manifest
 
     # Filter the manifest list and remove the previously
@@ -761,9 +761,9 @@ pkg_conflicts() {
         i_name=${pkg%/*}
         i_name=${i_name##*/}
 
-        shift
+        shift "$(($# ? 1 : 0))"
 
-        [ "$p_name" = "$i_name" ] && continue
+        [ "$p_name" != "$i_name" ] || continue
 
         set -- "$@" "$pkg"
     done
@@ -806,6 +806,11 @@ pkg_conflicts() {
             # conflicting file. (pkg_name>usr>bin>ls)
             con_name=$(echo "$con" | sed 's|/|>|g')
 
+            # Escape the required patch characters in the file name
+            # as it will be passed along to 'sed' below.
+            sea=$(echo "$con" | sed 's/[]\/$*.^[]/\\&/g')
+            rep=$(echo "/$cho_dir/$p_name$con_name" | sed 's/[\/&]/\\&/g')
+
             # Move the conflicting file to the choices directory
             # and name it according to the format above.
             mv -f "$tar_dir/$p_name/$con" \
@@ -813,12 +818,10 @@ pkg_conflicts() {
 
             # Rewrite the package's manifest to update its location
             # to its new spot (and name) in the choices directory.
-            sed -i "s|$con|/$cho_dir/$p_name$con_name|" \
-                "$tar_dir/$p_name/$pkg_db/$p_name/manifest"
+            sed -i "s/$sea/$rep/" \
+                   "$tar_dir/$p_name/$pkg_db/$p_name/manifest"
         done
     }
-
-    set -e
 }
 
 pkg_swap() {
@@ -851,18 +854,26 @@ pkg_swap() {
 
         log "Swapping '$2' from '$pkg_owns' to '$1'"
 
+        # Escape the required patch characters in the file name
+        # as it will be passed along to 'sed' below.
+        sea=$(echo "$2" | sed 's/[]\/$*.^[]/\\&/g')
+        rep=$(echo "$PWD/$pkg_owns>${alt#*>}" | sed 's/[\/&]/\\&/g')
+
         # Convert the current owner to an alternative and rewrite
         # its manifest file to reflect this.
-        dosu mv  -f "'$2'" "'$pkg_owns>${alt#*>}'"
-        dosu sed -i "'s|$2|$PWD/$pkg_owns>${alt#*>}|'" \
-            "'../installed/$pkg_owns/manifest'"
+        dosu mv  -f "'$2'"           "'$pkg_owns>${alt#*>}'"
+        dosu sed -i "'s/$sea/$rep/'" "'../installed/$pkg_owns/manifest'"
     fi
+
+    # Escape the required patch characters in the file name
+    # as it will be passed along to 'sed' below.
+    sea=$(echo "$PWD/$alt" | sed 's/[]\/$*.^[]/\\&/g')
+    rep=$(echo "$2" | sed 's/[\/&]/\\&/g')
 
     # Convert the desired alternative to a real file and rewrite
     # the manifest file to reflect this. The reverse of above.
     dosu mv  -f "'$alt'" "'$2'"
-    dosu sed -i "'s|$PWD/$alt|$2|'" \
-        "'../installed/$1/manifest'"
+    dosu sed -i "'s/$sea/$rep/'" "'../installed/$1/manifest'"
 }
 
 pkg_remove() {
@@ -1195,12 +1206,16 @@ args() {
     #
     # This handles the globbing characters '*', '!', '[' and ']' as per:
     # https://pubs.opengroup.org/onlinepubs/009695399/utilities/xcu_chap02.html
-    [ "$action" != search ] && [ "$action" != s ] &&
-        case $@ in
-            *'*'*|*'!'*|*'['*|*']'*)
-                die "Arguments contain invalid characters: '!*[]'"
-            ;;
-        esac
+    case $action in
+        a|alternatives|s|search) ;;
+
+        *)
+            case $@ in
+                *'*'*|*'!'*|*'['*|*']'*)
+                    die "Arguments contain invalid characters: '!*[]'"
+                ;;
+            esac
+    esac
 
     # Parse some arguments earlier to remove the need to duplicate code.
     case $action in
