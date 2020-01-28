@@ -1170,7 +1170,11 @@ args() {
     case $action in
         a|alternatives)
             if [ "$1" ]; then
-                :
+                # Check to see if the package is installed. This
+                # will exit with an error if it is not.
+                pkg_list "$1" >/dev/null
+
+                [ "$2" ] || die "No alternative chosen"
             else
                 log "Alternatives:"
 
