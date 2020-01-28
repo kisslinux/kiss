@@ -795,8 +795,8 @@ pkg_conflicts() {
         # this work.
         #
         # Pretty nifty huh?
-        while IFS=: read -r pro bin || [ "$pro" ]; do
-            log "$p_name" "Found conflict ($bin), adding choice"
+        while IFS=: read -r pro con || [ "$pro" ]; do
+            log "$p_name" "Found conflict ($con), adding choice"
 
             # Create the "choices" directory inside of the tarball.
             # This directory will store the conflicting file.
@@ -804,16 +804,16 @@ pkg_conflicts() {
 
             # Construct the file name of the "db" entry of the
             # conflicting file. (pkg_name>usr>bin>ls)
-            bin_name=$(echo "$bin" | sed 's|/|>|g')
+            con_name=$(echo "$con" | sed 's|/|>|g')
 
             # Move the conflicting file to the choices directory
             # and name it according to the format above.
-            mv -f "$tar_dir/$p_name/$bin" \
-                  "$tar_dir/$p_name/$cho_dir/$p_name$bin_name"
+            mv -f "$tar_dir/$p_name/$con" \
+                  "$tar_dir/$p_name/$cho_dir/$p_name$con_name"
 
             # Rewrite the package's manifest to update its location
             # to its new spot (and name) in the choices directory.
-            sed -i "s|$bin|/$cho_dir/$p_name$bin_name|" \
+            sed -i "s|$con|/$cho_dir/$p_name$con_name|" \
                 "$tar_dir/$p_name/$pkg_db/$p_name/manifest"
         done
     }
