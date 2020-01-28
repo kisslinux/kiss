@@ -865,7 +865,7 @@ pkg_install() {
     mkdir -p "$tar_dir/$pkg_name"
 
     # Extract the tar-ball to catch any errors before installation begins.
-    tar pxf "$tar_file" -C "$tar_dir/$pkg_name" ||
+    dosu tar pxf "'$tar_file'" -C "'$tar_dir/$pkg_name'" ||
         die "$pkg_name" "Failed to extract tar-ball"
 
     log "$pkg_name" "Checking that all dependencies are installed"
