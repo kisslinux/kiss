@@ -164,7 +164,7 @@ ssed() {
     # The '$4' equates to a 'sudo'/'su' equivalent when parts
     # of the function's body must run as 'root'. Globbing is
     # disabled and the input hardcoded so this is fine.
-    $4 sed "s/$sea/$rep" "$3" > "$3.bak"
+    $4 sed "s/$sea/$rep/" "$3" > "$3.bak"
     $4 mv -f "$3.bak" "$3"
 }
 
