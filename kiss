@@ -745,9 +745,8 @@ pkg_conflicts() {
     tar xf "$1" -O "./$pkg_db/$2/manifest" | while read -r file; do
         case $file in */) continue; esac
 
-        printf '%s\n' "$file"
-
-        readlink -f "$KISS_ROOT/$file" ||:
+        printf '%s/%s\n' \
+            "$(readlink -f "$KISS_ROOT/${file%/*}")" "${file##*/}"
     done > "$cac_dir/$pid-m"
 
     p_name=$2
@@ -772,9 +771,52 @@ pkg_conflicts() {
     # Use 'grep' to list matching lines between the to
     # be installed package's manifest and the above filtered
     # list.
-    [ -s "$cac_dir/$pid-m" ] &&
-        "$grep" -Fxf "$cac_dir/$pid-m" -- "$@" &&
-            die "Package '$p_name' conflicts with another package"
+    [ -s "$cac_dir/$pid-m" ] && {
+        "$grep" -Fxf "$cac_dir/$pid-m" -- "$@" |
+
+        # This is a novel way of offering an "alternatives" system.
+        # It is entirely dynamic and all "choices" are created and
+        # destroyed on the fly.
+        #
+        # When a conflict is found between two packages, the file
+        # is moved to a directory called "choices" and its name
+        # changed to store its parent package and its intended
+        # location.
+        #
+        # The package's manifest is then updated to reflect this
+        # new location.
+        #
+        # The 'kiss choices' command parses this directory and
+        # offers you the CHOICE of *swapping* entries in this
+        # directory for those on the filesystem.
+        #
+        # The choices command does the same thing we do here,
+        # it rewrites manifests and moves files around to make
+        # this work.
+        #
+        # Pretty nifty huh?
+        while IFS=: read -r pro bin || [ "$pro" ]; do
+            log "$p_name" "Found conflict ($bin), adding choice"
+
+            # Create the "choices" directory inside of the tarball.
+            # This directory will store the conflicting file.
+            mkdir -p "$tar_dir/$p_name/${cho_dir:=var/db/kiss/choices}"
+
+            # Construct the file name of the "db" entry of the
+            # conflicting file. (pkg_name>usr>bin>ls)
+            bin_name=$(echo "$bin" | sed 's|/|>|g')
+
+            # Move the conflicting file to the choices directory
+            # and name it according to the format above.
+            mv -f "$tar_dir/$p_name/$bin" \
+                  "$tar_dir/$p_name/$cho_dir/$p_name$bin_name"
+
+            # Rewrite the package's manifest to update its location
+            # to its new spot (and name) in the choices directory.
+            sed -i "s|$bin|/$cho_dir/$p_name$bin_name|" \
+                "$tar_dir/$p_name/$pkg_db/$p_name/manifest"
+        done
+    }
 
     set -e
 }
@@ -860,8 +902,6 @@ pkg_install() {
     pkg_name=${pkg_name%/*}
     pkg_name=${pkg_name##*/}
 
-    pkg_conflicts "$tar_file" "$pkg_name"
-
     mkdir -p "$tar_dir/$pkg_name"
 
     # Extract the tar-ball to catch any errors before installation begins.
@@ -881,6 +921,8 @@ pkg_install() {
         done < "$tar_dir/$pkg_name/$pkg_db/$pkg_name/depends"
 
     [ "$install_dep" ] && die "$1" "Package requires ${install_dep%, }"
+
+    pkg_conflicts "$tar_file" "$pkg_name"
 
     log "$pkg_name" "Installing package incrementally"
 
