@@ -640,8 +640,18 @@ pkg_build() {
 
         log "$pkg" "Starting build"
 
-        # Call the build script.
-        "$repo_dir/build" "$pkg_dir/$pkg" || die "$pkg" "Build failed"
+        # Call the build script, log the output to the terminal
+        # and to a file. There's no PIPEFAIL in POSIX shelll so
+        # we must resort to tricks like killing the script ourselves.
+        { "$repo_dir/build" "$pkg_dir/$pkg" || {
+            log "$pkg" "Build failed"
+            pkg_clean
+            kill 0
+        } } 2>&1 | tee "$log_dir/$pkg-$pid-$time"
+
+        # Delete the log file if the build succeeded to prevent
+        # the directory from filling very quickly with useless logs.
+        [ "$KISS_DEBUG" = 1 ] || rm -f "$log_dir/$pkg-$pid-$time"
 
         # Copy the repository files to the package directory.
         # This acts as the database entry.
@@ -1072,8 +1082,6 @@ pkg_clean() {
     # to the build.
     stty -F /dev/tty echo 2>/dev/null
 
-    [ "$KISS_DEBUG" != 1 ] || return
-
     # Block 'Ctrl+C' while cache is being cleaned.
     trap '' INT
 
@@ -1245,6 +1253,10 @@ main() {
     # POSIX correctness.
     grep=$(command -v ggrep) || grep='grep'
 
+    # Store the date and time of script invocation to be used as the name
+    # of the log files the package manager creates uring builds.
+    time=$(date '+%d-%m-%Y-%H:%M')
+
     # This allows for automatic setup of a KISS chroot and will
     # do nothing on a normal system.
     mkdir -p "${sys_db:=$KISS_ROOT/$pkg_db}" 2>/dev/null ||:
@@ -1256,6 +1268,7 @@ main() {
              "${pkg_dir:=$cac_dir/pkg-$pid}" \
              "${tar_dir:=$cac_dir/extract-$pid}" \
              "${src_dir:=$cac_dir/sources}" \
+             "${log_dir:=$cac_dir/logs}" \
              "${bin_dir:=$cac_dir/bin}" \
         || die "Couldn't create cache directories"
 
