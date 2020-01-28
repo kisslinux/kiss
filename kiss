@@ -1168,6 +1168,10 @@ args() {
     # Actions can be abbreviated to their first letter. This saves
     # keystrokes once you memorize the commands.
     case $action in
+        a|alternatives)
+
+        ;;
+
         b|build)
             # If no arguments were passed, rebuild all packages.
             [ "$1" ] || {
@@ -1248,15 +1252,16 @@ args() {
         ;;
 
         h|help|-h|--help|'')
-            log 'kiss [b|c|i|l|r|s|u|v] [pkg] [pkg] [pkg]'
-            log 'build:     Build a package'
-            log 'checksum:  Generate checksums'
-            log 'install:   Install a package'
-            log 'list:      List installed packages'
-            log 'remove:    Remove a package'
-            log 'search:    Search for a package'
-            log 'update:    Check for updates'
-            log 'version:   Package manager version'
+            log 'kiss [a|b|c|i|l|r|s|u|v] [pkg] [pkg] [pkg]'
+            log 'alternatives: List and swap to alternatives'
+            log 'build:        Build a package'
+            log 'checksum:     Generate checksums'
+            log 'install:      Install a package'
+            log 'list:         List installed packages'
+            log 'remove:       Remove a package'
+            log 'search:       Search for a package'
+            log 'update:       Check for updates'
+            log 'version:      Package manager version'
         ;;
 
         *) die "'kiss $action' is not a valid command" ;;
