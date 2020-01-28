@@ -1169,7 +1169,24 @@ args() {
     # keystrokes once you memorize the commands.
     case $action in
         a|alternatives)
+            if [ "$1" ]; then
+                :
+            else
+                log "Alternatives:"
 
+                # Go to the choices directory and hide errors
+                # as there is nothing to list if the directory
+                # doesn't exist.
+                cd "$sys_db/../choices" 2>/dev/null
+                set +f
+
+                # Go over each alternative and format the file
+                # name for listing. (pkg_name>usr>bin>ls)
+                for pkg in *; do
+                    [ -f "$pkg" ] &&
+                        printf '%s\n' "$pkg" | sed 's|>|: /|;s|>|/|g'
+                done
+            fi
         ;;
 
         b|build)
