@@ -826,11 +826,12 @@ pkg_conflicts() {
                   "$tar_dir/$p_name/$cho_dir/$p_name$con_name"
 
             regex_escape "$con" "/$cho_dir/$p_name$con_name"
+            mani=$tar_dir/$p_name/$pkg_db/$p_name/manifest
 
             # Rewrite the package's manifest to update its location
             # to its new spot (and name) in the choices directory.
-            sed -i "s/^$sea\$/$rep/" \
-                   "$tar_dir/$p_name/$pkg_db/$p_name/manifest"
+            sed "s/^$sea\$/$rep/" "$mani" > "$mani.1"
+            mv -f "$mani.1" "$mani"
         done
     else
         if "$grep" -Fxf "$cac_dir/$pid-m" -- "$@"; then
@@ -872,19 +873,23 @@ pkg_swap() {
         log "Swapping '$2' from '$pkg_owns' to '$1'"
 
         regex_escape "$2" "$PWD/$pkg_owns>${alt#*>}"
+        mani=${PWD%/*}/installed/$pkg_owns/manifest
 
         # Convert the current owner to an alternative and rewrite
         # its manifest file to reflect this.
         dosu cp  -f "'$2'" "'$pkg_owns>${alt#*>}'"
-        dosu sed -i "'s/^$sea\$/$rep/'" "'../installed/$pkg_owns/manifest'"
+        dosu sed "'s/^$sea\$/$rep/'" \
+            "'$mani' > '$mani.1' && mv -f '$mani.1' '$mani'"
     fi
 
     regex_escape "$PWD/$alt" "$2"
+    mani=${PWD%/*}/installed/$1/manifest
 
     # Convert the desired alternative to a real file and rewrite
     # the manifest file to reflect this. The reverse of above.
     dosu mv  -f "'$alt'" "'$2'"
-    dosu sed -i "'s/^$sea\$/$rep/'" "'../installed/$1/manifest'"
+    dosu sed "'s/^$sea\$/$rep/'" \
+        "'$mani' > '$mani.1' && mv -f '$mani.1' '$mani'"
 }
 
 pkg_remove() {
