@@ -148,6 +148,14 @@ dosu() {
     fi
 }
 
+regex_escape() {
+    # Escape all required characters in both the search and
+    # replace portions of two strings for use in a 'sed' call
+    # as "plain-text".
+    sea=$(echo "$1" | sed 's/[]\/$*.^[]/\\&/g')
+    rep=$(echo "$2" | sed 's/[\/&]/\\&/g')
+}
+
 pkg_lint() {
     # Check that each mandatory file in the package entry exists.
     log "$1" "Checking repository files"
@@ -745,15 +753,14 @@ pkg_conflicts() {
     tar xf "$1" -O "./$pkg_db/$2/manifest" | while read -r file; do
         case $file in */) continue; esac
 
-        printf '%s\n' "$file"
-
-        readlink -f "$KISS_ROOT/$file" ||:
+        printf '%s/%s\n' \
+            "$(readlink -f "$KISS_ROOT/${file%/*}")" "${file##*/}"
     done > "$cac_dir/$pid-m"
 
     p_name=$2
 
     # Generate a list of all installed package manifests.
-    set +ef
+    set +f
     set -f -- "$sys_db"/*/manifest
 
     # Filter the manifest list and remove the previously
@@ -762,21 +769,118 @@ pkg_conflicts() {
         i_name=${pkg%/*}
         i_name=${i_name##*/}
 
-        shift
+        shift "$(($# ? 1 : 0))"
 
         [ "$p_name" = "$i_name" ] && continue
 
         set -- "$@" "$pkg"
     done
 
+    [ -s "$cac_dir/$pid-m" ] || return 0
+
     # Use 'grep' to list matching lines between the to
     # be installed package's manifest and the above filtered
     # list.
-    [ -s "$cac_dir/$pid-m" ] &&
-        "$grep" -Fxf "$cac_dir/$pid-m" -- "$@" &&
-            die "Package '$p_name' conflicts with another package"
+    if [ "$KISS_CHOICE" ]; then
+        "$grep" -Fxf "$cac_dir/$pid-m" -- "$@" |
 
-    set -e
+        # This is a novel way of offering an "alternatives" system.
+        # It is entirely dynamic and all "choices" are created and
+        # destroyed on the fly.
+        #
+        # When a conflict is found between two packages, the file
+        # is moved to a directory called "choices" and its name
+        # changed to store its parent package and its intended
+        # location.
+        #
+        # The package's manifest is then updated to reflect this
+        # new location.
+        #
+        # The 'kiss choices' command parses this directory and
+        # offers you the CHOICE of *swapping* entries in this
+        # directory for those on the filesystem.
+        #
+        # The choices command does the same thing we do here,
+        # it rewrites manifests and moves files around to make
+        # this work.
+        #
+        # Pretty nifty huh?
+        while IFS=: read -r pro con || [ "$pro" ]; do
+            log "$p_name" "Found conflict ($con), adding choice"
+
+            # Create the "choices" directory inside of the tarball.
+            # This directory will store the conflicting file.
+            mkdir -p "$tar_dir/$p_name/${cho_dir:=var/db/kiss/choices}"
+
+            # Construct the file name of the "db" entry of the
+            # conflicting file. (pkg_name>usr>bin>ls)
+            con_name=$(echo "$con" | sed 's|/|>|g')
+
+            # Move the conflicting file to the choices directory
+            # and name it according to the format above.
+            mv -f "$tar_dir/$p_name/$con" \
+                  "$tar_dir/$p_name/$cho_dir/$p_name$con_name"
+
+            regex_escape "$con" "/$cho_dir/$p_name$con_name"
+
+            # Rewrite the package's manifest to update its location
+            # to its new spot (and name) in the choices directory.
+            sed -i "s/$sea/$rep/" \
+                   "$tar_dir/$p_name/$pkg_db/$p_name/manifest"
+        done
+    else
+        if "$grep" -Fxf "$cac_dir/$pid-m" -- "$@"; then
+            log "Package '$p_name' conflicts with another package" "" "!>"
+            log "Run 'KISS_CHOICE=1 kiss i $p_name' to add conflicts" "" "!>"
+            die "as alternatives."
+        fi
+    fi
+}
+
+pkg_swap() {
+    # Swap between package alternatives.
+
+    # Check to see if the package is installed. This
+    # will exit with an error if it is not.
+    pkg_list "$1" >/dev/null
+
+    alt=$(printf %s "$1$2" | sed 's|/|>|g')
+    cd "$sys_db/../choices"
+
+    [ -f "$alt" ] || [ -h "$alt" ] ||
+        die "Alternative '$1 $2' doesn't exist"
+
+    if [ -f "$2" ]; then
+        # Figure out which package owns the file we are going to
+        # swap for another package's.
+        #
+        # Print the full path to the manifest file which contains
+        # the match to our search.
+        pkg_owns=$(set +f; "$grep" -lFx "$2" "$sys_db/"*/manifest) ||:
+
+        # Extract the package name from the path above.
+        pkg_owns=${pkg_owns%/*}
+        pkg_owns=${pkg_owns##*/}
+
+        [ "$pkg_owns" ] ||
+            die "File '$2' exists on filesystem but isn't owned"
+
+        log "Swapping '$2' from '$pkg_owns' to '$1'"
+
+        regex_escape "$2" "$PWD/$pkg_owns>${alt#*>}"
+
+        # Convert the current owner to an alternative and rewrite
+        # its manifest file to reflect this.
+        dosu mv  -f "'$2'"           "'$pkg_owns>${alt#*>}'"
+        dosu sed -i "'s/$sea/$rep/'" "'../installed/$pkg_owns/manifest'"
+    fi
+
+    regex_escape "$PWD/$alt" "$2"
+
+    # Convert the desired alternative to a real file and rewrite
+    # the manifest file to reflect this. The reverse of above.
+    dosu mv  -f "'$alt'" "'$2'"
+    dosu sed -i "'s/$sea/$rep/'" "'../installed/$1/manifest'"
 }
 
 pkg_remove() {
@@ -860,8 +964,6 @@ pkg_install() {
     pkg_name=${pkg_name%/*}
     pkg_name=${pkg_name##*/}
 
-    pkg_conflicts "$tar_file" "$pkg_name"
-
     mkdir -p "$tar_dir/$pkg_name"
 
     # Extract the tar-ball to catch any errors before installation begins.
@@ -881,6 +983,8 @@ pkg_install() {
         done < "$tar_dir/$pkg_name/$pkg_db/$pkg_name/depends"
 
     [ "$install_dep" ] && die "$1" "Package requires ${install_dep%, }"
+
+    pkg_conflicts "$tar_file" "$pkg_name"
 
     log "$pkg_name" "Installing package incrementally"
 
@@ -1109,12 +1213,16 @@ args() {
     #
     # This handles the globbing characters '*', '!', '[' and ']' as per:
     # https://pubs.opengroup.org/onlinepubs/009695399/utilities/xcu_chap02.html
-    [ "$action" != search ] && [ "$action" != s ] &&
-        case $@ in
-            *'*'*|*'!'*|*'['*|*']'*)
-                die "Arguments contain invalid characters: '!*[]'"
-            ;;
-        esac
+    case $action in
+        a|alternatives|s|search) ;;
+
+        *)
+            case $@ in
+                *'*'*|*'!'*|*'['*|*']'*)
+                    die "Arguments contain invalid characters: '!*[]'"
+                ;;
+            esac
+    esac
 
     # Parse some arguments earlier to remove the need to duplicate code.
     case $action in
@@ -1126,6 +1234,28 @@ args() {
     # Actions can be abbreviated to their first letter. This saves
     # keystrokes once you memorize the commands.
     case $action in
+        a|alternatives)
+            if [ "$1" ]; then
+                pkg_swap "$@"
+
+            else
+                log "Alternatives:"
+
+                # Go to the choices directory and hide errors
+                # as there is nothing to list if the directory
+                # doesn't exist.
+                cd "$sys_db/../choices" 2>/dev/null
+                set +f
+
+                # Go over each alternative and format the file
+                # name for listing. (pkg_name>usr>bin>ls)
+                for pkg in *; do
+                    [ "$pkg" = '*' ] ||
+                        printf '%s\n' "$pkg" | sed 's|>| /|;s|>|/|g'
+                done
+            fi
+        ;;
+
         b|build)
             # If no arguments were passed, rebuild all packages.
             [ "$1" ] || {
@@ -1206,15 +1336,16 @@ args() {
         ;;
 
         h|help|-h|--help|'')
-            log 'kiss [b|c|i|l|r|s|u|v] [pkg] [pkg] [pkg]'
-            log 'build:     Build a package'
-            log 'checksum:  Generate checksums'
-            log 'install:   Install a package'
-            log 'list:      List installed packages'
-            log 'remove:    Remove a package'
-            log 'search:    Search for a package'
-            log 'update:    Check for updates'
-            log 'version:   Package manager version'
+            log 'kiss [a|b|c|i|l|r|s|u|v] [pkg] [pkg] [pkg]'
+            log 'alternatives: List and swap to alternatives'
+            log 'build:        Build a package'
+            log 'checksum:     Generate checksums'
+            log 'install:      Install a package'
+            log 'list:         List installed packages'
+            log 'remove:       Remove a package'
+            log 'search:       Search for a package'
+            log 'update:       Check for updates'
+            log 'version:      Package manager version'
         ;;
 
         *) die "'kiss $action' is not a valid command" ;;
