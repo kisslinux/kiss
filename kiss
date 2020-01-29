@@ -1352,7 +1352,7 @@ args() {
         ;;
 
         v|version|-v|--version)
-            log kiss 1.0.0
+            log kiss 1.0.1
         ;;
 
         h|help|-h|--help|'')
@@ -1379,7 +1379,8 @@ main() {
 
     # Prevent the package manager from running as root. The package
     # manager will elevate permissions where needed.
-    [ "$(id -u)" != 0 ] || die "kiss must be run as a normal user"
+    [ "$(id -u)" != 0 ] || [ "$KISS_ASROOT" ] ||
+        die "kiss must be run as a normal user"
 
     # Use the most secure method of sending data over stdin based on
     # whether or not the 'printf' command is built into the shell.
