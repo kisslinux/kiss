@@ -47,6 +47,7 @@ main() {
             TERM="$TERM" \
             SHELL=/bin/sh \
             USER=root \
+            KISS_ASROOT=1 \
             CFLAGS="-march=x86-64 -mtune=generic -pipe -Os" \
             CXXFLAGS="-march=x86-64 -mtune=generic -pipe -Os" \
             MAKEFLAGS="-j$(nproc 2>/dev/null || echo 1)" \
