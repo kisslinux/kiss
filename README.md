@@ -235,6 +235,10 @@ busybox /usr/bin/yes
 # NOTE: One sbase utility currently has issues with kiss.
 #       'tar'. You will need to be swapped back to 'busybox'
 kiss a busybox /usr/bin/tar
+
+# NOTE: One ubase utility currently has issues with kiss.
+#       'su'. You will need to be swapped back to 'busybox'
+kiss a busybox /usr/bin/su
 ```
 
 ## Extending the package manager
