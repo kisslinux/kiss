@@ -232,10 +232,8 @@ busybox /usr/bin/whoami
 busybox /usr/bin/xargs
 busybox /usr/bin/yes
 
-# NOTE: Two sbase utilities currently have issues with kiss.
-#       'su' and 'tar'. You will need to swap these back to
-#       'busybox'.
-kiss a busybox /usr/bin/su
+# NOTE: One sbase utility currently has issues with kiss.
+#       'tar'. You will need to be swapped back to 'busybox'
 kiss a busybox /usr/bin/tar
 ```
 
