@@ -135,3 +135,91 @@ export CMAKE_GENERATOR=
 .
 .fi
 .
+.SH "Alternatives System"
+.
+.nf
+
+When a package with conflicts is installed with KISS_CHOICE=1,
+the conflicting files will be added as "choices" to the
+alternatives system.
+
+Afterwards, running kiss a/kiss alternatives will list all of
+the choices you are able to make. Each line of output with this
+command is also usable directly as input.
+
+NOTE: If a package has fewer than 10 conflicting files, the
+conflicting files will automatically be added to the alternatives
+system.
+
+Example usage:
+
+# List alternatives.
+-> kiss a
+-> Alternatives:
+ncurses /usr/bin/clear
+ncurses /usr/bin/reset
+
+# Swap to ncurses 'clear'.
+-> kiss a ncurses /usr/bin/clear
+-> Swapping '/usr/bin/clear' from 'busybox' to 'ncurses'
+Password:
+
+# New listing (busybox clear was swapped out).
+-> kiss a
+-> Alternatives:
+busybox /usr/bin/clear
+ncurses /usr/bin/reset
+
+Example usage (complex):
+
+-> kiss i sbase
+# More lines...
+/var/db/kiss/installed/util-linux/manifest:/usr/bin/renice
+/var/db/kiss/installed/util-linux/manifest:/usr/bin/logger
+/var/db/kiss/installed/util-linux/manifest:/usr/bin/flock
+/var/db/kiss/installed/util-linux/manifest:/usr/bin/cal
+!> Package 'sbase' conflicts with another package
+!> Run 'KISS_CHOICE=1 kiss i sbase' to add conflicts
+!> as alternatives.
+
+# There were more than 10 conflicts so the alternatives system
+# must be manually enabled for this package.
+-> KISS_CHOICE=1 kiss i sbase
+# More lines...
+-> sbase Found conflict (/usr/bin/renice), adding choice
+-> sbase Found conflict (/usr/bin/logger), adding choice
+-> sbase Found conflict (/usr/bin/flock), adding choice
+-> sbase Found conflict (/usr/bin/cal), adding choice
+-> sbase Installing package incrementally
+-> sbase Installed successfully
+
+# List alternatives.
+-> kiss a
+-> Alternatives:
+# More lines...
+sbase /usr/bin/uuencode
+sbase /usr/bin/wc
+sbase /usr/bin/which
+sbase /usr/bin/whoami
+sbase /usr/bin/xargs
+sbase /usr/bin/yes
+
+# Swapping in bulk (all of sbase).
+# The 'kiss a' command with '-' as an argument will read
+# from stdin and use each line as arguments to 'kiss a'.
+kiss a | grep ^sbase | kiss a -
+
+# New listing, sbase has replaced busybox utilities.
+-> kiss a
+-> Alternatives:
+# More lines...
+busybox /usr/bin/uuencode
+busybox /usr/bin/wc
+busybox /usr/bin/which
+busybox /usr/bin/whoami
+busybox /usr/bin/xargs
+busybox /usr/bin/yes
+
+# NOTE: One sbase utility currently has issues with kiss.
+#       'tar'. You will need to be swapped back to 'busybox'
+kiss a busybox /usr/bin/tar
