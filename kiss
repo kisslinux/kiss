@@ -74,6 +74,11 @@ root_cache() {
     #
     # This change was needed as the existing behavior was not ideal
     # in any way and needed to be fixed.
+
+    # Pointless running this function if the user has chosen to run
+    # the package manager as root anyway.
+    [ "$(id -u)" != 0 ] || return 0
+
     printf 'Password: '
 
     # Disable echoing to the terminal while the password is inputted
