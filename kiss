@@ -106,16 +106,10 @@ dosu() {
     # below. Great naming of functions all around.
     #
     # Run a command as root using the cached password. The 'su'
-    # and 'sudo' commands allow you to input a password via stdin.
-    # To hide the prompt, the command's output is sent to '/dev/tty'
-    # and the output of 'su'/'sudo' is sent to '/dev/null'.
-    dosudo() {
-        if command -v sudo >/dev/null 2>&1; then
-            sudo -SEk -- su "${drop_to:-root}" -c "$* >/dev/tty" 2>/dev/null
-        else
-            su "${drop_to:-root}" -c "$* >/dev/tty" >/dev/null
-        fi
-    }
+    # command allows you to input a password via stdin. To hide
+    # the prompt, the command's output is sent to '/dev/tty'
+    # and the output of 'su' is sent to '/dev/null'.
+    dosudo() { su "${drop_to:-root}" -c "$* >/dev/tty" >/dev/null; }
 
     # The code below uses the most secure method of sending
     # data over stdin based on what is available in the system.
