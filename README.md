@@ -7,6 +7,7 @@ Tiny and straightforward package manager for KISS written in POSIX `sh`.
 - Incremental package installation.
 - Fast dependency solver.
 - File conflict detection.
+- Package alternatives system.
 - Binary stripping.
 - `shellcheck` compliant.
 
