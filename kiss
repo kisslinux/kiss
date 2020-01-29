@@ -761,7 +761,8 @@ pkg_conflicts() {
         case $file in */) continue; esac
 
         printf '%s/%s\n' \
-            "$(readlink -f "$KISS_ROOT/${file%/*}")" "${file##*/}"
+            "$(readlink -f "$KISS_ROOT/${file%/*}" 2>/dev/null)" \
+            "${file##*/}"
     done > "$cac_dir/$pid-m"
 
     p_name=$2
