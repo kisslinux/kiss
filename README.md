@@ -14,14 +14,16 @@ Tiny and straightforward package manager for KISS written in POSIX `sh`.
 
 ```sh
 ➜ kiss
-=> kiss [b|c|i|l|r|s|u] [pkg] [pkg] [pkg]
-=> build:     Build a package.
-=> checksum:  Generate checksums.
-=> install:   Install a package.
-=> list:      List installed packages.
-=> remove:    Remove a package.
-=> search:    Search for a package.
-=> update:    Check for updates.
+-> kiss [a|b|c|i|l|r|s|u|v] [pkg] [pkg] [pkg]
+-> alternatives: List and swap to alternatives
+-> build:        Build a package
+-> checksum:     Generate checksums
+-> install:      Install a package
+-> list:         List installed packages
+-> remove:       Remove a package
+-> search:       Search for a package
+-> update:       Check for updates
+-> version:      Package manager version
 ```
 
 ## Package format
