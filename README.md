@@ -27,6 +27,18 @@ Tiny and straightforward package manager for KISS written in POSIX `sh`.
 -> version:      Package manager version
 ```
 
+## Index
+
+<!-- vim-markdown-toc GFM -->
+
+* [Package format](#package-format)
+* [Customization](#customization)
+* [Alternatives system](#alternatives-system)
+* [Extending the package manager](#extending-the-package-manager)
+
+<!-- vim-markdown-toc -->
+
+
 ## Package format
 
 See: <https://getkiss.org/pages/package-system/>
@@ -138,6 +150,93 @@ export MAKEFLAGS=
 # Good value (Ninja):     export CMAKE_GENERATOR=Ninja
 # Good value (Makefiles): export CMAKE_GENERATOR=
 export CMAKE_GENERATOR=
+```
+
+## Alternatives system
+
+When a package with conflicts is installed with `KISS_CHOICE=1`, the conflicting files will be added as "choices" to the alternatives system.
+
+Afterwards, running `kiss a`/`kiss alternatives` will list all of the choices you are able to make. Each line of output with this command is also usable directly as input.
+
+**NOTE** If a package has fewer than 10 conflicting files, the conflicting files will automatically be added to the alternatives system.
+
+Example usage:
+
+```sh
+# List alternatives.
+-> kiss a
+-> Alternatives:
+ncurses /usr/bin/clear
+ncurses /usr/bin/reset
+
+# Swap to ncurses 'clear'.
+-> kiss a ncurses /usr/bin/clear
+-> Swapping '/usr/bin/clear' from 'busybox' to 'ncurses'
+Password:
+
+# New listing (busybox clear was swapped out).
+-> kiss a
+-> Alternatives:
+busybox /usr/bin/clear
+ncurses /usr/bin/reset
+```
+
+Example usage (complex):
+
+```sh
+-> kiss i sbase
+# More lines...
+/var/db/kiss/installed/util-linux/manifest:/usr/bin/renice
+/var/db/kiss/installed/util-linux/manifest:/usr/bin/logger
+/var/db/kiss/installed/util-linux/manifest:/usr/bin/flock
+/var/db/kiss/installed/util-linux/manifest:/usr/bin/cal
+!> Package 'sbase' conflicts with another package
+!> Run 'KISS_CHOICE=1 kiss i sbase' to add conflicts
+!> as alternatives.
+
+# There were more than 10 conflicts so the alternatives system
+# must be manually enabled for this package.
+-> KISS_CHOICE=1 kiss i sbase
+# More lines...
+-> sbase Found conflict (/usr/bin/renice), adding choice
+-> sbase Found conflict (/usr/bin/logger), adding choice
+-> sbase Found conflict (/usr/bin/flock), adding choice
+-> sbase Found conflict (/usr/bin/cal), adding choice
+-> sbase Installing package incrementally
+-> sbase Installed successfully
+
+# List alternatives.
+-> kiss a
+-> Alternatives:
+# More lines...
+sbase /usr/bin/uuencode
+sbase /usr/bin/wc
+sbase /usr/bin/which
+sbase /usr/bin/whoami
+sbase /usr/bin/xargs
+sbase /usr/bin/yes
+
+# Swapping in bulk (all of sbase).
+# The 'kiss a' command with '-' as an argument will read
+# from stdin and use each line as arguments to 'kiss a'.
+kiss a | grep ^sbase | kiss a -
+
+# New listing, sbase has replaced busybox utilities.
+-> kiss a
+-> Alternatives:
+# More lines...
+busybox /usr/bin/uuencode
+busybox /usr/bin/wc
+busybox /usr/bin/which
+busybox /usr/bin/whoami
+busybox /usr/bin/xargs
+busybox /usr/bin/yes
+
+# NOTE: Two sbase utilities currently have issues with kiss.
+#       'su' and 'tar'. You will need to swap these back to
+#       'busybox'.
+kiss a busybox /usr/bin/su
+kiss a busybox /usr/bin/tar
 ```
 
 ## Extending the package manager
