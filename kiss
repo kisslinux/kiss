@@ -53,9 +53,9 @@ as_root() {
         log "Using '${su:-su}'"
 
         case $su in
-            *sudo) sudo -u "${user:-root}" -E sh -c "$*" ;;
-            *doas) doas -u "${user:-root}" sh -c "KISS_PATH='$KISS_PATH' $*" ;;
-            *)     su -pc "$* <&3" "${user:-root}" 3<&0 </dev/tty ;;
+            *sudo) sudo -E sh -c "$*" ;;
+            *doas) doas sh -c "HOME='$HOME' KISS_PATH='$KISS_PATH' $*" ;;
+            *)     su -pc "$* <&3" 3<&0 </dev/tty ;;
         esac
 
         exit
