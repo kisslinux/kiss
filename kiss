@@ -48,108 +48,13 @@ prompt() {
     read -r _
 }
 
-root_cache() {
-    # This function simply mimics a 'su' prompt to then store
-    # the root password for the lifetime of the package manager.
-    #
-    # This function is called once when needed to cache the
-    # password. The password is not accessible to any subprocesses
-    # and should never leave the package manager's process.
-    #
-    # This behavior is needed as there is no POSIX shell method
-    # of running a shell function as a different user. We can't
-    # selectively lower or raise permissions in a seamless way
-    # through "normal" means.
-    #
-    # Root is only needed when installing/removing packages whereas
-    # non-root permissions are needed in countless places throughout.
-    #
-    # This is the only *workable* solution to 1) not run the entire
-    # package manager as root and 2) avoid prompting for password
-    # before, during and after builds numerous times.
-    #
-    # NOTE: Careful consideration has been taken in regards to this
-    #       change and I would have loved an inconspicuous solution
-    #       to this problem... but it doesn't exist.
-    #
-    # This change was needed as the existing behavior was not ideal
-    # in any way and needed to be fixed.
-
-    # Pointless running this function if the user has chosen to run
-    # the package manager as root anyway.
-    [ "$(id -u)" != 0 ] || return 0
-
-    printf 'Password: '
-
-    # Disable echoing to the terminal while the password is inputted
-    # by the user. The below commands read from '/dev/tty' to ensure
-    # they work when run from a subshell.
-    #
-    # The variable '$cached' is used to check if we've been here
-    # before. We cannot check whether or not '$pass' is empty as the
-    # '[' command may be external which would result in /proc leakage.
-    stty -F /dev/tty -echo
-    IFS= read -r pass < /dev/tty && cached=1
-    stty -F /dev/tty echo
-
-    printf '\n'
-
-    # Validate the password now with a simple 'true' command as we
-    # don't yet need to elevate permissions.
-    dosu /bin/true
-}
-
-dosu() {
-    [ "$cached" ] || root_cache
-
-    # Declare this as a function to avoid repeating it twice
-    # below. Great naming of functions all around.
-    #
-    # Run a command as root using the cached password. The 'su'
-    # command allows you to input a password via stdin. To hide
-    # the prompt, the command's output is sent to '/dev/tty'
-    # and the output of 'su' is sent to '/dev/null'.
-    dosudo() { su "${drop_to:-root}" -c "$* >/dev/tty" >/dev/null; }
-
-    # The code below uses the most secure method of sending
-    # data over stdin based on what is available in the system.
-    #
-    # The great debate: Use a heredoc or echo+pipe for password
-    # input over stdin? Time to explain.
-    #
-    # 1) 'printf | cmd' is the most secure IF 'printf' is built
-    #    into the shell and NOT an external command. When 'printf'
-    #    is external, the password WILL be leaked over '/proc'.
-    #
-    #    Safe shells here are anything with a builtin 'printf',
-    #    'ash', 'dash', 'bash' and most other shells.
-    #
-    # 2) Using a heredoc is as secure as the above method (when
-    #    builtin) IF and only IF the user's shell implements
-    #    heredocs WITHOUT the use of temporary files (See bash!).
-    #
-    #    When using heredocs and a temporary file the risk is a
-    #    tiny window in which the input is available inside of
-    #    a temporary file.
-    #
-    #    'ash' and 'dash' are safe here, 'bash' is not ('bash'
-    #    falls under (1) however).
-    #
-    # Which is best? (order is best to worst)
-    #
-    # 1) builtin 'printf'.
-    # 2) heredocs with no temporary file.
-    # 3) heredocs with a temporary file.
-    #
-    # This code below follows the above ordering when deciding
-    # which method to use. The '$heredocs' variable is declared
-    # in 'main()' after a check to see if 'printf' is builtin.
-    if [ "$heredocs" ]; then
-        dosudo "$@" <<-EOF
-			$pass
-		EOF
+as_root() {
+    if command -v sudo >/dev/null; then
+        sudo -E KISS_FORCE="$KISS_FORCE" "$@"
+    elif command -v doas >/dev/null; then
+        KISS_FORCE="$KISS_FORCE" doas "$@"
     else
-        printf '%s\n' "$pass" | dosudo "$@"
+        su -pc "KISS_FORCE=$KISS_FORCE $*"
     fi
 }
 
@@ -571,15 +476,7 @@ pkg_build() {
     log "Building: $*"
 
     # Only ask for confirmation if more than one package needs to be built.
-    [ $# -gt 1 ] || [ "$pkg_update" ] && {
-        prompt
-
-        # Prompt for password prior to the build if more than one package
-        # will be built and installed. No use in forcing the user to wait
-        # for the first password prompt (before caching) if it may take a
-        # long long while.
-        [ "$cached" ] || root_cache
-    }
+    [ $# -gt 1 ] || [ "$pkg_update" ] && prompt
 
     log "Checking to see if any dependencies have already been built"
     log "Installing any pre-built dependencies"
@@ -598,9 +495,7 @@ pkg_build() {
             # to 'su' to elevate permissions.
             [ -f "$bin_dir/$pkg#$version-$release.tar.gz" ] && {
                 log "$pkg" "Found pre-built binary, installing"
-
-                (KISS_FORCE=1 \
-                    pkg_install "$bin_dir/$pkg#$version-$release.tar.gz")
+                (KISS_FORCE=1 args i "$bin_dir/$pkg#$version-$release.tar.gz")
 
                 # Remove the now installed package from the build
                 # list. No better way than using 'sed' in POSIX 'sh'.
@@ -698,8 +593,7 @@ pkg_build() {
 
         log "$pkg" "Needed as a dependency or has an update, installing"
 
-        (KISS_FORCE=1 \
-            pkg_install "$bin_dir/$pkg#$version-$release.tar.gz")
+        (KISS_FORCE=1 args i "$pkg")
     done
 
     # End here as this was a system update and all packages have been installed.
@@ -890,9 +784,9 @@ pkg_swap() {
 
         # Convert the current owner to an alternative and rewrite
         # its manifest file to reflect this.
-        dosu cp  -f "'$2'" "'$pkg_owns>${alt#*>}'"
-        dosu sed "'s/^$sea\$/$rep/'" \
-            "'$mani' > '$mani.1' && mv -f '$mani.1' '$mani'"
+        cp  -f "$2" "$pkg_owns>${alt#*>}"
+        sed "s/^$sea\$/$rep/" "$mani" > "$mani.1"
+        mv -f "$mani.1" "$mani"
     fi
 
     regex_escape "$PWD/$alt" "$2"
@@ -900,9 +794,9 @@ pkg_swap() {
 
     # Convert the desired alternative to a real file and rewrite
     # the manifest file to reflect this. The reverse of above.
-    dosu mv  -f "'$alt'" "'$2'"
-    dosu sed "'s/^$sea\$/$rep/'" \
-        "'$mani' > '$mani.1' && mv -f '$mani.1' '$mani'"
+    mv  -f "$alt" "$2"
+    sed "s/^$sea\$/$rep/" "$mani" > "$mani.1"
+    mv -f "$mani.1" "$mani"
 }
 
 pkg_remove() {
@@ -949,9 +843,9 @@ pkg_remove() {
         [ "${file##/etc/*}" ] || continue
 
         if [ -d "$KISS_ROOT/$file" ]; then
-            dosu rmdir "'$KISS_ROOT/$file'" 2>/dev/null || continue
+            rmdir "$KISS_ROOT/$file" 2>/dev/null || continue
         else
-            dosu rm -f "'$KISS_ROOT/$file'"
+            rm -f "$KISS_ROOT/$file"
         fi
     done < "$sys_db/$1/manifest"
 
@@ -995,7 +889,7 @@ pkg_install() {
     mkdir -p "$tar_dir/$pkg_name"
 
     # Extract the tar-ball to catch any errors before installation begins.
-    dosu tar pxf "'$tar_file'" -C "'$tar_dir/$pkg_name'" ||
+    tar pxf "$tar_file" -C "$tar_dir/$pkg_name" ||
         die "$pkg_name" "Failed to extract tar-ball"
 
     log "$pkg_name" "Checking that all dependencies are installed"
@@ -1027,9 +921,9 @@ pkg_install() {
 
     # This is repeated multiple times. Better to make it a function.
     pkg_rsync() {
-        dosu rsync --chown=root:root --chmod=Du-s,Dg-s,Do-s \
+        rsync --chown=root:root --chmod=Du-s,Dg-s,Do-s \
               -WhHKa --no-compress "$1" --exclude /etc \
-              "'$tar_dir/$pkg_name/'" "'$KISS_ROOT/'"
+              "$tar_dir/$pkg_name/" "$KISS_ROOT/"
     }
 
     # Install the package by using 'rsync' and overwrite any existing files
@@ -1038,8 +932,8 @@ pkg_install() {
 
     # If '/etc/' exists in the package, install it but don't overwrite.
     [ -d "$tar_dir/$pkg_name/etc" ] &&
-        dosu rsync --chown=root:root -WhHKa --no-compress --ignore-existing \
-            "'$tar_dir/$pkg_name/etc'" "'$KISS_ROOT/'"
+        rsync --chown=root:root -WhHKa --no-compress --ignore-existing \
+            "$tar_dir/$pkg_name/etc" "$KISS_ROOT/"
 
     # Remove any leftover files if this is an upgrade.
     [ "$old_manifest" ] && {
@@ -1056,18 +950,18 @@ pkg_install() {
 
             # Remove files.
             if [ -f "$file" ] && [ ! -L "$file" ]; then
-                dosu rm -f "'$file'"
+                rm -f "$file"
 
             # Remove file symlinks.
             elif [ -L "$file" ] && [ ! -d "$file" ]; then
-                dosu unlink "'$file'" ||:
+                unlink "$file" ||:
 
             # Skip directory symlinks.
             elif [ -L "$file" ] && [ -d "$file" ]; then :
 
             # Remove directories if empty.
             elif [ -d "$file" ]; then
-                dosu rmdir "'$file'" 2>/dev/null ||:
+                rmdir "$file" 2>/dev/null ||:
             fi
         done ||:
     }
@@ -1083,7 +977,7 @@ pkg_install() {
 
     if [ -x "$sys_db/$pkg_name/post-install" ]; then
         log "$pkg_name" "Running post-install script"
-        dosu "'$sys_db/$pkg_name/post-install'" ||:
+        "$sys_db/$pkg_name/post-install" ||:
     fi
 
     log "$pkg_name" "Installed successfully"
@@ -1140,16 +1034,15 @@ pkg_updates() {
             else
                 log "$PWD" "Need root to update"
 
-                # Find out the owner of the repository and spawn
-                # git as this user below.
-                #
-                # This prevents 'git' from changing the original
-                # ownership of files and directories in the rare
-                # case that the repository is owned by a 3rd user.
-                (drop_to=$(stat -c %U "$PWD")
-
-                dosu git fetch
-                dosu git merge)
+                if command -v sudo >/dev/null; then
+                    sudo git fetch
+                    sudo git merge
+                elif command -v doas >/dev/null; then
+                    doas git fetch
+                    doas git merge
+                else
+                    su -c 'git fetch && git merge'
+                fi
             fi
         }
     done
@@ -1181,8 +1074,8 @@ pkg_updates() {
 
         prompt
 
-        pkg_build   kiss
-        pkg_install kiss
+        pkg_build kiss
+        args i kiss
 
         log "Updated the package manager"
         log "Re-run 'kiss update' to update your system"
@@ -1215,7 +1108,6 @@ pkg_updates() {
 pkg_clean() {
     # Clean up on exit or error. This removes everything related
     # to the build.
-    stty -F /dev/tty echo 2>/dev/null
 
     # Block 'Ctrl+C' while cache is being cleaned.
     trap '' INT
@@ -1254,8 +1146,28 @@ args() {
 
     # Parse some arguments earlier to remove the need to duplicate code.
     case $action in
-        c|checksum|s|search|i|install|r|remove)
+        c|checksum|s|search)
             [ "$1" ] || die "'kiss $action' requires an argument"
+        ;;
+
+        a|alternatives)
+            # Rerun the script with 'su' if the user isn't root.
+            # Cheeky but 'su' can't be used on shell functions themselves.
+            [ -z "$1" ] || [ "$(id -u)" = 0 ] || {
+                as_root kiss "$action" "$@"
+                return
+            }
+        ;;
+
+        i|install|r|remove)
+            [ "$1" ] || die "'kiss $action' requires an argument"
+
+            # Rerun the script with 'su' if the user isn't root.
+            # Cheeky but 'su' can't be used on shell functions themselves.
+            [ "$(id -u)" = 0 ] || {
+                as_root kiss "$action" "$@"
+                return
+            }
         ;;
     esac
 
@@ -1385,21 +1297,6 @@ args() {
 }
 
 main() {
-    # Ensure that debug mode is never enabled to prevent internal
-    # package manager information from leaking to stdout.
-    set +x
-
-    # Prevent the package manager from running as root. The package
-    # manager will elevate permissions where needed.
-    [ "$(id -u)" != 0 ] || [ "$KISS_ASROOT" ] || {
-        log "kiss must be run as a normal user" "" "!>"
-        die "(Run with KISS_ASROOT=1 to ignore this warning)"
-    }
-
-    # Use the most secure method of sending data over stdin based on
-    # whether or not the 'printf' command is built into the shell.
-    [ "$(command -v printf)" = printf ] || heredocs=1
-
     # Set the location to the repository and package database.
     pkg_db=var/db/kiss/installed
 
