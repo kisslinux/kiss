@@ -53,13 +53,9 @@ as_root() {
     # 'doas' or 'su'. This also handles KISS' environment variables.
     log "Using '${su:-su}'"
 
-    # doas requires these environment variables to be set as they
-    # aren't brought over from the calling user.
-    env="HOME='$HOME' KISS_FORCE='$KISS_FORCE' KISS_PATH='$KISS_PATH'"
-
     case $su in
-        *sudo) sudo -E sh -c "$*" ;;
-        *doas) doas -- sh -c "$env $*" ;;
+        *sudo) sudo -E "$@" ;;
+        *doas) doas -- "$@" ;;
         *)     su -pc "$* <&3" 3<&0 </dev/tty ;;
     esac
 }
@@ -1024,13 +1020,12 @@ pkg_updates() {
             log "$PWD" "$signed "
 
             if [ -w "$PWD" ]; then
-                git fetch
-                git merge
+                git pull
 
             else
                 log "$PWD" "Need root to update"
 
-                as_root 'git fetch && git merge'
+                as_root git pull
             fi
         }
     done
@@ -1264,7 +1259,7 @@ args() {
         ;;
 
         v|version|-v|--version)
-            log kiss 1.1.4
+            log kiss 1.1.5
         ;;
 
         h|help|-h|--help|'')
