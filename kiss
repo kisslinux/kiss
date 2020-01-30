@@ -53,9 +53,9 @@ as_root() {
         log "Using '${su:-su}'"
 
         case $su in
-            *sudo) sudo -E KISS_FORCE="$KISS_FORCE" "$@" ;;
-            *doas) KISS_FORCE="$KISS_FORCE" doas "$@" ;;
-            *)     su -pc "KISS_FORCE=$KISS_FORCE $* <&3" 3<&0 </dev/tty ;;
+            *sudo) sudo -u "${user:-root}" -E "$@" ;;
+            *doas) doas -u "${user:-root}" "$@" ;;
+            *)     su -pc "$* <&3" "${user:-root}" 3<&0 </dev/tty ;;
         esac
 
         exit
@@ -1165,7 +1165,7 @@ args() {
 
             # Rerun the script with 'su' if the user isn't root.
             # Cheeky but 'su' can't be used on shell functions themselves.
-            as_root kiss "$action" "$@"
+            KISS_FORCE="$KISS_FORCE" as_root kiss "$action" "$@"
         ;;
     esac
 
