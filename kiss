@@ -49,16 +49,23 @@ prompt() {
 }
 
 as_root() {
+    # Simple function to run a command as root using either 'sudo',
+    # 'doas' or 'su'. This also handles KISS' environment variables.
     [ "$(id -u)" = 0 ] || {
         log "Using '${su:-su}'"
 
+        # doas requires these environment variables to be set as they
+        # aren't brought over from the calling user.
+        env="HOME='$HOME' KISS_FORCE='$KISS_FORCE' KISS_PATH='$KISS_PATH'"
+
         case $su in
             *sudo) sudo -E sh -c "$*" ;;
-            *doas) doas -- sh -c "HOME='$HOME' KISS_PATH='$KISS_PATH' $*" ;;
+            *doas) doas -- sh -c "$env $*" ;;
             *)     su -pc "$* <&3" 3<&0 </dev/tty ;;
         esac
 
-        exit
+        # Only exit here if we're spawning a second 'kiss' instance.
+        [ "$1" != kiss ] || exit
     }
 }
 
@@ -1255,7 +1262,7 @@ args() {
         ;;
 
         v|version|-v|--version)
-            log kiss 1.1.3
+            log kiss 1.1.4
         ;;
 
         h|help|-h|--help|'')
