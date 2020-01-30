@@ -737,12 +737,11 @@ pkg_conflicts() {
                   "$tar_dir/$p_name/$cho_dir/$p_name$con_name"
 
             regex_escape "$con" "/$cho_dir/$p_name$con_name"
-            mani=$tar_dir/$p_name/$pkg_db/$p_name/manifest
+            mani=
 
             # Rewrite the package's manifest to update its location
             # to its new spot (and name) in the choices directory.
-            sed "s/^$sea\$/$rep/" "$mani" > "$mani.1"
-            mv -f "$mani.1" "$mani"
+            sed -i "s/^$sea\$/$rep/" "$tar_dir/$p_name/$pkg_db/$p_name/manifest"
         done
     else
         if "$grep" -Fxf "$cac_dir/$pid-m" -- "$@"; then
@@ -789,8 +788,7 @@ pkg_swap() {
         # Convert the current owner to an alternative and rewrite
         # its manifest file to reflect this.
         cp  -f "$2" "$pkg_owns>${alt#*>}"
-        sed "s/^$sea\$/$rep/" "$mani" > "$mani.1"
-        mv -f "$mani.1" "$mani"
+        sed -i "s/^$sea\$/$rep/" "../installed/$pkg_owns/manifest"
     fi
 
     regex_escape "$PWD/$alt" "$2"
@@ -799,8 +797,7 @@ pkg_swap() {
     # Convert the desired alternative to a real file and rewrite
     # the manifest file to reflect this. The reverse of above.
     mv  -f "$alt" "$2"
-    sed "s/^$sea\$/$rep/" "$mani" > "$mani.1"
-    mv -f "$mani.1" "$mani"
+    sed -i "s/^$sea\$/$rep/" "../installed/$1/manifest"
 }
 
 pkg_remove() {
