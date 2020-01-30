@@ -53,8 +53,8 @@ as_root() {
         log "Using '${su:-su}'"
 
         case $su in
-            *sudo) sudo -u "${user:-root}" -E "$@" ;;
-            *doas) doas -u "${user:-root}" "$@" ;;
+            *sudo) sudo -u "${user:-root}" -E sh -c "$*" ;;
+            *doas) doas -u "${user:-root}"    sh -c "$*" ;;
             *)     su -pc "$* <&3" "${user:-root}" 3<&0 </dev/tty ;;
         esac
 
@@ -1038,15 +1038,7 @@ pkg_updates() {
             else
                 log "$PWD" "Need root to update"
 
-                if command -v sudo >/dev/null; then
-                    sudo git fetch
-                    sudo git merge
-                elif command -v doas >/dev/null; then
-                    doas git fetch
-                    doas git merge
-                else
-                    su -c 'git fetch && git merge'
-                fi
+                as_root 'git fetch && git merge'
             fi
         }
     done
@@ -1142,8 +1134,8 @@ args() {
 
         *)
             case $@ in
-                *'*'*|*'!'*|*'['*|*']'*)
-                    die "Arguments contain invalid characters: '!*[]'"
+                *'*'*|*'!'*|*'['*|*']'*|*' '*)
+                    die "Arguments contain invalid characters: '!*[] '"
                 ;;
             esac
     esac
