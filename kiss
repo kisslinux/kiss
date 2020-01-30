@@ -1019,7 +1019,7 @@ pkg_updates() {
 
             log "$PWD" "$signed "
 
-            if [ -w "$PWD" ]; then
+            if [ -w "$PWD" ] && [ "$(id -u)" != 0 ]; then
                 git pull
 
             else
