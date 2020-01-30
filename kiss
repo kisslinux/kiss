@@ -55,7 +55,8 @@ as_root() {
         elif command -v doas >/dev/null; then
             KISS_FORCE="$KISS_FORCE" doas "$@"
         else
-            su -pc "KISS_FORCE=$KISS_FORCE $*"
+            exec 3<&0
+            su -pc "KISS_FORCE=$KISS_FORCE $* <&3" </dev/tty
         fi
 
         exit
