@@ -54,9 +54,9 @@ as_root() {
     log "Using '${su:-su}'"
 
     case $su in
-        *sudo) sudo -E -- "$@" ;;
-        *doas) doas -- "$@" ;;
-        *)     su -pc "$* <&3" 3<&0 </dev/tty ;;
+        *sudo) sudo -Eu "${user:-root}" -- "$@" ;;
+        *doas) doas -u "${user:-root}" -- "$@" ;;
+        *)     su -pc "$* <&3" "${user:-root}" 3<&0 </dev/tty ;;
     esac
 }
 
@@ -1025,7 +1025,20 @@ pkg_updates() {
             else
                 log "$PWD" "Need root to update"
 
-                as_root git pull
+                # Find out the owner of the repository and spawn
+                # git as this user below.
+                #
+                # This prevents 'git' from changing the original
+                # ownership of files and directories in the rare
+                # case that the repository is owned by a 3rd user.
+                (
+                    user=$(stat -c %U "$PWD")
+
+                    [ "$user" = root ] ||
+                        log "Dropping permissions to $user for pull"
+
+                    as_root git pull
+                )
             fi
         }
     done
