@@ -569,6 +569,7 @@ pkg_build() {
         # we must resort to tricks like killing the script ourselves.
         { "$repo_dir/build" "$pkg_dir/$pkg" || {
             log "$pkg" "Build failed"
+            log "$pkg" "Log stored to $log_dir/$pkg-$time-$pid"
             pkg_clean
             kill 0
         } } 2>&1 | tee "$log_dir/$pkg-$time-$pid" > /dev/tty
