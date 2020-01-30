@@ -737,7 +737,6 @@ pkg_conflicts() {
                   "$tar_dir/$p_name/$cho_dir/$p_name$con_name"
 
             regex_escape "$con" "/$cho_dir/$p_name$con_name"
-            mani=
 
             # Rewrite the package's manifest to update its location
             # to its new spot (and name) in the choices directory.
@@ -783,7 +782,6 @@ pkg_swap() {
         log "Swapping '$2' from '$pkg_owns' to '$1'"
 
         regex_escape "$2" "$PWD/$pkg_owns>${alt#*>}"
-        mani=${PWD%/*}/installed/$pkg_owns/manifest
 
         # Convert the current owner to an alternative and rewrite
         # its manifest file to reflect this.
@@ -792,7 +790,6 @@ pkg_swap() {
     fi
 
     regex_escape "$PWD/$alt" "$2"
-    mani=${PWD%/*}/installed/$1/manifest
 
     # Convert the desired alternative to a real file and rewrite
     # the manifest file to reflect this. The reverse of above.
