@@ -1266,7 +1266,7 @@ args() {
         ;;
 
         v|version|-v|--version)
-            log kiss 1.0.6
+            log kiss 1.1.0
         ;;
 
         h|help|-h|--help|'')
