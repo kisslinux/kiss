@@ -831,11 +831,6 @@ pkg_remove() {
     # Disable globbing.
     set -f
 
-    # Ensure that the user leaves their machine in a working state by
-    # refusing to remove the package which providees 'su'.
-    grep -q "^$(command -v su)$" "$sys_db/$1/manifest" &&
-        die "$1" "Removing su will break the system."
-
     # Block being able to abort the script with 'Ctrl+C' during removal.
     # Removes all risk of the user aborting a package removal leaving
     # an incomplete package installed.
