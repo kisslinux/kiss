@@ -50,14 +50,13 @@ prompt() {
 
 as_root() {
     [ "$(id -u)" = 0 ] || {
-        if command -v sudo >/dev/null; then
-            sudo -E KISS_FORCE="$KISS_FORCE" "$@"
-        elif command -v doas >/dev/null; then
-            KISS_FORCE="$KISS_FORCE" doas "$@"
-        else
-            exec 3<&0
-            su -pc "KISS_FORCE=$KISS_FORCE $* <&3" </dev/tty
-        fi
+        log "Using '${su:-su}'"
+
+        case $su in
+            *sudo) sudo -E KISS_FORCE="$KISS_FORCE" "$@" ;;
+            *doas) KISS_FORCE="$KISS_FORCE" doas "$@" ;;
+            *)     su -pc "KISS_FORCE=$KISS_FORCE $* <&3" 3<&0 </dev/tty ;;
+        esac
 
         exit
     }
@@ -1317,6 +1316,10 @@ main() {
     # implementation. Very much worth it if you value performance over
     # POSIX correctness.
     grep=$(command -v ggrep) || grep='grep'
+
+    # Figure out which 'sudo' command to use based on the user's choice or
+    # what is available on the system.
+    su=${KISS_SU:-$(command -v sudo || command -v doas)} || su=su
 
     # Store the date and time of script invocation to be used as the name
     # of the log files the package manager creates uring builds.
