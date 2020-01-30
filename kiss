@@ -54,7 +54,7 @@ as_root() {
 
         case $su in
             *sudo) sudo -u "${user:-root}" -E sh -c "$*" ;;
-            *doas) doas -u "${user:-root}"    sh -c "$*" ;;
+            *doas) doas -u "${user:-root}" sh -c "KISS_PATH='$KISS_PATH' $*" ;;
             *)     su -pc "$* <&3" "${user:-root}" 3<&0 </dev/tty ;;
         esac
 
