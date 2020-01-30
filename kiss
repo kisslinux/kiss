@@ -54,7 +54,7 @@ as_root() {
     log "Using '${su:-su}'"
 
     case $su in
-        *sudo) sudo -E "$@" ;;
+        *sudo) sudo -E -- "$@" ;;
         *doas) doas -- "$@" ;;
         *)     su -pc "$* <&3" 3<&0 </dev/tty ;;
     esac
@@ -1259,7 +1259,7 @@ args() {
         ;;
 
         v|version|-v|--version)
-            log kiss 1.1.5
+            log kiss 1.1.6
         ;;
 
         h|help|-h|--help|'')
