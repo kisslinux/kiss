@@ -49,13 +49,17 @@ prompt() {
 }
 
 as_root() {
-    if command -v sudo >/dev/null; then
-        sudo -E KISS_FORCE="$KISS_FORCE" "$@"
-    elif command -v doas >/dev/null; then
-        KISS_FORCE="$KISS_FORCE" doas "$@"
-    else
-        su -pc "KISS_FORCE=$KISS_FORCE $*"
-    fi
+    [ "$(id -u)" = 0 ] || {
+        if command -v sudo >/dev/null; then
+            sudo -E KISS_FORCE="$KISS_FORCE" "$@"
+        elif command -v doas >/dev/null; then
+            KISS_FORCE="$KISS_FORCE" doas "$@"
+        else
+            su -pc "KISS_FORCE=$KISS_FORCE $*"
+        fi
+
+        exit
+    }
 }
 
 regex_escape() {
@@ -1153,10 +1157,7 @@ args() {
         a|alternatives)
             # Rerun the script with 'su' if the user isn't root.
             # Cheeky but 'su' can't be used on shell functions themselves.
-            [ -z "$1" ] || [ "$(id -u)" = 0 ] || {
-                as_root kiss "$action" "$@"
-                return
-            }
+            [ -z "$1" ] || as_root kiss "$action" "$@"
         ;;
 
         i|install|r|remove)
@@ -1164,10 +1165,7 @@ args() {
 
             # Rerun the script with 'su' if the user isn't root.
             # Cheeky but 'su' can't be used on shell functions themselves.
-            [ "$(id -u)" = 0 ] || {
-                as_root kiss "$action" "$@"
-                return
-            }
+            as_root kiss "$action" "$@"
         ;;
     esac
 
