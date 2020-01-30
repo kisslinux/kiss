@@ -51,22 +51,17 @@ prompt() {
 as_root() {
     # Simple function to run a command as root using either 'sudo',
     # 'doas' or 'su'. This also handles KISS' environment variables.
-    [ "$(id -u)" = 0 ] || {
-        log "Using '${su:-su}'"
+    log "Using '${su:-su}'"
 
-        # doas requires these environment variables to be set as they
-        # aren't brought over from the calling user.
-        env="HOME='$HOME' KISS_FORCE='$KISS_FORCE' KISS_PATH='$KISS_PATH'"
+    # doas requires these environment variables to be set as they
+    # aren't brought over from the calling user.
+    env="HOME='$HOME' KISS_FORCE='$KISS_FORCE' KISS_PATH='$KISS_PATH'"
 
-        case $su in
-            *sudo) sudo -E sh -c "$*" ;;
-            *doas) doas -- sh -c "$env $*" ;;
-            *)     su -pc "$* <&3" 3<&0 </dev/tty ;;
-        esac
-
-        # Only exit here if we're spawning a second 'kiss' instance.
-        [ "$1" != kiss ] || exit
-    }
+    case $su in
+        *sudo) sudo -E sh -c "$*" ;;
+        *doas) doas -- sh -c "$env $*" ;;
+        *)     su -pc "$* <&3" 3<&0 </dev/tty ;;
+    esac
 }
 
 regex_escape() {
@@ -1145,7 +1140,10 @@ args() {
         a|alternatives)
             # Rerun the script with 'su' if the user isn't root.
             # Cheeky but 'su' can't be used on shell functions themselves.
-            [ -z "$1" ] || as_root kiss "$action" "$@"
+            [ -z "$1" ] || [ "$(id -u)" = 0 ] || {
+                as_root kiss "$action" "$@"
+                return
+            }
         ;;
 
         i|install|r|remove)
@@ -1153,7 +1151,10 @@ args() {
 
             # Rerun the script with 'su' if the user isn't root.
             # Cheeky but 'su' can't be used on shell functions themselves.
-            KISS_FORCE="$KISS_FORCE" as_root kiss "$action" "$@"
+            [ "$(id -u)" = 0 ] || {
+                KISS_FORCE="$KISS_FORCE" as_root kiss "$action" "$@"
+                return
+            }
         ;;
     esac
 
