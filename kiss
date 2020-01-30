@@ -1123,8 +1123,8 @@ args() {
 
         *)
             case $@ in
-                *'*'*|*'!'*|*'['*|*']'*|*' '*)
-                    die "Arguments contain invalid characters: '!*[] '"
+                *'*'*|*'!'*|*'['*|*']'*)
+                    die "Arguments contain invalid characters: '!*[]'"
                 ;;
             esac
     esac
