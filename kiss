@@ -50,12 +50,12 @@ prompt() {
 
 as_root() {
     # Simple function to run a command as root using either 'sudo',
-    # 'doas' or 'su'. This also handles KISS' environment variables.
+    # 'doas' or 'su'. Hurrah for choice.
     log "Using '${su:-su}'"
 
     case $su in
         *sudo) sudo -Eu "${user:-root}" -- "$@" ;;
-        *doas) doas -u "${user:-root}" -- "$@" ;;
+        *doas) doas -u  "${user:-root}" -- "$@" ;;
         *)     su -pc "$* <&3" "${user:-root}" 3<&0 </dev/tty ;;
     esac
 }
