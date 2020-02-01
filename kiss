@@ -733,7 +733,8 @@ pkg_conflicts() {
             # Move the conflicting file to the choices directory
             # and name it according to the format above.
             mv -f "$tar_dir/$p_name/$con" \
-                  "$tar_dir/$p_name/$cho_dir/$p_name$con_name"
+                  "$tar_dir/$p_name/$cho_dir/$p_name$con_name" 2>/dev/null ||
+                  die "File must be in ${con%/*} and not a symlink to it"
 
             regex_escape "$con" "/$cho_dir/$p_name$con_name"
 
