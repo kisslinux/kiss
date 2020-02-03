@@ -141,10 +141,7 @@ pkg_list() {
 
     # Loop over each package and print its name and version.
     for pkg; do
-        [ -d "$pkg" ] || {
-            log "Package '$pkg' is not installed"
-            return 1
-        }
+        [ -d "$pkg" ] || { log "'$pkg' is not installed"; return 1; }
 
         read -r version 2>/dev/null < "$pkg/version" || version=null
         printf '%s\n' "$pkg $version"
