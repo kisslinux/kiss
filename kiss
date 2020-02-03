@@ -56,16 +56,17 @@ as_root() {
     case $su in
         *sudo) sudo -Eu "${user:-root}" -- "$@" ;;
         *doas) doas -u  "${user:-root}" -- "$@" ;;
-        *)     su -pc "$* <&3" "${user:-root}" 3<&0 </dev/tty ;;
+        *)     su   -pc "$* <&3" "${user:-root}" 3<&0 </dev/tty ;;
     esac
 }
 
-regex_escape() {
+esc() {
     # Escape all required characters in both the search and
     # replace portions of two strings for use in a 'sed' call
     # as "plain-text".
-    sea=$(printf %s "$1" | sed 's/[]\/$*.^[]/\\&/g')
-    rep=$(printf %s "$2" | sed 's/[\/&]/\\&/g')
+    printf 's/^%s$/%s/' \
+        "$(printf %s "$1" | sed 's/[]\/$*.^[]/\\&/g')" \
+        "$(printf %s "$2" | sed 's/[\/&]/\\&/g')"
 }
 
 pkg_lint() {
@@ -736,11 +737,10 @@ pkg_conflicts() {
                   "$tar_dir/$p_name/$cho_dir/$p_name$con_name" 2>/dev/null ||
                   die "File must be in ${con%/*} and not a symlink to it"
 
-            regex_escape "$con" "/$cho_dir/$p_name$con_name"
-
             # Rewrite the package's manifest to update its location
             # to its new spot (and name) in the choices directory.
-            sed -i "s/^$sea\$/$rep/" "$tar_dir/$p_name/$pkg_db/$p_name/manifest"
+            sed -i "$(esc "$con" "/$cho_dir/$p_name$con_name")" \
+                "$tar_dir/$p_name/$pkg_db/$p_name/manifest"
         done
     else
         if "$grep" -Fxf "$cac_dir/$pid-m" -- "$@"; then
@@ -781,20 +781,17 @@ pkg_swap() {
 
         log "Swapping '$2' from '$pkg_owns' to '$1'"
 
-        regex_escape "$2" "$PWD/$pkg_owns>${alt#*>}"
-
         # Convert the current owner to an alternative and rewrite
         # its manifest file to reflect this.
         cp  -f "$2" "$pkg_owns>${alt#*>}"
-        sed -i "s/^$sea\$/$rep/" "../installed/$pkg_owns/manifest"
+        sed -i "$(esc "$2" "$PWD/$pkg_owns>${alt#*>}")" \
+            "../installed/$pkg_owns/manifest"
     fi
-
-    regex_escape "$PWD/$alt" "$2"
 
     # Convert the desired alternative to a real file and rewrite
     # the manifest file to reflect this. The reverse of above.
     mv  -f "$alt" "$2"
-    sed -i "s/^$sea\$/$rep/" "../installed/$1/manifest"
+    sed -i "$(esc "$PWD/$alt" "$2")" "../installed/$1/manifest"
 }
 
 pkg_remove() {
