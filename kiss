@@ -1130,16 +1130,10 @@ args() {
     #
     # This handles the globbing characters '*', '!', '[' and ']' as per:
     # https://pubs.opengroup.org/onlinepubs/009695399/utilities/xcu_chap02.html
-    case $action in
-        a|alternatives|s|search) ;;
-
-        *)
-            case $@ in
-                *'*'*|*'!'*|*'['*|*']'*)
-                    die "Arguments contain invalid characters: '!*[]'"
-                ;;
-            esac
-    esac
+    [ "${action#[as]*}" ] &&
+        case $@ in *'*'*|*'!'*|*'['*|*']'*)
+            die "Arguments contain invalid characters: '!*[]'"
+        esac
 
     # Parse some arguments earlier to remove the need to duplicate code.
     case $action in
@@ -1260,21 +1254,10 @@ args() {
             done
         ;;
 
-        l|list)
-            pkg_list "$@"
-        ;;
-
-        u|update)
-            pkg_updates
-        ;;
-
-        s|search)
-            for pkg; do pkg_find "$pkg" all; done
-        ;;
-
-        v|version|-v|--version)
-            log kiss 1.1.7
-        ;;
+        l|list)    pkg_list "$@" ;;
+        u|update)  pkg_updates ;;
+        s|search)  for pkg; do pkg_find "$pkg" all; done ;;
+        v|version) log kiss 1.1.7 ;;
 
         h|help|-h|--help|'')
             log 'kiss [a|b|c|i|l|r|s|u|v] [pkg] [pkg] [pkg]'
