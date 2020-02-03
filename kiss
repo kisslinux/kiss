@@ -115,10 +115,7 @@ pkg_find() {
 
     # Show all search results if called from 'kiss search', else
     # print only the first match.
-    case $match in
-        all) printf '%s\n' "$@" ;;
-        *)   printf '%s\n' "$1" ;;
-    esac
+    [ "$match" ] && printf '%s\n' "$@" || printf '%s\n' "$1"
 }
 
 pkg_list() {
