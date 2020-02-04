@@ -1295,9 +1295,10 @@ main() {
     # POSIX correctness.
     grep=$(command -v ggrep) || grep='grep'
 
-    # Prefer libarchive tar if installed as it is much much faster than
-    # busybox's implementation. Very much worth it if you value performance.
-    tar=$(command -v bsdtar) || tar='tar'
+    # Prefer libarchive tar or GNU tar if installed as they are  much
+    # much faster than busybox's implementation. Very much worth it if
+    # you value performance.
+    tar=$(command -v bsdtar || command -v gtar) || tar='tar'
 
     # Figure out which 'sudo' command to use based on the user's choice or
     # what is available on the system.
