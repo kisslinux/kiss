@@ -821,6 +821,11 @@ pkg_remove() {
     # an incomplete package installed.
     trap '' INT
 
+    if [ -x "$sys_db/$1/pre-remove" ]; then
+        log "$1" "Running pre-remove script"
+        "$sys_db/$1/pre-remove" ||:
+    fi
+
     while read -r file; do
         # The file is in '/etc' skip it. This prevents the package
         # manager from removing user edited configuration files.
