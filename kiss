@@ -421,6 +421,18 @@ pkg_manifest() (
         sort -r | sed '/^\.\/$/d;ss.ss' > "$pkg_dir/$1/$pkg_db/$1/manifest"
 )
 
+pkg_etcsums() (
+    # Generate checksums for each configuration file in the package's
+    # /etc/ directory for use in "smart" handling of these files.
+    log "$1" "Generating etcsums"
+
+    # This funcion runs as a sub-shell to avoid having to 'cd' back to the
+    # prior directory before being able to continue.
+    cd "$pkg_dir/$1/etc" 2>/dev/null || return 0; cd ..
+
+    find etc -type f -exec sha256sum {} + > "$pkg_dir/$1/$pkg_db/$1/etcsums"
+)
+
 pkg_tar() {
     # Create a tar-ball from the built package's files.
     # This tar-ball also contains the package's database entry.
@@ -579,10 +591,16 @@ pkg_build() {
         # This ensure that the manifest is added to the manifest...
         : > "$pkg_dir/$pkg/$pkg_db/$pkg/manifest"
 
+        # If the package contains '/etc', add a file called
+        # 'etcsums' to the manifest. See comment directly above.
+        [ -d "$pkg_dir/$pkg/etc" ] &&
+            : > "$pkg_dir/$pkg/$pkg_db/$pkg/etcsums"
+
         pkg_strip    "$pkg"
         pkg_fixdeps  "$pkg"
         pkg_junk     "$pkg"
         pkg_manifest "$pkg"
+        pkg_etcsums  "$pkg"
         pkg_tar      "$pkg"
 
         # Install only dependencies of passed packages.
@@ -911,7 +929,7 @@ pkg_install() {
     # This is repeated multiple times. Better to make it a function.
     pkg_rsync() {
         rsync --chown=root:root --chmod=Du-s,Dg-s,Do-s \
-              -WhHKa --no-compress "$1" --exclude /etc \
+              -WhHKa --no-compress --exclude /etc "$1" \
               "$tar_dir/$pkg_name/" "$KISS_ROOT/"
     }
 
@@ -919,10 +937,36 @@ pkg_install() {
     # (excluding '/etc/').
     pkg_rsync --info=progress2
 
-    # If '/etc/' exists in the package, install it but don't overwrite.
-    [ -d "$tar_dir/$pkg_name/etc" ] &&
-        rsync --chown=root:root -WhHKa --no-compress --ignore-existing \
-            "$tar_dir/$pkg_name/etc" "$KISS_ROOT/"
+    [ -d "$tar_dir/$pkg_name/etc" ] && (
+        cd "$tar_dir/$pkg_name"
+
+        # Handle files in /etc/ based on a 3-way checksum check.
+        find etc -type f | while read -r file; do
+            {
+                sum_new=$(sha256sum "$file")
+                sum_sys=$(cd "$KISS_ROOT/"; sha256sum "$file")
+                sum_old=$("$grep" "$file$" "$sys_db/$pkg_name/etcsums")
+            } 2>/dev/null ||:
+
+            # Use a case statement to easily compare three strings at
+            # the same time. Pretty nifty.
+            case ${sum_old:-null}${sum_sys}${sum_new} in
+                # old = X, sys = X, new = X
+                # old = X, sys = Y, new = Y
+                # old = X, sys = X, new = Y
+                ${sum_old}${sum_old}${sum_old}|\
+                ${sum_old:-null}${sum_sys}${sum_sys}|\
+                ${sum_sys}${sum_old}*) new= ;;
+
+                # All other cases.
+                *) log "$pkg_name" "WARN: saving $file as $file.new"
+                   new=.new
+            esac
+
+            cp -af "$file"  "$KISS_ROOT/${file}${new}"
+            chown root:root "$KISS_ROOT/${file}${new}"
+        done ||:
+    )
 
     # Remove any leftover files if this is an upgrade.
     [ "$old_manifest" ] && {
@@ -957,8 +1001,7 @@ pkg_install() {
 
     # Install the package again to fix any non-leftover files being
     # removed above.
-    pkg_rsync -v ||:
-    pkg_rsync -v ||:
+    { pkg_rsync --; pkg_rsync --; } ||:
 
     # Reset 'trap' to its original value. Installation is done so
     # we no longer need to block 'Ctrl+C'.
