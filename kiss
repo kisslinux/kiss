@@ -428,7 +428,7 @@ pkg_etcsums() (
 
     # This funcion runs as a sub-shell to avoid having to 'cd' back to the
     # prior directory before being able to continue.
-    cd "$pkg_dir/$1"
+    cd "$pkg_dir/$1/etc" 2>/dev/null || return; cd ..
 
     find etc -type f -exec sha256sum {} + > "$pkg_dir/$1/$pkg_db/$1/etcsums"
 )
@@ -600,7 +600,7 @@ pkg_build() {
         pkg_fixdeps  "$pkg"
         pkg_junk     "$pkg"
         pkg_manifest "$pkg"
-        pkg_etcsums  "$pkg"
+        pkg_etcsums  "$pkg" ||:
         pkg_tar      "$pkg"
 
         # Install only dependencies of passed packages.
