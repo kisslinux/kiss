@@ -944,7 +944,7 @@ pkg_install() {
         find etc -type f | while read -r file; do
             {
                 sum_new=$(sha256sum "$file")
-                sum_sys=$(cd /; sha256sum "$file")
+                sum_sys=$(cd "$KISS_ROOT/"; sha256sum "$file")
                 sum_old=$("$grep" "$file$" "$sys_db/$pkg_name/etcsums")
             } 2>/dev/null ||:
 
@@ -956,20 +956,18 @@ pkg_install() {
                 # old = X, sys = X, new = Y
                 ${sum_old}${sum_old}${sum_old}|\
                 ${sum_old:-null}${sum_sys}${sum_sys}|\
-                ${sum_sys}${sum_old}*)
-                    cp -af "$file"  "/$file"
-                    chown root:root "/$file"
-                ;;
+                ${sum_sys}${sum_old}*) ;;
 
                 # All other cases.
-                *)
-                    log "$pkg_name" "WARN: saving $file as $file.new"
+                *) log "$pkg_name" "WARN: saving $file as $file.new"
+                   new=.new
+            esac
 
-                    cp -af "$file"  "/$file.new"
-                    chown root:root "/$file.new"
-                ;;
-            esac ||:
-        done
+            cp -af "$file"  "$KISS_ROOT/${file}${new}"
+            chown root:root "$KISS_ROOT/${file}${new}"
+
+            new=
+        done ||:
     )
 
     # Remove any leftover files if this is an upgrade.
