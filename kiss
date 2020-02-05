@@ -955,7 +955,7 @@ pkg_install() {
                 # old = X, sys = Y, new = Y
                 # old = X, sys = X, new = Y
                 ${sum_old}${sum_old}${sum_old}|\
-                ${sum_old}${sum_sys}${sum_sys}|\
+                ${sum_old:-null}${sum_sys}${sum_sys}|\
                 ${sum_sys}${sum_old}*)
                     cp -af "$file"  "/$file"
                     chown root:root "/$file"
