@@ -1047,9 +1047,8 @@ pkg_updates() {
     # Update each repository in '$KISS_PATH'. It is assumed that
     # each repository is 'git' tracked.
     for repo; do
-        cd "$repo"
-
         # Go to the root of the repository (if it exists).
+        cd "$repo"
         cd "$(git rev-parse --show-toplevel 2>/dev/null)" 2>/dev/null ||:
 
         [ -d .git ] || {
@@ -1070,7 +1069,7 @@ pkg_updates() {
             # Display a tick if signing is enabled for this
             # repository.
             case $(git config merge.verifySignatures) in
-                true) log "$PWD" "[[32;1msigned ✓[m] " ;;
+                true) log "$PWD" "[signed ✓] " ;;
                 *)    log "$PWD" " "  ;;
             esac
 
