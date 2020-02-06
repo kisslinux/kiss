@@ -1042,7 +1042,6 @@ pkg_updates() {
     # Check all installed packages for updates. So long as the installed
     # version and the version in the repositories differ, it's considered
     # an update.
-
     log "Updating repositories"
 
     # Create a list of all repositories.
