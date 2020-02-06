@@ -941,7 +941,7 @@ pkg_install() {
         cd "$tar_dir/$pkg_name"
 
         # Create all directories beforehand.
-        find etc -type d -exec mkdir -p {} +
+        find etc -type d -exec mkdir -p /{} +
 
         # Handle files in /etc/ based on a 3-way checksum check.
         find etc -type f | while read -r file; do
