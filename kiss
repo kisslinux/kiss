@@ -939,7 +939,7 @@ pkg_install() {
 
     # If the package is already installed (and this is an upgrade) make a
     # backup of the manifest file.
-    old_manifest=$(cat "$sys_db/$pkg_name/manifest" 2>/dev/null ||:)
+    cp -f "$sys_db/$pkg_name/manifest" "$mak_dir/m" 2>/dev/null ||:
 
     # This is repeated multiple times. Better to make it a function.
     pkg_rsync() {
@@ -987,35 +987,30 @@ pkg_install() {
     )
 
     # Remove any leftover files if this is an upgrade.
-    [ "$old_manifest" ] && {
-        printf '%s\n' "$old_manifest" |
-        "$grep" -vFxf "$sys_db/$pkg_name/manifest" - |
+    "$grep" -vFxf "$sys_db/$pkg_name/manifest" "$mak_dir/m" 2>/dev/null |
 
-        while read -r file; do
-            # Skip deleting some leftover files.
-            case $file in
-                /etc/*|*bin/rm|*bin/busybox|*bin/rsync) continue
-            esac
+    while read -r file; do
+        file=$KISS_ROOT/$file
 
-            file=$KISS_ROOT/$file
+        # Skip deleting some leftover files.
+        case $file in /etc/*) continue; esac
 
-            # Remove files.
-            if [ -f "$file" ] && [ ! -L "$file" ]; then
-                rm -f "$file"
+        # Remove files.
+        if [ -f "$file" ] && [ ! -L "$file" ]; then
+            rm -f "$file"
 
-            # Remove file symlinks.
-            elif [ -L "$file" ] && [ ! -d "$file" ]; then
-                unlink "$file" ||:
+        # Remove file symlinks.
+        elif [ -L "$file" ] && [ ! -d "$file" ]; then
+            unlink "$file" ||:
 
-            # Skip directory symlinks.
-            elif [ -L "$file" ] && [ -d "$file" ]; then :
+        # Skip directory symlinks.
+        elif [ -L "$file" ] && [ -d "$file" ]; then :
 
-            # Remove directories if empty.
-            elif [ -d "$file" ]; then
-                rmdir "$file" 2>/dev/null ||:
-            fi
-        done ||:
-    }
+        # Remove directories if empty.
+        elif [ -d "$file" ]; then
+            rmdir "$file" 2>/dev/null ||:
+        fi
+    done ||:
 
     # Install the package again to fix any non-leftover files being
     # removed above.
