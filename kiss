@@ -141,7 +141,7 @@ pkg_list() {
 
     # Loop over each package and print its name and version.
     for pkg; do
-        [ -d "$pkg" ] || { log "'$pkg' is not installed"; return 1; }
+        [ -d "$pkg" ] || { log "$pkg" "not installed"; return 1; }
 
         read -r version 2>/dev/null < "$pkg/version" || version=null
         printf '%s\n' "$pkg $version"
@@ -270,6 +270,30 @@ pkg_depends() {
         # add the package which depends on them.
         [ "$2" = explicit ] || deps="$deps $1 "
     }
+}
+
+pkg_order() {
+    # Order a list of packages based on dependence and
+    # take into account pre-built tarballs if this is
+    # to be called from 'kiss i'.
+    for pkg; do
+        case $pkg in
+            *.tar.gz) deps="$deps $pkg " ;;
+            *)        pkg_depends "$pkg" raw
+        esac
+    done
+
+    # Filter the list, only keeping explicit packages.
+    # The purpose of these two loops is to order the
+    # argument list based on dependence.
+    for pkg in $deps; do
+        ! contains "$*" "$pkg" || {
+            order="$order $pkg "
+            redro=" $pkg $redro"
+        }
+    done
+
+    deps=
 }
 
 pkg_strip() {
@@ -811,11 +835,7 @@ pkg_remove() {
     # is handled differently and configuration files are *not*
     # overwritten.
 
-    # The package is not installed, don't do anything.
-    pkg_list "$1" >/dev/null || {
-        log "$1" "Not installed"
-        return
-    }
+    pkg_list "$1" >/dev/null || return
 
     # Enable globbing.
     set +f
@@ -1139,7 +1159,10 @@ pkg_updates() {
     # Build all packages requiring an update.
     # See [1] at top of script.
     # shellcheck disable=2046,2086
-    pkg_build $outdated
+    {
+        pkg_order $outdated
+        pkg_build $order
+    }
 
     log "Updated all packages"
 }
@@ -1260,38 +1283,15 @@ args() {
         ;;
 
         i|install)
-            # Create a list of each package's dependencies.
-            for pkg; do
-                case $pkg in
-                    *.tar.gz) deps="$deps $pkg " ;;
-                    *)        pkg_depends "$pkg" install
-                esac
-            done
+            pkg_order "$@"
 
-            # Filter the list, only installing explicit packages.
-            # The purpose of these two loops is to order the
-            # argument list based on dependence.
-            for pkg in $deps; do
-                ! contains "$*" "$pkg" || pkg_install "$pkg"
-            done
+            for pkg in $order; do pkg_install "$pkg"; done
         ;;
 
         r|remove)
-            log "Removing packages"
+            pkg_order "$@"
 
-            # Create a list of each package's dependencies.
-            for pkg; do pkg_depends "$pkg" remove; done
-
-            # Reverse the list of dependencies filtering out anything
-            # not explicitly set for removal.
-            for pkg in $deps; do
-                contains "$*" "$pkg" && remove_pkgs="$pkg $remove_pkgs"
-            done
-
-            for pkg in $remove_pkgs; do
-                pkg_list "$pkg" >/dev/null ||
-                    die "$pkg" "Not installed"
-
+            for pkg in $redro; do
                 pkg_remove "$pkg" "${KISS_FORCE:-check}"
             done
         ;;
