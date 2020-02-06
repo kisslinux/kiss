@@ -1252,18 +1252,9 @@ args() {
 
         b|build)
             # If no arguments were passed, rebuild all packages.
-            [ "$1" ] || {
-                cd "$sys_db" || die "Failed to find package db"
+            [ "$1" ] || { cd "$sys_db" && { set +f; set -f -- *; } }
 
-                # Use a glob after 'cd' to generate a list of all installed
-                # packages based on directory names.
-                set +f; set -f -- *
-
-                # Undo the above 'cd' to ensure we stay in the same location.
-                cd - >/dev/null
-            }
-
-            pkg_build "$@"
+            pkg_build "${@:?No packages installed}"
         ;;
 
         c|checksum)
@@ -1332,13 +1323,13 @@ main() {
 
     # Prefer GNU grep if installed as it is much much faster than busybox's
     # implementation. Very much worth it if you value performance over
-    # POSIX correctness.
+    # POSIX correctness (grep quoted to avoid shellcheck false-positive).
     grep=$(command -v ggrep) || grep='grep'
 
     # Prefer libarchive tar or GNU tar if installed as they are  much
     # much faster than busybox's implementation. Very much worth it if
     # you value performance.
-    tar=$(command -v bsdtar || command -v gtar) || tar='tar'
+    tar=$(command -v bsdtar || command -v gtar) || tar=tar
 
     # Figure out which 'sudo' command to use based on the user's choice or
     # what is available on the system.
