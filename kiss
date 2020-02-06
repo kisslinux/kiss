@@ -773,20 +773,16 @@ pkg_conflicts() {
             sed -i "$(esc "$con" "/$cho_dir/$p_name$con_name")" \
                 "$tar_dir/$p_name/$pkg_db/$p_name/manifest"
         done
-    else
-        if "$grep" -Fxf "$cac_dir/$pid-m" -- "$@"; then
-            log "Package '$p_name' conflicts with another package" "" "!>"
-            log "Run 'KISS_CHOICE=1 kiss i $p_name' to add conflicts" "" "!>"
-            die "as alternatives."
-        fi
+
+    elif "$grep" -Fxf "$cac_dir/$pid-m" -- "$@"; then
+        log "Package '$p_name' conflicts with another package" "" "!>"
+        log "Run 'KISS_CHOICE=1 kiss i $p_name' to add conflicts" "" "!>"
+        die "as alternatives."
     fi
 }
 
 pkg_swap() {
     # Swap between package alternatives.
-
-    # Check to see if the package is installed. This
-    # will exit with an error if it is not.
     pkg_list "$1" >/dev/null
 
     alt=$(printf %s "$1$2" | sed 's|/|>|g')
@@ -829,7 +825,6 @@ pkg_remove() {
     # Remove a package and all of its files. The '/etc' directory
     # is handled differently and configuration files are *not*
     # overwritten.
-
     pkg_list "$1" >/dev/null || return
 
     # Enable globbing.
