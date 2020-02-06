@@ -1070,11 +1070,9 @@ pkg_updates() {
             # Display a tick if signing is enabled for this
             # repository.
             case $(git config merge.verifySignatures) in
-                true) signed='[[32;1msigned ✓[m]' ;;
-                *)    signed=  ;;
+                true) log "$PWD" "[[32;1msigned ✓[m] " ;;
+                *)    log "$PWD" " "  ;;
             esac
-
-            log "$PWD" "$signed "
 
             if [ -w "$PWD" ] && [ "$(id -u)" != 0 ]; then
                 git pull
@@ -1120,6 +1118,9 @@ pkg_updates() {
         }
     done
 
+    # Disable globbing.
+    set -f
+
     # If the package manager has an update, handle it first.
     contains "$outdated" kiss && {
         log "Detected package manager update"
@@ -1135,9 +1136,6 @@ pkg_updates() {
 
         exit 0
     }
-
-    # Disable globbing.
-    set -f
 
     # End here if no packages have an update.
     [ "$outdated" ] || {
