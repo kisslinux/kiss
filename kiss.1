@@ -63,6 +63,34 @@ export KISS_RM=usr/share/doc:usr/share/gtk-doc:usr/share/info:usr/share/polkit-1
 # Set it to '1' to force.
 export KISS_FORCE=0
 
+# Hook into kiss through a script.
+#
+# This can be used set custom CFLAGS per package, modify builds,
+# etc. This environment variable must point to a shellscript.
+#
+# The script will have the following environment variables set.
+#
+# $PKG:  Name of the current package .
+# $TYPE: The type of hook (valid: pre-build, post-build).
+# $DEST: The full path to where 'make install' will put the package.
+#
+# Simple example script:
+#
+# case $TYPE in
+#     pre-build)
+#         case $PKG in
+#            zlib) export CFLAGS="-Os -static" ;;
+#            curl) export CFLAGS="-O3" ;;
+#         esac
+#     ;;
+#
+#     post-build)
+#         # post-build code here.
+#     ;;
+# esac
+#
+export KISS_HOOK=/path/to/script
+
 # Root directory.
 #
 # Where installed packages will go. You won't ever need

@@ -601,7 +601,7 @@ pkg_build() {
 
         if [  "$KISS_HOOK" ]; then
            log "$pkg" "Running pre-build hook"
-           TYPE=pre PKG=$pkg DEST=$pkg_dir/$pkg . "$KISS_HOOK"
+           TYPE=pre-build PKG=$pkg DEST=$pkg_dir/$pkg . "$KISS_HOOK"
         fi
 
         # Call the build script, log the output to the terminal
@@ -626,7 +626,7 @@ pkg_build() {
 
         if [ "$KISS_HOOK" ]; then
            log "$pkg" "Running post-build hook"
-           TYPE=post PKG=$pkg DEST=$pkg_dir/$pkg . "$KISS_HOOK"
+           TYPE=post-build PKG=$pkg DEST=$pkg_dir/$pkg . "$KISS_HOOK"
         fi
 
         # Create the manifest file early and make it empty.
