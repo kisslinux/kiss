@@ -441,7 +441,7 @@ pkg_manifest() (
     # packages, checking for package conflicts and for general debugging.
     log "$1" "Generating manifest"
 
-    # This funcion runs as a sub-shell to avoid having to 'cd' back to the
+    # This function runs as a sub-shell to avoid having to 'cd' back to the
     # prior directory before being able to continue.
     cd "$pkg_dir/$1"
 
@@ -459,7 +459,7 @@ pkg_etcsums() (
     # /etc/ directory for use in "smart" handling of these files.
     log "$1" "Generating etcsums"
 
-    # This funcion runs as a sub-shell to avoid having to 'cd' back to the
+    # This function runs as a sub-shell to avoid having to 'cd' back to the
     # prior directory before being able to continue.
     cd "$pkg_dir/$1/etc" 2>/dev/null || return 0; cd ..
 
@@ -1009,7 +1009,7 @@ pkg_install() {
 
     # Install the package again to fix any non-leftover files being
     # removed above.
-    { pkg_rsync --; pkg_rsync --; } ||:
+    [ -s "$mak_dir/m" ] && { pkg_rsync -u; pkg_rsync -u; } ||:
 
     # Reset 'trap' to its original value. Installation is done so
     # we no longer need to block 'Ctrl+C'.
