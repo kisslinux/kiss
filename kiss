@@ -598,6 +598,11 @@ pkg_build() {
 
         log "$pkg" "Starting build"
 
+        if [ -x "$KISS_HOOK" ]; then
+           log "$pkg" "Running pre-build hook"
+           "$KISS_HOOK" pre "$pkg" "$pkg_dir/$pkg"
+        fi
+
         # Call the build script, log the output to the terminal
         # and to a file. There's no PIPEFAIL in POSIX shelll so
         # we must resort to tricks like killing the script ourselves.
@@ -617,6 +622,11 @@ pkg_build() {
         cp -LRf "$repo_dir" "$pkg_dir/$pkg/$pkg_db/"
 
         log "$pkg" "Successfully built package"
+
+        if [ -x "$KISS_HOOK" ]; then
+           log "$pkg" "Running post-build hook"
+           "$KISS_HOOK" post "$pkg" "$pkg_dir/$pkg"
+        fi
 
         # Create the manifest file early and make it empty.
         # This ensure that the manifest is added to the manifest...
