@@ -84,6 +84,34 @@ export KISS_RM=usr/share/doc:usr/share/gtk-doc:usr/share/info:usr/share/polkit-1
 # Set it to '1' to force.
 export KISS_FORCE=0
 
+# Hook into kiss through a script.
+#
+# This can be used set custom CFLAGS per package, modify builds,
+# etc. This environment variable must point to a shellscript.
+#
+# The script will have the following environment variables set.
+#
+# $PKG:  Name of the current package .
+# $TYPE: The type of hook (valid: pre-build, post-build).
+# $DEST: The full path to where 'make install' will put the package.
+#
+# Simple example script:
+#
+# case $TYPE in
+#     pre-build)
+#         case $PKG in
+#            zlib) export CFLAGS="-Os -static" ;;
+#            curl) export CFLAGS="-O3" ;;
+#         esac
+#     ;;
+#
+#     post-build)
+#         # post-build code here.
+#     ;;
+# esac
+#
+export KISS_HOOK=/path/to/script
+
 # Root directory.
 #
 # Where installed packages will go. You won't ever need
@@ -92,11 +120,16 @@ export KISS_FORCE=0
 # This can be used to have the package manager run in a "fake root".
 export KISS_ROOT=/
 
-# Keep build, package and extraction cache directories for debugging
-# purposes.
+# Keep build logs around for successful builds and not just failing
+# ones. Helpful when debugging.
 #
 # Set it to '1' to enable.
 export KISS_DEBUG=0
+
+# Force the usage of a different 'sudo' tool.
+#
+# Values: 'su', 'sudo', 'doas'
+export KISS_SU=
 
 # Use a reproducible cache naming scheme.
 #
@@ -143,12 +176,16 @@ export CXXFLAGS=
 export LDFLAGS=
 
 # Make flags.
-# Good value: MAKEFLAGS='-j 4' (number of cores).
+# Good value: MAKEFLAGS='-j4' (number of cores).
 export MAKEFLAGS=
 
+# Ninja (Samurai) flags.
+# Good value: SAMUFLAGS='-j4' (number of cores).
+export SAMUFLAGS=
+
 # Cmake Generator.
-# Good value (Ninja):     export CMAKE_GENERATOR=Ninja
-# Good value (Makefiles): export CMAKE_GENERATOR=
+# Good value (Ninja):     export CMAKE_GENERATOR='Ninja'
+# Good value (Makefiles): export CMAKE_GENERATOR='Unix Makefiles'
 export CMAKE_GENERATOR=
 ```
 
