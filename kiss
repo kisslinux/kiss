@@ -1075,7 +1075,8 @@ pkg_updates() {
             esac
 
             if [ -w "$PWD" ] && [ "$(id -u)" != 0 ]; then
-                git pull
+                git fetch
+                git merge
 
             else
                 log "$PWD" "Need root to update"
@@ -1092,7 +1093,8 @@ pkg_updates() {
                     [ "$user" = root ] ||
                         log "Dropping permissions to $user for pull"
 
-                    as_root git pull
+                    as_root git fetch
+                    as_root git merge
                 )
             fi
         }
@@ -1278,7 +1280,7 @@ args() {
         l|list)    pkg_list "$@" ;;
         u|update)  pkg_updates ;;
         s|search)  for pkg; do pkg_find "$pkg" all; done ;;
-        v|version) log kiss 1.3.0 ;;
+        v|version) log kiss 1.3.1 ;;
 
         h|help|-h|--help|'')
             log 'kiss [a|b|c|i|l|r|s|u|v] [pkg] [pkg] [pkg]'
