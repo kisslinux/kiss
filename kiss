@@ -616,7 +616,7 @@ pkg_build() {
 
         # Delete the log file if the build succeeded to prevent
         # the directory from filling very quickly with useless logs.
-        [ "$KISS_DEBUG" = 1 ] || rm -f "$log_dir/$pkg-$time-$pid"
+        [ "$KISS_KEEPLOG" = 1 ] || rm -f "$log_dir/$pkg-$time-$pid"
 
         # Copy the repository files to the package directory.
         # This acts as the database entry.
@@ -1164,6 +1164,7 @@ pkg_updates() {
 pkg_clean() {
     # Clean up on exit or error. This removes everything related
     # to the build.
+    [ "$KISS_DEBUG" != 1 ] || return
 
     # Block 'Ctrl+C' while cache is being cleaned.
     trap '' INT
