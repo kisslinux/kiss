@@ -540,8 +540,7 @@ pkg_build() {
                 log "$pkg" "Found pre-built binary, installing"
                 (KISS_FORCE=1 args i "$bin_dir/$pkg#$version-$release.tar.gz")
 
-                # Remove the now installed package from the build
-                # list. No better way than using 'sed' in POSIX 'sh'.
+                # Remove the now installed package from the build list.
                 # See [1] at top of script.
                 # shellcheck disable=2046,2086
                 set -- $(pop "$pkg" "$@")
