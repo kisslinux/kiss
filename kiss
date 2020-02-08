@@ -92,6 +92,8 @@ pkg_lint() {
 
     read -r _ release < version
     [ "$release" ] || die "Release field not found in version file"
+
+    [ "$2" ] || [ -f checksums ] || die "$pkg" "Checksums are missing"
 }
 
 pkg_find() {
@@ -548,39 +550,9 @@ pkg_build() {
     done
 
     for pkg; do pkg_lint "$pkg"; done
-    for pkg; do
-        # Ensure that checksums exist prior to building the package.
-        [ -f "$(pkg_find "$pkg")/checksums" ] || {
-            log "$pkg" "Checksums are missing"
-
-            # Instead of dying above, log it to the terminal. Also define a
-            # variable so we *can* die after all checksum files have been
-            # checked.
-            no_sums="$no_sums$pkg "
-        }
-    done
-
-    # Die here as packages without checksums were found above.
-    [ "$no_sums" ] && die "Checksums missing, run 'kiss checksum ${no_sums% }'"
-
     for pkg; do pkg_sources "$pkg"; done
 
-    # Verify all package checksums. This is achieved by generating
-    # a new set of checksums and then comparing those with the old
-    # set.
-    for pkg; do
-        pkg_checksums "$pkg" | cmp -s - "$(pkg_find "$pkg")/checksums" || {
-            log "$pkg" "Checksum mismatch"
-
-            # Instead of dying above, log it to the terminal. Also define a
-            # variable so we *can* die after all checksum files have been
-            # checked.
-            mismatch="$mismatch$pkg "
-        }
-    done
-
-    # Die here as packages with differing checksums were found above.
-    [ "$mismatch" ] && die "Checksum mismatch with: ${mismatch% }"
+    pkg_verify "$@"
 
     # Finally build and create tarballs for all passed packages and
     # dependencies.
@@ -599,7 +571,7 @@ pkg_build() {
 
         log "$pkg" "Starting build"
 
-        if [  "$KISS_HOOK" ]; then
+        if [ "$KISS_HOOK" ]; then
            log "$pkg" "Running pre-build hook"
            TYPE=pre-build PKG=$pkg DEST=$pkg_dir/$pkg . "$KISS_HOOK"
         fi
@@ -705,6 +677,24 @@ pkg_checksums() {
         (cd "$src_path" && sha256sum "${src##*/}") ||
             die "$1" "Failed to generate checksums"
     done < "$repo_dir/sources"
+}
+
+pkg_verify() {
+    # Verify all package checksums. This is achieved by generating
+    # a new set of checksums and then comparing those with the old
+    # set.
+    for pkg; do
+        pkg_checksums "$pkg" | cmp -s - "$(pkg_find "$pkg")/checksums" || {
+            log "$pkg" "Checksum mismatch"
+
+            # Instead of dying above, log it to the terminal. Also define a
+            # variable so we *can* die after all checksum files have been
+            # checked.
+            mismatch="$mismatch$pkg "
+        }
+    done
+
+    [ -z "$mismatch" ] || die "Checksum mismatch with: ${mismatch% }"
 }
 
 pkg_conflicts() {
@@ -1255,7 +1245,7 @@ args() {
         ;;
 
         c|checksum)
-            for pkg; do pkg_lint    "$pkg"; done
+            for pkg; do pkg_lint    "$pkg" c; done
             for pkg; do pkg_sources "$pkg" c; done
             for pkg; do
                 pkg_checksums "$pkg" > "$(pkg_find "$pkg")/checksums"
