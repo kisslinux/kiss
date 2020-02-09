@@ -1147,7 +1147,8 @@ pkg_updates() {
 
     # Show a diff of each new change to the repositories.
     # This spawns the user's set PAGER with a fallback to less.
-    [ "$KISS_AUDIT" ] && "${PAGER:-less}" "$mak_dir/log"
+    [ -s "$mak_dir/log" ] && [ "$KISS_AUDIT" = 1 ] &&
+        "${PAGER:-less}" "$mak_dir/log"
 
     # Tell 'pkg_build' to always prompt before build.
     pkg_update=1
