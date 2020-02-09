@@ -84,6 +84,14 @@ export KISS_RM=usr/share/doc:usr/share/gtk-doc:usr/share/info:usr/share/polkit-1
 # Set it to '1' to force.
 export KISS_FORCE=0
 
+# Show diff on system updates.
+#
+# This will spawn '$PAGER' (fallback to 'less') with a diff
+# of each changed file in the system update.
+#
+# Set it to '1' to enable.
+export KISS_AUDIT=0
+
 # Hook into kiss through a script.
 #
 # This can be used set custom CFLAGS per package, modify builds,
