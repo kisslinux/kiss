@@ -1147,11 +1147,16 @@ pkg_updates() {
 
     # Show a diff of each new change to the repositories.
     # This spawns the user's set PAGER with a fallback to less.
+    #
+    # Disable this warning as the behavior (C may run when A is true)
+    # is intentional and fine. It is to prevent pager error from
+    # causing the package manager to abort.
+    # shellcheck disable=2015
     [ -s "$log_file" ] && {
         log "Saved update log to $log_file"
 
         [ "$KISS_AUDIT" ] && "${PAGER:-less}" "$log_file"
-    }
+    } ||:
 
     # Tell 'pkg_build' to always prompt before build.
     pkg_update=1
