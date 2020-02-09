@@ -1090,8 +1090,11 @@ pkg_updates() {
                         log "Dropping permissions to $user for pull"
 
                     case $su in
-                        su) as_root       "$pull" ;;
-                        *)  as_root sh -c "$pull" ;;
+                        su) as_root "$pull" ;;
+
+                        *)  as_root git fetch
+                            as_root git diff > "$mak_dir/log"
+                            as_root git merge
                     esac
                 )
             fi
