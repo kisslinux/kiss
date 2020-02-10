@@ -188,17 +188,14 @@ export CMAKE_GENERATOR=
 .
 .nf
 
-When a package with conflicts is installed with KISS_CHOICE=1,
-the conflicting files will be added as "choices" to the
-alternatives system.
+When a package with conflicts is installed the conflicting 
+files will be added as "choices" to the alternatives system.
 
 Afterwards, running kiss a/kiss alternatives will list all of
 the choices you are able to make. Each line of output with this
 command is also usable directly as input.
 
-NOTE: If a package has fewer than 10 conflicting files, the
-conflicting files will automatically be added to the alternatives
-system.
+NOTE: To disable this functionality, set 'KISS_CHOICE=0'.
 
 Example usage:
 
@@ -222,18 +219,6 @@ ncurses /usr/bin/reset
 Example usage (complex):
 
 -> kiss i sbase
-# More lines...
-/var/db/kiss/installed/util-linux/manifest:/usr/bin/renice
-/var/db/kiss/installed/util-linux/manifest:/usr/bin/logger
-/var/db/kiss/installed/util-linux/manifest:/usr/bin/flock
-/var/db/kiss/installed/util-linux/manifest:/usr/bin/cal
-!> Package 'sbase' conflicts with another package
-!> Run 'KISS_CHOICE=1 kiss i sbase' to add conflicts
-!> as alternatives.
-
-# There were more than 10 conflicts so the alternatives system
-# must be manually enabled for this package.
--> KISS_CHOICE=1 kiss i sbase
 # More lines...
 -> sbase Found conflict (/usr/bin/renice), adding choice
 -> sbase Found conflict (/usr/bin/logger), adding choice
