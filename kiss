@@ -288,6 +288,8 @@ pkg_order() {
     # Order a list of packages based on dependence and
     # take into account pre-built tarballs if this is
     # to be called from 'kiss i'.
+    order=; redro=; deps=
+
     for pkg; do
         case $pkg in
             *.tar.gz) deps="$deps $pkg " ;;
@@ -720,14 +722,16 @@ pkg_conflicts() {
 
     [ -s "$cac_dir/$pid-m" ] || return 0
 
-    # Count the total conflicts to determine when to
-    # automatically enable the alternatives feature.
-    con_total=$("$grep" -Fxf "$cac_dir/$pid-m" -- "$@" | wc -l)
+    # Enable alternatives automatically if it is safe to do so.
+    # This checks to see that the package that is about to be installed
+    # doesn't overwrite anything it shouldn't in '/var/db/kiss/installed'.
+    "$grep" -Fxf "$cac_dir/$pid-m" -- "$@" | 
+    "$grep" -q ":/var/db/kiss/installed/" || choice_auto=1 
 
     # Use 'grep' to list matching lines between the to
     # be installed package's manifest and the above filtered
     # list.
-    if [ "$KISS_CHOICE" = 1 ] || [ "$con_total" -le 10 ]; then
+    if [ "$KISS_CHOICE" != 0 ] && [ "$choice_auto" = 1 ]; then
         "$grep" -Fxf "$cac_dir/$pid-m" -- "$@" |
 
         # This is a novel way of offering an "alternatives" system.
