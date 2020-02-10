@@ -978,7 +978,7 @@ pkg_install() {
                 ${sum_sys}${sum_old}*) new= ;;
 
                 # All other cases.
-                *) log "$pkg_name" "WARN: saving $file as $file.new"
+                *) log "$pkg_name" "WARN: saving /$file as /$file.new"
                    new=.new
             esac
 
