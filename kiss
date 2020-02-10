@@ -951,7 +951,9 @@ pkg_install() {
         cd "$tar_dir/$pkg_name"
 
         # Create all directories beforehand.
-        find etc -type d -exec mkdir -p /{} +
+        find etc -type d | while read -r dir; do
+            mkdir -p "$KISS_ROOT/$dir"
+        done
 
         # Handle files in /etc/ based on a 3-way checksum check.
         find etc -type f | while read -r file; do
@@ -1287,7 +1289,7 @@ args() {
         l|list)    pkg_list "$@" ;;
         u|update)  pkg_updates ;;
         s|search)  for pkg; do pkg_find "$pkg" all; done ;;
-        v|version) log kiss 1.4.1 ;;
+        v|version) log kiss 1.4.2 ;;
 
         h|help|-h|--help|'')
             log 'kiss [a|b|c|i|l|r|s|u|v] [pkg] [pkg] [pkg]'
