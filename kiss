@@ -578,12 +578,12 @@ pkg_build() {
         # Call the build script, log the output to the terminal
         # and to a file. There's no PIPEFAIL in POSIX shelll so
         # we must resort to tricks like killing the script ourselves.
-        { "$repo_dir/build" "$pkg_dir/$pkg" || {
+        { "$repo_dir/build" "$pkg_dir/$pkg" 2>&1 || {
             log "$pkg" "Build failed"
             log "$pkg" "Log stored to $log_dir/$pkg-$time-$pid"
             pkg_clean
             kill 0
-        } } 2>&1 | tee "$log_dir/$pkg-$time-$pid" > /dev/tty
+        } } | tee "$log_dir/$pkg-$time-$pid"
 
         # Delete the log file if the build succeeded to prevent
         # the directory from filling very quickly with useless logs.
@@ -1289,7 +1289,7 @@ args() {
         l|list)    pkg_list "$@" ;;
         u|update)  pkg_updates ;;
         s|search)  for pkg; do pkg_find "$pkg" all; done ;;
-        v|version) log kiss 1.4.2 ;;
+        v|version) log kiss 1.4.3 ;;
 
         h|help|-h|--help|'')
             log 'kiss [a|b|c|i|l|r|s|u|v] [pkg] [pkg] [pkg]'
