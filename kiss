@@ -52,7 +52,7 @@ prompt() {
 as_root() {
     # Simple function to run a command as root using either 'sudo',
     # 'doas' or 'su'. Hurrah for choice.
-    log "Using '${su:-su}'"
+    [ "$uid" = 0 ] || log "Using '${su:-su}'"
 
     case $su in
         *sudo) sudo -Eu "${user:-root}" -- "$@" ;;
@@ -1070,13 +1070,13 @@ pkg_updates() {
                 *)    log "$PWD" " "  ;;
             esac
 
-            if [ -w "$PWD" ] && [ "$(id -u)" != 0 ]; then
+            if [ -w "$PWD" ] && [ "$uid" != 0 ]; then
                 git fetch
                 git diff >> "$mak_dir/log"
                 git merge
 
             else
-                log "$PWD" "Need root to update"
+                [ "$uid" = 0 ] || log "$PWD" "Need root to update"
 
                 # Find out the owner of the repository and spawn
                 # git as this user below.
@@ -1212,7 +1212,7 @@ args() {
         a|alternatives)
             # Rerun the script with 'su' if the user isn't root.
             # Cheeky but 'su' can't be used on shell functions themselves.
-            [ -z "$1" ] || [ "$(id -u)" = 0 ] || {
+            [ -z "$1" ] || [ "$uid" = 0 ] || {
                 as_root kiss "$action" "$@"
                 return
             }
@@ -1223,7 +1223,7 @@ args() {
 
             # Rerun the script with 'su' if the user isn't root.
             # Cheeky but 'su' can't be used on shell functions themselves.
-            [ "$(id -u)" = 0 ] || {
+            [ "$uid" = 0 ] || {
                 KISS_FORCE="$KISS_FORCE" as_root kiss "$action" "$@"
                 return
             }
@@ -1289,7 +1289,7 @@ args() {
         l|list)    pkg_list "$@" ;;
         u|update)  pkg_updates ;;
         s|search)  for pkg; do pkg_find "$pkg" all; done ;;
-        v|version) log kiss 1.4.3 ;;
+        v|version) log kiss 1.4.4 ;;
 
         h|help|-h|--help|'')
             log 'kiss [a|b|c|i|l|r|s|u|v] [pkg] [pkg] [pkg]'
@@ -1343,6 +1343,10 @@ main() {
     # Store the date and time of script invocation to be used as the name
     # of the log files the package manager creates uring builds.
     time=$(date '+%Y-%m-%d-%H:%M')
+
+    # Make note of the user's current ID to do root checks later on.
+    # This is used enough to warrant a place here.
+    uid=$(id -u)
 
     # This allows for automatic setup of a KISS chroot and will
     # do nothing on a normal system.
