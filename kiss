@@ -1255,6 +1255,8 @@ args() {
             else
                 set +f
 
+                log Alternatives:
+
                 # Go over each alternative and format the file
                 # name for listing. (pkg_name>usr>bin>ls)
                 for pkg in "$sys_db/../choices"/*; do
@@ -1262,6 +1264,9 @@ args() {
                 done |
 
                 sed 's|>| /|; s|>|/|g; /\*/d'
+
+                log note "Think about what you are doing for"
+                log note "this feature requires thought"
             fi
         ;;
 
