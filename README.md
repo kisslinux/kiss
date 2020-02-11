@@ -11,6 +11,26 @@ Tiny and straightforward package manager for KISS written in POSIX `sh`.
 - Binary stripping.
 - `shellcheck` compliant.
 
+
+## `kiss` Guidestones
+
+```
+* The package manager must not exceed 1000 lines of code.
+  This number excludes blank lines and comments which make
+  up around 50% of the program's current size.
+
+* The ends do not justify the means. A feature, fix or what
+  have you will not be implemented if it requires gross
+  hacks to accomplish.
+
+* The user is smart, the package manager is dumb. The package 
+  manager is written under the assumption that the user has 
+  some kind of functioning brain in their skull.
+
+* There are some things which can't be, shouldn't be and won't
+  be automated. Firstly, for my sanity and secondly, for yours.
+```
+
 ## Usage
 
 ```sh
