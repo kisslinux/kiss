@@ -188,6 +188,8 @@ pkg_sources() {
             (
                 repo_src=${src##git+}
 
+                log "$1" "Cloning ${repo_src%#*}"
+
                 [ "${src##*#*}" ] && shallow=--depth=1
 
                 cd "$mak_dir/$1/$dest" &&
@@ -197,6 +199,8 @@ pkg_sources() {
 
         # Remote source.
         elif [ -z "${src##*://*}" ]; then
+            log "$1" "Downloading $src"
+
             curl "$src" -fLo "${src##*/}" || {
                 rm -f "${src##*/}"
                 die "$1" "Failed to download $src"
