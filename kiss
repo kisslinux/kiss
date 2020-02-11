@@ -769,8 +769,14 @@ pkg_conflicts() {
             # Move the conflicting file to the choices directory
             # and name it according to the format above.
             mv -f "$tar_dir/$p_name/$con" \
-                  "$tar_dir/$p_name/$cho_dir/$p_name$con_name" 2>/dev/null ||
-                  die "File must be in ${con%/*} and not a symlink to it"
+                  "$tar_dir/$p_name/$cho_dir/$p_name$con_name" 2>/dev/null || {
+                log "File must be in ${con%/*} and not a symlink to it"
+                log "This usually occurs when a binary is installed to"
+                log "/sbin instead of /usr/bin (example)"
+                log "Before this package can be used as an alternative,"
+                log "this must be fixed in $p_name. Contact the maintainer"
+                die "by checking 'git log' or by running 'kiss-maintainer'"
+            }
 
             # Rewrite the package's manifest to update its location
             # to its new spot (and name) in the choices directory.
