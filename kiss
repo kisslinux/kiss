@@ -970,7 +970,7 @@ pkg_install() {
         done
 
         # Handle files in /etc/ based on a 3-way checksum check.
-        find etc -type f | while read -r file; do
+        find etc ! -type d | while read -r file; do
             {
                 sum_new=$(sha256sum "$file")
                 sum_sys=$(cd "$KISS_ROOT/"; sha256sum "$file")
@@ -1308,7 +1308,7 @@ args() {
         l|list)    pkg_list "$@" ;;
         u|update)  pkg_updates ;;
         s|search)  for pkg; do pkg_find "$pkg" all; done ;;
-        v|version) log kiss 1.5.4 ;;
+        v|version) log kiss 1.5.5 ;;
 
         h|help|-h|--help|'')
             log 'kiss [a|b|c|i|l|r|s|u|v] [pkg] [pkg] [pkg]'
