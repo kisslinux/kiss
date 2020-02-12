@@ -824,7 +824,7 @@ pkg_swap() {
 
         # Convert the current owner to an alternative and rewrite
         # its manifest file to reflect this.
-        cp  -f "$2" "$pkg_owns>${alt#*>}"
+        cp  -Pf "$2" "$pkg_owns>${alt#*>}"
         sed -i "$(esc "$2" "$PWD/$pkg_owns>${alt#*>}")" \
             "../installed/$pkg_owns/manifest"
     fi
@@ -1308,7 +1308,7 @@ args() {
         l|list)    pkg_list "$@" ;;
         u|update)  pkg_updates ;;
         s|search)  for pkg; do pkg_find "$pkg" all; done ;;
-        v|version) log kiss 1.5.3 ;;
+        v|version) log kiss 1.5.4 ;;
 
         h|help|-h|--help|'')
             log 'kiss [a|b|c|i|l|r|s|u|v] [pkg] [pkg] [pkg]'
