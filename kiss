@@ -173,8 +173,11 @@ pkg_sources() {
     repo_dir=$(pkg_find "$1")
 
     while read -r src dest || [ "$src" ]; do
+        # Comment.
+        if [ -z "${src##\#*}" ]; then :
+
         # Remote source (cached).
-        if [ -f "${src##*/}" ]; then
+        elif [ -f "${src##*/}" ]; then
             log "$1" "Found cached source '${src##*/}'"
 
         # Remote git repository.
@@ -235,10 +238,8 @@ pkg_extract() {
                     die "Commit hash ${src##*#} doesn't exist"
             ;;
 
-            # Git repository.
-            git+*)
-                continue
-            ;;
+            # Git repository or comment.
+            git+*|\#*) continue ;;
 
             # Only 'tar' archives are currently supported for extraction.
             # Any other file-types are simply copied to '$mak_dir' which
