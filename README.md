@@ -14,7 +14,7 @@ Tiny and straightforward package manager for KISS written in POSIX `sh`.
 
 ## `kiss` Guidestones
 
-Read: https://getkiss.org/guidestones.txt
+Read: https://k1ss.org/guidestones.txt
 
 ## Usage
 
@@ -46,7 +46,7 @@ Read: https://getkiss.org/guidestones.txt
 
 ## Package format
 
-See: <https://getkiss.org/pages/package-system/>
+See: <https://k1ss.org/pages/package-system/>
 
 
 ## Customization
