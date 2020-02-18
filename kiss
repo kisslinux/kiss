@@ -39,26 +39,14 @@ contains() {
     case " $1 " in *" $2 "*) return 0; esac; return 1
 }
 
-yn() {
-    log "${1:-Continue?} (y/n)"
+prompt() {
+    # Ask the user for some input.
+    log "Continue?: Press Enter to continue or Ctrl+C to abort here"
 
-    # Enable raw input to allow for a single byte to be read from
-    # stdin without needing to wait for the user to press Return.
-    stty -icanon -echo
-
-    # Read a single byte from stdin using 'dd'. POSIX 'read' has
-    # no support for single/'N' byte based input from the user.
-    answer=$(dd ibs=1 count=1 2>/dev/null)
-
-    # Disable raw input, leaving the terminal how we *should*
-    # have found it.
-    stty icanon echo
-
-    # Handle the answer here directly, enabling this function's
-    # return status to be used in place of checking for '[yY]'
-    # throughout this program. Also call the function again if
-    # invalid input is given.
-    case $answer in y) ;; n) return 1 ;; *) yn "$1"; esac
+    # POSIX 'read' has none of the "nice" options like '-n', '-p'
+    # etc etc. This is the most basic usage of 'read'.
+    # '_' is used as 'dash' errors when no variable is given to 'read'.
+    read -r _
 }
 
 as_root() {
@@ -538,7 +526,7 @@ pkg_build() {
     log "Building: $*"
 
     # Only ask for confirmation if more than one package needs to be built.
-    [ $# -gt 1 ] || [ "$pkg_update" ] && yn
+    [ $# -gt 1 ] || [ "$pkg_update" ] && prompt
 
     log "Checking to see if any dependencies have already been built"
     log "Installing any pre-built dependencies"
@@ -571,13 +559,6 @@ pkg_build() {
     for pkg; do pkg_sources "$pkg"; done
 
     pkg_verify "$@"
-
-    # Allow user to inspect package files prior to build.
-    [ "$KISS_AUDIT" != 1 ] ||
-        for pkg; do
-            yn "View build file for $pkg?" &&
-                "${EDITOR:-vi}" "$(pkg_find "$pkg")/build"
-        done
 
     # Finally build and create tarballs for all passed packages and
     # dependencies.
@@ -662,9 +643,13 @@ pkg_build() {
     set -- $explicit
 
     # Only ask for confirmation if more than one package needs to be installed.
-    [ $# -gt 1 ] && yn "Install built packages? [$*]" && {
-        args i "$@"
-        return
+    [ $# -gt 1 ] && {
+        log "Install built packages? [$*]"
+
+        prompt && {
+            args i "$@"
+            return
+        }
     }
 
     log "Run 'kiss i $*' to install the package(s)"
@@ -1161,7 +1146,7 @@ pkg_updates() {
         log "Detected package manager update"
         log "The package manager will be updated first"
 
-        yn
+        prompt
 
         pkg_build kiss
         args i kiss
