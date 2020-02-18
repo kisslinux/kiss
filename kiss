@@ -660,8 +660,12 @@ pkg_checksums() {
     repo_dir=$(pkg_find "$1")
 
     while read -r src _ || [ "$src" ]; do
+        # Comment.
+        if [ -z "${src##\#*}" ]; then
+            continue
+
         # File is local to the package.
-        if [ -f "$repo_dir/$src" ]; then
+        elif [ -f "$repo_dir/$src" ]; then
             src_path=$repo_dir/${src%/*}
 
         # File is remote and was downloaded.
