@@ -1125,7 +1125,7 @@ pkg_updates() {
                         su) as_root "$pull" ;;
 
                         *)  "$su" git fetch
-                            "$su" git diff > "$mak_dir/log"
+                            "$su" git diff >> "$mak_dir/log"
                             "$su" git merge
                     esac
                 )
