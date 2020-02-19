@@ -1323,8 +1323,8 @@ args() {
 
                 sed 's|>| /|; s|>|/|g; /\*/d'
 
-                log note "Think about what you are doing for"
-                log note "this feature requires thought"
+                log note "Think about what you are doing"
+                log note "for this feature requires thought"
             fi
         ;;
 
