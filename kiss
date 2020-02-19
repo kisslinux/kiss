@@ -431,7 +431,7 @@ pkg_fixdeps() {
     # Remove duplicate entries from the new depends file.
     # This removes duplicate lines looking *only* at the
     # first column.
-    sort -uk1,1 -o depends depends -
+    sort -uk1,1 -o depends depends - 2>/dev/null ||:
 
     # Display a 'diff' of the new dependencies against
     # the old ones. '-N' treats non-existent files as blank.
