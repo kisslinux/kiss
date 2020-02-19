@@ -70,17 +70,6 @@ See: <https://k1ss.org/pages/package-system/>
 # add your own repositories or remove the default ones.
 export KISS_PATH=/var/db/kiss/repo/core:/var/db/kiss/repo/extra:/var/db/kiss/repo/xorg
 
-# Delete junk from packages.
-#
-# This works exactly like '$PATH' (Colon separated).
-#
-# A list of paths and files to remove from built packages.
-#
-# Set this to a blank value to keep all of the below files
-# and directories around. This can be customized to keep or
-# remove whatever you like.
-export KISS_RM=usr/share/doc:usr/share/gtk-doc:usr/share/info:usr/share/polkit-1:usr/share/gettext:usr/share/locale:etc/bash_completion.d:usr/share/zsh
-
 # Force package installation or removal.
 #
 # This can be used to bypass the dependency checks on installation
@@ -119,7 +108,10 @@ export KISS_AUDIT=0
 #     ;;
 #
 #     post-build)
-#         # post-build code here.
+#         : "${DEST:?DEST is unset}"
+#
+#         rm -rf "$DEST/usr/share/doc"
+#         rm -rf "$DEST/usr/share/gettext"
 #     ;;
 # esac
 #

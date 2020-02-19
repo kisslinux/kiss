@@ -441,43 +441,6 @@ pkg_fixdeps() {
     rm -f depends-copy
 }
 
-pkg_junk() (
-    # Optionally remove "junk" files from packages. This includes 'info'
-    # files, 'man' pages, gettext files, etc. This is configurable by the
-    # user.
-    #
-    # This function runs as a sub-shell to avoid having to 'cd' back to the
-    # prior directory before being able to continue.
-    cd "$pkg_dir/$1"
-
-    # Default list of directories and their contents to be removed from
-    # built packages. This default assumes a prefix of '/usr' though the
-    # user can further configure it to search whatever paths they desire.
-    #
-    # TODO: This could be nicer as could the interface to it. Something
-    #       which allows for the addition/subtraction from the list
-    #       would be desirable.
-    rm=usr/share/doc:usr/share/gtk-doc:usr/share/info:usr/share/polkit-1
-    rm=$rm:usr/share/gettext:usr/share/locale:usr/share/bash-completion
-    rm=$rm:etc/bash_completion.d:usr/share/applications
-    rm=$rm:usr/share/zsh/site-functions:usr/share/zsh/vendor-completions
-
-    # Split the environment variable on ':' and turn it into an argument
-    # list. This works exactly like '$KISS_PATH'.
-    #
-    # Files which always conflict (such as usr/lib/charset.alias) and are
-    # uneeded should be removed regardless.
-    #
-    # shellcheck disable=2046,2086
-    { IFS=:; set -- ${KISS_RM:-$rm} usr/lib/charset.alias; IFS=$old_ifs; }
-
-    # Loop over each junk entry and delete it if it exists.
-    for junk; do
-        [ -e "./$junk" ] && rm -rf "./$junk" &&
-            log "${PWD##*/}" "Removed $junk"
-    done ||:
-)
-
 pkg_manifest() (
     # Generate the package's manifest file. This is a list of each file
     # and directory inside the package. The file is used when uninstalling
@@ -651,7 +614,6 @@ pkg_build() {
 
         pkg_strip    "$pkg"
         pkg_fixdeps  "$pkg"
-        pkg_junk     "$pkg"
         pkg_manifest "$pkg"
         pkg_etcsums  "$pkg"
         pkg_tar      "$pkg"
