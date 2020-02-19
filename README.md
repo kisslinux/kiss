@@ -204,7 +204,7 @@ export CMAKE_GENERATOR=
 
 ## Alternatives system
 
-When a package with conflicts is installed the conflicting 
+When a package with conflicts is installed the conflicting
 files will be added as "choices" to the alternatives system.
 
 Afterwards, running kiss a/kiss alternatives will list all of
@@ -276,8 +276,9 @@ busybox /usr/bin/yes
 
 ## Extending the package manager
 
-The `contrib` directory contains a set of simple scripts to extend the package manager. These scripts can be installed through the `kiss-utils` package.
+The `contrib` directory contains a set of simple scripts to extend the package manager. These are just simple and stupid automations which parse the package format.
 
+- `kiss-chbuild`: Spawn a throwaway chroot.
 - `kiss-chroot`: Enter a KISS `chroot`.
 - `kiss-depends-finder`: Find missing dependencies by parsing 'ldd'.
 - `kiss-depends`: Display a package's dependencies.
@@ -285,7 +286,11 @@ The `contrib` directory contains a set of simple scripts to extend the package m
 - `kiss-manifest-tree`: Display all files as tree owned by a package.
 - `kiss-manifest`: Display all files owned by a package.
 - `kiss-maintainer`: Display the package maintainers.
+- `kiss-new`: Create a boilerplate package.
 - `kiss-orphans`: List orphaned packages.
 - `kiss-owns`: Check which package owns a file.
+- `kiss-repodepends`: Display a package's original dependencies.
+- `kiss-reset`: Reset the system to the base.
 - `kiss-revdepends`: Display packages which depend on package.
 - `kiss-size`: Show the size on disk for an installed package.
+
