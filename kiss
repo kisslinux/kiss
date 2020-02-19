@@ -2,7 +2,7 @@
 # shellcheck source=/dev/null
 #
 # This is a simple package manager written in POSIX 'sh' for use
-# in KISS Linux (https://getkiss.org).
+# in KISS Linux (https://k1ss.org).
 #
 # This script runs with '-ef' meaning:
 # '-e': Abort on any non-zero exit code.
