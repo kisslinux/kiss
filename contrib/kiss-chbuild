@@ -12,12 +12,13 @@ clean() {
 }
 
 pid=$$
+url=https://github.com/kisslinux/repo/releases/download/1.9.0/
 
 cd "${cac_dir:=$KISS_ROOT${XDG_CACHE_HOME:-$HOME/.cache}/kiss}"
 
 [ -f kiss-chroot.tar.xz ] || {
     log "Downloading chroot tarball"
-    wget https://dl.getkiss.org/kiss-chroot.tar.xz
+    wget "$url/kiss-chroot.tar.xz"
 }
 
 [ -d kiss-chroot ] || {
