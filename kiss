@@ -596,6 +596,11 @@ pkg_build() {
         # This acts as the database entry.
         cp -LRf "$repo_dir" "$pkg_dir/$pkg/$pkg_db/"
 
+        # We never ever want this. Let's end the endless conflicts
+        # and remove it. This will be the only exception for a
+        # specific removal of this kind.
+        rm -f "$pkg_dir/$pkg/usr/lib/charset.alias"
+
         log "$pkg" "Successfully built package"
 
         if [ "$KISS_HOOK" ]; then
