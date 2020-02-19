@@ -429,7 +429,7 @@ pkg_fixdeps() {
     done |
 
     # Remove duplicate entries from the new depends file.
-    # This remove duplicate lines looking *only* at the
+    # This removes duplicate lines looking *only* at the
     # first column.
     sort -uk1,1 -o depends depends -
 
