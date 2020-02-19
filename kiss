@@ -199,15 +199,27 @@ pkg_sources() {
                 # beforehand.
                 cd "$mak_dir/$1/$dest" || die 2>/dev/null
 
+                # Clear the argument list as we'll be overwriting
+                # it below based on what kind of checkout we're
+                # dealing with.
+                set -- "$repo_src"
+
                 # If a branch was given, shallow clone it directly.
                 # This speeds things up as we don't have to grab
                 # a lot of unneeded commits.
-                [ "${src##*@*}" ] && set -- ||
+                [ "${src##*@*}" ] ||
                     set -- -b "${src##*@}" "${repo_src%@*}"
+
+                # Maintain compatibility with older versions of
+                # kiss by shallow cloning all branches. This has
+                # the added benefit of allowing checkouts of
+                # specific commits in specific branches.
+                [ "${src##*#*}" ] ||
+                    set -- --no-single-branch "${repo_src%#*}"
 
                 # Always do a shallow clone as we will unshallow it if
                 # needed later (when a commit is desired).
-                git clone --depth=1 "${@:-${repo_src%#*}}" .
+                git clone --depth=1 "$@" .
 
             ) || die "$1" "Failed to clone $src"
 
