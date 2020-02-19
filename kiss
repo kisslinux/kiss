@@ -187,16 +187,39 @@ pkg_sources() {
 
             mkdir -p "$mak_dir/$1/$dest"
 
-            # Run in a subshell to keep variables local.
+            # Run in a subshell to keep the variables, path and
+            # argument list local to each loop iteration.
             (
                 repo_src=${src##git+}
 
-                log "$1" "Cloning ${repo_src%#*}"
+                log "$1" "Cloning ${repo_src%[@#]*}"
 
-                [ "${src##*#*}" ] && shallow=--depth=1
+                # Git has no option to clone a repository to a
+                # specific location so we must do it ourselves
+                # beforehand.
+                cd "$mak_dir/$1/$dest" || die 2>/dev/null
 
-                cd "$mak_dir/$1/$dest" &&
-                    git clone "${shallow:---}" "${repo_src%#*}" .
+                # Clear the argument list as we'll be overwriting
+                # it below based on what kind of checkout we're
+                # dealing with.
+                set -- "$repo_src"
+
+                # If a branch was given, shallow clone it directly.
+                # This speeds things up as we don't have to grab
+                # a lot of unneeded commits.
+                [ "${src##*@*}" ] ||
+                    set -- -b "${src##*@}" "${repo_src%@*}"
+
+                # Maintain compatibility with older versions of
+                # kiss by shallow cloning all branches. This has
+                # the added benefit of allowing checkouts of
+                # specific commits in specific branches.
+                [ "${src##*#*}" ] ||
+                    set -- --no-single-branch "${repo_src%#*}"
+
+                # Always do a shallow clone as we will unshallow it if
+                # needed later (when a commit is desired).
+                git clone --depth=1 "$@" .
 
             ) || die "$1" "Failed to clone $src"
 
@@ -234,6 +257,13 @@ pkg_extract() {
             git+*\#*)
                 log "Checking out ${src##*#}"
 
+                # A commit was requested, unshallow the repository.
+                # This will convert it to a regular repository with
+                # full history.
+                git fetch --unshallow
+
+                # Try to checkout the repository. If we fail here,
+                # the requested commit doesn't exist.
                 git -c advice.detachedHead=false checkout "${src##*#}" ||
                     die "Commit hash ${src##*#} doesn't exist"
             ;;
