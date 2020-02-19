@@ -1016,7 +1016,7 @@ pkg_install() {
                 sum_old=$("$grep" "$file$" "$mak_dir/c")
             } 2>/dev/null ||:
 
-            log "Doing 3-way handshake for $file"
+            log "$pkg_name" "Doing 3-way handshake for $file"
             printf '%s\n' "Previous: ${sum_old:-null}"
             printf '%s\n' "System:   ${sum_sys:-null}"
             printf '%s\n' "New:      ${sum_new:-null}"
