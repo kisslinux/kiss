@@ -116,10 +116,13 @@ pkg_find() {
 
     # Find the repository containing a package.
     # Searches installed packages if the package is absent
-    # from the repositories.
+    # from the repositories. This ugly mess is thanks to POSIX
+    # find which has no '-mindepth'/'-maxdepth', etc.
+    # See: https://unix.stackexchange.com/a/330372
     # See [1] at top of script.
     # shellcheck disable=2046,2086
-    set -- $(find "$@" "$sys_db/." \( ! -name . -prune \) -name "$query")
+    set -- $(find "$@" "$sys_db/." \( ! -name . -prune \) \
+        ! -name .git -a -name "$query" -type d)
 
     # A package may also not be found due to a repository not being
     # readable by the current user. Either way, we need to die here.
