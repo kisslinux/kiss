@@ -843,7 +843,6 @@ pkg_remove() {
     # overwritten.
     pkg_list "$1" >/dev/null || return
 
-    # Enable globbing.
     set +f
 
     # Make sure that nothing depends on this package.
@@ -857,7 +856,6 @@ pkg_remove() {
     [ "$required_by" ] &&
         die "$1" "Package is required by ${required_by%, }"
 
-    # Disable globbing.
     set -f
 
     # Block being able to abort the script with 'Ctrl+C' during removal.
@@ -1136,7 +1134,6 @@ pkg_updates() {
 
     log "Checking for new package versions"
 
-    # Enable globbing.
     set +f
 
     for pkg in "$sys_db/"*; do
@@ -1154,7 +1151,6 @@ pkg_updates() {
         }
     done
 
-    # Disable globbing.
     set -f
 
     # If the package manager has an update, handle it first.
