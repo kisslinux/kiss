@@ -1177,6 +1177,7 @@ pkg_updates() {
         "${PAGER:-less}" "$mak_dir/log"
 
     # Tell 'pkg_build' to always prompt before build.
+    pkg_update=1
 
     # Build all packages requiring an update.
     # See [1] at top of script.
