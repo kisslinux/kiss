@@ -902,12 +902,10 @@ pkg_install() {
         read -r version release < "$(pkg_find "$1")/version"
 
         # Construct the name of the package tarball.
-        tar_name=$1\#$version-$release.tar.gz
+        tar_file=$bin_dir/$1\#$version-$release.tar.gz
 
-        [ -f "$bin_dir/$tar_name" ] ||
+        [ -f "$tar_file" ] ||
             die "Package '$1' has not been built, run 'kiss build $1'"
-
-        tar_file=$bin_dir/$tar_name
     fi
 
     # Figure out which package the tar-ball installs by checking for
