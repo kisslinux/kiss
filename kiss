@@ -1153,7 +1153,6 @@ pkg_updates() {
 
     set -f
 
-    # If the package manager has an update, handle it first.
     contains "$outdated" kiss && {
         log "Detected package manager update"
         log "The package manager will be updated first"
@@ -1169,7 +1168,6 @@ pkg_updates() {
         exit 0
     }
 
-    # End here if no packages have an update.
     [ "$outdated" ] || {
         log "Everything is up to date"
         return
@@ -1183,7 +1181,6 @@ pkg_updates() {
         "${PAGER:-less}" "$mak_dir/log"
 
     # Tell 'pkg_build' to always prompt before build.
-    pkg_update=1
 
     # Build all packages requiring an update.
     # See [1] at top of script.
@@ -1225,7 +1222,7 @@ args() {
     # This handles the globbing characters '*', '!', '[' and ']' as per:
     # https://pubs.opengroup.org/onlinepubs/009695399/utilities/xcu_chap02.html
     [ "${action##[as]*}" ] &&
-        case $@ in *'*'*|*'!'*|*'['*|*']'*)
+        case $@ in *\**|*\!*|*\[*|*\]*)
             die "Arguments contain invalid characters: '!*[]'"
         esac
 
@@ -1402,8 +1399,7 @@ main() {
              "${tar_dir:=$cac_dir/extract-$pid}" \
              "${src_dir:=$cac_dir/sources}" \
              "${log_dir:=$cac_dir/logs}" \
-             "${bin_dir:=$cac_dir/bin}" \
-        || die "Couldn't create cache directories"
+             "${bin_dir:=$cac_dir/bin}"
 
     args "$@"
 }
