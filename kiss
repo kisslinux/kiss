@@ -193,10 +193,16 @@ pkg_sources() {
 
                 log "$1" "Cloning ${repo_src%#*}"
 
-                [ "${src##*#*}" ] && shallow=--depth=1
+                # If a commit hash or branch was given, grab the latest
+                # commit from all branches. This gives a speed-up when
+                # wanting to checkout a specific branch.
+                [ "${src##*#*}" ] ||
+                    branch=--no-single-branch
 
+                # Always do a shallow clone as we will unshallow it if
+                # needed later (when a commit is desired).
                 cd "$mak_dir/$1/$dest" &&
-                    git clone "${shallow:---}" "${repo_src%#*}" .
+                    git clone --depth=1 "${branch:---}" "${repo_src%#*}" .
 
             ) || die "$1" "Failed to clone $src"
 
@@ -234,8 +240,21 @@ pkg_extract() {
             git+*\#*)
                 log "Checking out ${src##*#}"
 
-                git -c advice.detachedHead=false checkout "${src##*#}" ||
-                    die "Commit hash ${src##*#} doesn't exist"
+                (
+                    set -- git -c advice.detachedHead=false checkout
+
+                    # Try to checkout the commit or branch. If it fails,
+                    # unshallow the repository as we're dealing with a
+                    # specific commit.
+                    "$@" "${src##*#}" >/dev/null 2>&1 ||
+                        git fetch --unshallow
+
+                    # Checkout the repository a second time. If this
+                    # fails, the desired commit or branch doesn't exist.
+                    # This will do nothing if the above checkout succeeded.
+                    "$@" "${src##*#}" 2>/dev/null ||
+                        die "${src##*#} doesn't exist"
+                )
             ;;
 
             # Git repository, comment or blank line.
