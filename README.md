@@ -19,11 +19,11 @@ Read: https://k1ss.org/guidestones.txt
 ## Usage
 
 ```sh
-➜ kiss
 -> kiss [a|b|c|i|l|r|s|u|v] [pkg] [pkg] [pkg]
 -> alternatives: List and swap to alternatives
 -> build:        Build a package
 -> checksum:     Generate checksums
+-> env:          List kiss settings
 -> install:      Install a package
 -> list:         List installed packages
 -> remove:       Remove a package

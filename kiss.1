@@ -13,12 +13,14 @@ Tiny and straightforward package manager for KISS written in POSIX sh.
 -> alternatives: List and swap to alternatives
 -> build:        Build a package
 -> checksum:     Generate checksums
+-> env:          List kiss settings
 -> install:      Install a package
 -> list:         List installed packages
 -> remove:       Remove a package
 -> search:       Search for a package
 -> update:       Check for updates
 -> version:      Package manager version
+
 .
 .fi
 .
@@ -188,7 +190,7 @@ export CMAKE_GENERATOR=
 .
 .nf
 
-When a package with conflicts is installed the conflicting 
+When a package with conflicts is installed the conflicting
 files will be added as "choices" to the alternatives system.
 
 Afterwards, running kiss a/kiss alternatives will list all of

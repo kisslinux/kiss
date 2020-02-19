@@ -1359,16 +1359,18 @@ args() {
             done
         ;;
 
+        e|env)     env | grep -F KISS_ ;;
         l|list)    pkg_list "$@" ;;
         u|update)  pkg_updates ;;
         s|search)  for pkg; do pkg_find "$pkg" all; done ;;
-        v|version) log kiss 1.6.0 ;;
+        v|version) log kiss 1.6.1 ;;
 
         h|help|-h|--help|'')
             log 'kiss [a|b|c|i|l|r|s|u|v] [pkg] [pkg] [pkg]'
             log 'alternatives: List and swap to alternatives'
             log 'build:        Build a package'
             log 'checksum:     Generate checksums'
+            log 'env:          List kiss settings'
             log 'install:      Install a package'
             log 'list:         List installed packages'
             log 'remove:       Remove a package'
