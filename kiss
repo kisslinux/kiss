@@ -1026,7 +1026,7 @@ pkg_install() {
             case ${sum_old:-null}${sum_sys:-null}${sum_new} in
                 # old = Y, sys = X, new = Y
                 ${sum_new}${sum_sys}${sum_old})
-                    log "Skipping $file."
+                    log "Skipping $file"
                     continue
                 ;;
 
@@ -1036,13 +1036,13 @@ pkg_install() {
                 ${sum_old}${sum_old}${sum_old}|\
                 ${sum_old:-null}${sum_sys}${sum_sys}|\
                 ${sum_sys}${sum_old}*)
-                    log "Installing $file."
+                    log "Installing $file"
                     new=
                 ;;
 
                 # All other cases.
                 *)
-                    log "($pkg_name) WARN: saving /$file as /$file.new"
+                    log WARN "($pkg_name) saving /$file as /$file.new"
                     new=.new
                 ;;
             esac
