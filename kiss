@@ -609,7 +609,7 @@ pkg_build() {
         fi
 
         # Create the manifest file early and make it empty.
-        # This ensure that the manifest is added to the manifest...
+        # This ensures that the manifest is added to the manifest.
         : > "$pkg_dir/$pkg/$pkg_db/$pkg/manifest"
 
         # If the package contains '/etc', add a file called
