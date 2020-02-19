@@ -952,8 +952,9 @@ pkg_install() {
     trap '' INT
 
     # If the package is already installed (and this is an upgrade) make a
-    # backup of the manifest file.
+    # backup of the manifest and etcsums files.
     cp -f "$sys_db/$pkg_name/manifest" "$mak_dir/m" 2>/dev/null ||:
+    cp -f "$sys_db/$pkg_name/etcsums"  "$mak_dir/c" 2>/dev/null ||:
 
     # This is repeated multiple times. Better to make it a function.
     pkg_rsync() {
@@ -979,22 +980,38 @@ pkg_install() {
             {
                 sum_new=$(sha256sum "$file")
                 sum_sys=$(cd "$KISS_ROOT/"; sha256sum "$file")
-                sum_old=$("$grep" "$file$" "$sys_db/$pkg_name/etcsums")
+                sum_old=$("$grep" "$file$" "$mak_dir/c")
             } 2>/dev/null ||:
+
+            log "Doing 3-way handshake for $file"
+            printf '%s\n' "Previous: ${sum_old:-null}"
+            printf '%s\n' "System:   ${sum_sys:-null}"
+            printf '%s\n' "New:      ${sum_new:-null}"
 
             # Use a case statement to easily compare three strings at
             # the same time. Pretty nifty.
-            case ${sum_old:-null}${sum_sys}${sum_new} in
+            case ${sum_old:-null}${sum_sys:-null}${sum_new} in
+                # old = Y, sys = X, new = Y
+                ${sum_new}${sum_sys}${sum_old})
+                    log "Skipping $file."
+                    continue
+                ;;
+
                 # old = X, sys = X, new = X
                 # old = X, sys = Y, new = Y
                 # old = X, sys = X, new = Y
                 ${sum_old}${sum_old}${sum_old}|\
                 ${sum_old:-null}${sum_sys}${sum_sys}|\
-                ${sum_sys}${sum_old}*) new= ;;
+                ${sum_sys}${sum_old}*)
+                    log "Installing $file."
+                    new=
+                ;;
 
                 # All other cases.
-                *) log "$pkg_name" "WARN: saving /$file as /$file.new"
-                   new=.new
+                *)
+                    log "($pkg_name) WARN: saving /$file as /$file.new"
+                    new=.new
+                ;;
             esac
 
             cp -af "$file"  "$KISS_ROOT/${file}${new}"
