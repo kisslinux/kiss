@@ -80,6 +80,14 @@ pop() {
     for i; do [ "$i" = "$del" ] || printf %s " $i "; done
 }
 
+run_hook() {
+    [ "$KISS_HOOK" ] || return 0
+
+    log "$pkg" "Running $1 hook"
+
+    TYPE=$1 PKG=$pkg DEST=$pkg_dir/$pkg . "$KISS_HOOK"
+}
+
 pkg_lint() {
     # Check that each mandatory file in the package entry exists.
     log "$1" "Checking repository files"
@@ -570,10 +578,7 @@ pkg_build() {
 
         log "$pkg" "Starting build"
 
-        if [ "$KISS_HOOK" ]; then
-           log "$pkg" "Running pre-build hook"
-           TYPE=pre-build PKG=$pkg DEST=$pkg_dir/$pkg . "$KISS_HOOK"
-        fi
+        run_hook pre-build
 
         # Call the build script, log the output to the terminal
         # and to a file. There's no PIPEFAIL in POSIX shelll so
@@ -600,10 +605,7 @@ pkg_build() {
 
         log "$pkg" "Successfully built package"
 
-        if [ "$KISS_HOOK" ]; then
-           log "$pkg" "Running post-build hook"
-           TYPE=post-build PKG=$pkg DEST=$pkg_dir/$pkg . "$KISS_HOOK"
-        fi
+        run_hook post-build
 
         # Create the manifest file early and make it empty.
         # This ensures that the manifest is added to the manifest.
