@@ -23,7 +23,6 @@ Read: https://k1ss.org/guidestones.txt
 -> alternatives: List and swap to alternatives
 -> build:        Build a package
 -> checksum:     Generate checksums
--> env:          List kiss settings
 -> install:      Install a package
 -> list:         List installed packages
 -> remove:       Remove a package

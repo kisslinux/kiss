@@ -1286,16 +1286,6 @@ args() {
             done
         ;;
 
-        e|env)
-            # Display all KISS related environment variables as
-            # seen by the package manager.
-            env | grep -F KISS_
-
-            # Run the above as root as a means of debugging
-            # the environment. We'll see how handy it is over time.
-            [ "$uid" = 0 ] || as_root kiss env
-        ;;
-
         i|install)
             pkg_order "$@"
 
@@ -1320,7 +1310,6 @@ args() {
             log 'alternatives: List and swap to alternatives'
             log 'build:        Build a package'
             log 'checksum:     Generate checksums'
-            log 'env:          List kiss settings'
             log 'install:      Install a package'
             log 'list:         List installed packages'
             log 'remove:       Remove a package'
