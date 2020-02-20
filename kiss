@@ -1061,11 +1061,6 @@ pkg_updates() {
     # shellcheck disable=2046,2086
     { IFS=:; set -- $KISS_PATH; IFS=$old_ifs; }
 
-    # Where to store repository diffs for the update.
-    # At the same time, create the file so updates requiring root don't
-    # overwrite the user's existing permissions over the log.
-    :> "$mak_dir/log"
-
     # Update each repository in '$KISS_PATH'. It is assumed that
     # each repository is 'git' tracked.
     for repo; do
@@ -1097,7 +1092,6 @@ pkg_updates() {
 
             if [ -w "$PWD" ] && [ "$uid" != 0 ]; then
                 git fetch
-                git diff >> "$mak_dir/log"
                 git merge
 
             else
@@ -1111,16 +1105,14 @@ pkg_updates() {
                 # case that the repository is owned by a 3rd user.
                 (
                     user=$(stat -c %U "$PWD")
-                    pull="git fetch && git diff >>'$mak_dir/log' && git merge"
 
                     [ "$user" = root ] ||
                         log "Dropping permissions to $user for pull"
 
                     case $su in
-                        su) as_root "$pull" ;;
+                        su) as_root "git fetch && git merge" ;;
 
                         *)  "$su" git fetch
-                            "$su" git diff >> "$mak_dir/log"
                             "$su" git merge
                     esac
                 )
@@ -1170,11 +1162,6 @@ pkg_updates() {
     }
 
     log "Packages to update: ${outdated% }"
-
-    # Show a diff of each new change to the repositories.
-    # This spawns the user's set PAGER with a fallback to less.
-    [ -s "$mak_dir/log" ] && [ "$KISS_AUDIT" = 1 ] &&
-        "${PAGER:-less}" "$mak_dir/log"
 
     # Tell 'pkg_build' to always prompt before build.
     pkg_update=1
