@@ -56,9 +56,9 @@ as_root() {
     [ "$uid" = 0 ] || log "Using '${su:-su}'"
 
     case $su in
-        *sudo) sudo -Eu "${user:-root}" -- "$@" ;;
-        *doas) doas -u  "${user:-root}" -- "$@" ;;
-        *)     su   -pc "$* <&3" "${user:-root}" 3<&0 </dev/tty ;;
+        *sudo) sudo -E  -- "$@" ;;
+        *doas) doas     -- "$@" ;;
+        *)     su -pc "$* <&3" 3<&0 </dev/tty ;;
     esac
 }
 
@@ -1108,14 +1108,14 @@ pkg_updates() {
                 (
                     user=$(stat -c %U "$PWD")
 
-                    [ "$user" = root ] ||
+                    [ "${user:=root}" = root ] ||
                         log "Dropping permissions to $user for pull"
 
                     case $su in
-                        su) as_root "git fetch && git merge" ;;
+                        su) "$su" -c "git fetch && git merge" "$user" ;;
 
-                        *)  "$su" git fetch
-                            "$su" git merge
+                        *)  "$su" -u "$user" git fetch
+                            "$su" -u "$user" git merge
                     esac
                 )
             fi
