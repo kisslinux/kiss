@@ -2,16 +2,22 @@
 #
 # kiss-export - Turn an installed package into a KISS tarball.
 
-read -r ver rel 2>/dev/null < "$KISS_ROOT/var/db/kiss/installed/$1/version" || {
-    printf '%s\n' "error: '$1' is not installed." >&2
-    exit 1
-}
+kiss l "${1:-null}" >/dev/null
 
-# This warning is safe to ignore as globs are disabled and
-# word splitting is intentional.
-# shellcheck disable=2046
-tar czvf "$1#$ver-$rel.tar.gz" -C / -- $(
-    while read -r file; do
-        [ -d "$KISS_ROOT/$file" ] || printf '%s\n' ".$file"
-    done < "$KISS_ROOT/var/db/kiss/installed/$1/manifest"
-)
+# Grab the package's version..
+read -r ver rel 2>/dev/null < \
+    "$KISS_ROOT/var/db/kiss/installed/$1/version"
+
+# Reset the argument list.
+pkg=$1
+set --
+
+# Construct the argument list using each file.
+while read -r file || [ "$file" ]; do
+    [ -d "$KISS_ROOT/$file" ] || set -- "$@" ".$file"
+done < "$KISS_ROOT/var/db/kiss/installed/$pkg/manifest"
+
+# Turn the list of files back into a package.
+tar czf "$pkg#$ver-$rel.tar.gz" -C / -- "$@"
+
+printf 'tarball created in %s\n' "$PWD/$pkg#$ver-$rel.tar.gz"

@@ -5,12 +5,10 @@
 cd "$KISS_ROOT/var/db/kiss/installed/"
 
 for pkg in *; do
-    # Skip these packages.
     case $pkg in
-        baseinit|baselayout|gcc|pkgconf|e2fsprogs|\
-        make|busybox|bzip2|grub|automake)
-                continue
-        ;;
+        baseinit|baselayout|gcc|pkgconf|e2fsprogs|musl|\
+        make|busybox|bzip2|grub|automake|kiss|rsync|git)
+            continue
     esac
 
     grep -q "^$pkg$" ./*/depends || printf '%s\n' "$pkg"

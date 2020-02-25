@@ -5,16 +5,17 @@
 #
 # kiss-reset: Remove all packages except for the base.
 
-set -- \
-    $(kiss l | while read -r pkg _; do
-        case $pkg in
-            baselayout|binutils|bison|busybox|bzip2|curl|flex|gcc|git|\
-            gzip|kiss|libelf|libressl|linux-headers|m4|make|mandoc|musl|\
-            perl|pkgconf|rsync|xz|zlib) ;;
+set --
 
-            *) printf '%s\n' "$pkg" ;;
-        esac
-    done)
+kiss l | while read -r pkg _; do
+    case $pkg in
+        baselayout|binutils|bison|busybox|bzip2|curl|flex|gcc|git|\
+        gzip|kiss|libelf|libressl|linux-headers|m4|make|musl|perl|\
+        pkgconf|rsync|xz|zlib) ;;
+
+        *) set -- "$@" "$pkg" ;;
+    esac
+done
 
 [ "$1" ] && {
     printf 'WARNING: This will remove \033[1m%s\033[m package(s).\n' "$#"

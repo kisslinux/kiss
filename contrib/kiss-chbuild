@@ -8,6 +8,7 @@ log() {
 
 clean() {
     log "Destroying chroot"
+
     su -c "rm -rf chroot-$pid" || clean
 }
 
