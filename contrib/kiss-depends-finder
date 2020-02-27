@@ -1,0 +1,42 @@
+#!/bin/sh -e
+#
+# Find missing dependencies by parsing 'ldd'.
+
+kiss l "${1:-null}" >/dev/null
+
+db_dir=$KISS_ROOT/var/db/kiss/installed
+grep=$(command -v ggrep) || grep='grep'
+
+printf '=> Detected dependencies:\n'
+
+while read -r file || [ "$file" ]; do
+    [ -d "$KISS_ROOT/$file" ] && continue
+
+    ldd "$KISS_ROOT/$file" 2>/dev/null | while read -r dep; do
+        # Skip lines containing 'ldd'.
+        [ "${dep##*ldd*}" ] || continue
+
+        # Extract the file path from 'ldd' output.
+        dep=${dep#* => }
+        dep=${dep% *}
+
+        # Traverse symlinks to get the true path to the file.
+        pkg=$(readlink -f "$KISS_ROOT/${dep##$KISS_ROOT}")
+
+        # Figure out which package owns the file.
+        pkg=$("$grep" -lFx "${pkg##$KISS_ROOT}" "$db_dir/"*/manifest)
+        pkg=${pkg%/*}
+        pkg=${pkg##*/}
+
+        # Skip listing these packages as dependencies.
+        case $pkg in
+            musl|gcc|$1) ;;
+            *) printf '%s\n' "$pkg" ;;
+        esac
+    done 
+done < "$db_dir/$1/manifest" | sort -u
+
+printf '\n=> Package dependencies:\n'
+
+[ -f "$db_dir/$1/depends" ] &&
+    cat "$db_dir/$1/depends"
