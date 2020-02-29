@@ -397,7 +397,12 @@ pkg_fixdeps() {
 
     # Make a copy of the depends file if it exists to have a
     # reference to 'diff' against.
-    [ -f depends ] && cp -f depends "$mak_dir/d"
+    if [ -f depends ]; then
+        cp -f depends "$mak_dir/d"
+        dep_file=$mak_dir/d
+    else
+        dep_file=/dev/null
+    fi
 
     # Generate a list of all installed manifests.
     pkg_name=$1
@@ -434,16 +439,15 @@ pkg_fixdeps() {
                 *) printf '%s\n' "$dep" ;;
             esac
         done ||:
-    done |
+    done >> depends
 
     # Remove duplicate entries from the new depends file.
     # This removes duplicate lines looking *only* at the
     # first column.
-    sort -uk1,1 -o depends depends - 2>/dev/null ||:
+    sort -uk1,1 -o depends depends 2>/dev/null ||:
 
-    # Display a 'diff' of the new dependencies against
-    # the old ones. '-N' treats non-existent files as blank.
-    diff -N "$mak_dir/d" depends ||:
+    # Display a diff of the new dependencies against the old ones. 
+    diff "$dep_file" depends 2>/dev/null ||:
 }
 
 pkg_manifest() (
