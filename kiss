@@ -1216,6 +1216,11 @@ args() {
             die "Arguments contain invalid characters: '!*[]'"
         esac
 
+    # Abort early if output is not a TTY and the requirement is that it
+    # be so (password prompts, user input, etc). This is a safeguard.
+    [ "${action##[bciru]*}" ] || [ -t 1 ] ||
+        die "Output not a tty"
+
     # Parse some arguments earlier to remove the need to duplicate code.
     case $action in
         c|checksum|s|search)
