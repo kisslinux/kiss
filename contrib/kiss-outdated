@@ -1,0 +1,49 @@
+#!/bin/sh
+#
+# Check installed packages for updates.
+
+old_IFS=$IFS
+
+# List via arguments or all installed packages.
+if [ "$1" ]; then
+    set -- printf '%s\n' "$@"
+else
+    set -- kiss l
+fi
+
+"$@" | (while read -r pkg _; do {
+    read -r ver _ < "/var/db/kiss/installed/$pkg/version"
+
+    # Fix some package names.
+    case $pkg in
+        *-bin) fix=${pkg%%-bin} ;;
+    esac
+    
+    # Grab the repology version from the SVG file.
+    rep=$(curl -s "https://repology.org/badge/latest-versions/${fix:-$pkg}.svg")
+    rep=${rep%</text>*}
+    rep=${rep##*>}
+
+    # Skip these.
+    # shellcheck disable=2106
+    {
+        [ "${rep:--}" = - ] && continue
+        [ "$ver" = git ]    && continue
+    }
+
+    # Split the comma separated list.
+    # shellcheck disable=2086
+    {
+        IFS=', ' 
+        set -f
+        set +f -- $rep
+        IFS=$old_IFS
+    }
+
+    # Parse comma separated version lists.
+    {
+        for v; do case $v in "$ver") match=1; esac; done
+
+        [ "$match" ] || printf '%s\n' "$pkg $ver -> $rep"
+    }
+} & done; wait)
