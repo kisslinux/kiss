@@ -271,6 +271,7 @@ The `contrib` directory contains a set of simple scripts to extend the package m
 - `kiss-maintainer`: Display the package maintainers.
 - `kiss-new`: Create a boilerplate package.
 - `kiss-orphans`: List orphaned packages.
+- `kiss-outdated`: List outdated packages based on Repology versions.
 - `kiss-owns`: Check which package owns a file.
 - `kiss-repodepends`: Display a package's original dependencies.
 - `kiss-reset`: Reset the system to the base.
