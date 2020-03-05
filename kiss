@@ -590,6 +590,7 @@ pkg_build() {
         { "$repo_dir/build" "$pkg_dir/$pkg" 2>&1 || {
             log "$pkg" "Build failed"
             log "$pkg" "Log stored to $log_dir/$pkg-$time-$pid"
+            run_hook build-fail
             pkg_clean
             kill 0
         } } | tee "$log_dir/$pkg-$time-$pid"
