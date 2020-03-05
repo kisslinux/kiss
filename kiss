@@ -1013,7 +1013,7 @@ pkg_install() {
             esac
 
             cp -af "$file"  "$KISS_ROOT/${file}${new}"
-            chown root:root "$KISS_ROOT/${file}${new}"
+            chown root:root "$KISS_ROOT/${file}${new}" 2>/dev/null
         done ||:
     )
 
