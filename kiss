@@ -120,7 +120,7 @@ pkg_find() {
     # '$KISS_PATH' as POSIX 'find' has no '-mindepth'/'-maxdepth'.
     # See: https://unix.stackexchange.com/a/330372
     IFS=:; set --
-    for path in $KISS_PATH; do set "$@" "$path/."; done
+    for path in $KISS_PATH; do set -- "$@" "$path/."; done
     IFS=$old_ifs
 
     # Find the repository containing a package.
