@@ -9,7 +9,7 @@ grep=$(command -v ggrep) || grep='grep'
 
 printf '=> Detected dependencies:\n'
 
-while read -r file || [ "$file" ]; do
+while read -r file; do
     [ -d "$KISS_ROOT/$file" ] && continue
 
     ldd "$KISS_ROOT/$file" 2>/dev/null | while read -r dep; do

@@ -13,7 +13,7 @@ pkg=$1
 set --
 
 # Construct the argument list using each file.
-while read -r file || [ "$file" ]; do
+while read -r file; do
     [ -d "$KISS_ROOT/$file" ] || set -- "$@" ".$file"
 done < "$KISS_ROOT/var/db/kiss/installed/$pkg/manifest"
 
