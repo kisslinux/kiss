@@ -7,15 +7,17 @@
 
 set --
 
-kiss l | while read -r pkg _; do
+while read -r pkg _; do
     case $pkg in
         baselayout|binutils|bison|busybox|bzip2|curl|flex|gcc|git|\
-        gzip|kiss|libelf|libressl|linux-headers|m4|make|musl|perl|\
-        pkgconf|rsync|xz|zlib) ;;
+        gzip|kiss|libressl|linux-headers|m4|make|musl|pkgconf|rsync|\
+        xz|zlib) ;;
 
         *) set -- "$@" "$pkg" ;;
     esac
-done
+done <<EOF
+$(kiss l)
+EOF
 
 [ "$1" ] && {
     printf 'WARNING: This will remove \033[1m%s\033[m package(s).\n' "$#"
