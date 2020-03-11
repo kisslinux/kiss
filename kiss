@@ -75,7 +75,7 @@ pop() {
     # Remove an item from a "string list". This allows us
     # to remove a 'sed' call and reuse this code throughout.
     del=$1
-    shift "$(($# ? 1 : 0))"
+    shift
 
     for i; do [ "$i" = "$del" ] || printf %s " $i "; done
 }
