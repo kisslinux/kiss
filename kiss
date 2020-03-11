@@ -767,7 +767,7 @@ pkg_conflicts() {
         # this work.
         #
         # Pretty nifty huh?
-        while IFS=: read -r pro con || [ "$pro" ]; do
+        while IFS=: read -r pro con; do
             log "$p_name" "Found conflict ($con), adding choice"
 
             # Create the "choices" directory inside of the tarball.
