@@ -45,7 +45,7 @@ Read: https://k1ss.org/guidestones.txt
 
 ## Package format
 
-See: <https://k1ss.org/pages/package-system/>
+See: <https://k1ss.org/package-system>
 
 
 ## Customization
