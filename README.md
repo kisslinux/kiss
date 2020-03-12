@@ -261,6 +261,7 @@ busybox /usr/bin/yes
 
 The `contrib` directory contains a set of simple scripts to extend the package manager. These are just simple and stupid automations which parse the package format.
 
+- `kiss-cargo-urlgen`: Generate sources for rust packages.
 - `kiss-chbuild`: Spawn a throwaway chroot.
 - `kiss-chroot`: Enter a KISS `chroot`.
 - `kiss-depends-finder`: Find missing dependencies by parsing 'ldd'.
