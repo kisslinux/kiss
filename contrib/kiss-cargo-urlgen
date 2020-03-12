@@ -1,0 +1,11 @@
+#!/bin/sh
+
+[ "$1" ] || {
+    printf 'usage: kiss-carg-urlgen [crate-ver] [crate-ver]\n'
+    exit 1
+}
+
+for crate in "$@"; do
+    printf 'https://static.crates.io/crates/%s/%s.crate vendor\n' \
+        "${crate%-*}" "$crate"
+done
