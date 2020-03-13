@@ -267,6 +267,8 @@ The `contrib` directory contains a set of simple scripts to extend the package m
 - `kiss-depends-finder`: Find missing dependencies by parsing 'ldd'.
 - `kiss-depends`: Display a package's dependencies.
 - `kiss-export`: Turn an installed package into a KISS tarball.
+- `kiss-fork`: Copy a package's repository files into the current directory.
+- `kiss-link`: Link a repository file to another repository.
 - `kiss-manifest-tree`: Display all files as tree owned by a package.
 - `kiss-manifest`: Display all files owned by a package.
 - `kiss-maintainer`: Display the package maintainers.
