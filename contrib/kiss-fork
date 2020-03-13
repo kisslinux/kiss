@@ -1,0 +1,17 @@
+#!/bin/sh -ef
+
+kiss s "${1:-null}" >/dev/null || {
+    printf 'usage: kiss-fork pkg_name\n'
+    exit 1
+}
+
+# Disable this warning as globbing is disabled and word splitting
+# is intentional. This grabs the location of the package's files.
+# shellcheck disable=2046
+(
+    set -- $(kiss s "$1")
+
+    cp -r "$1" .
+)
+
+printf 'forked package to %s\n' "$PWD/$1"

@@ -1,0 +1,45 @@
+#!/bin/sh -ef
+
+[ "$1" ] || {
+    printf 'usage: kiss-link file\n'
+    exit 1
+}
+
+[ -f "${file:=$1}" ] || {
+    printf 'file %s does not exist in the current directory\n' "$1"
+    exit 1
+}
+
+oPWD=$PWD
+
+# Check if the package exists in a repository and error out here
+# if it does not. The error message from the package manager will
+# be displayed.
+kiss s "${PWD##*/}" >/dev/null
+
+# Disable this warning as globbing is disabled and word splitting
+# is intentional. This grabs the location of the package's files.
+# shellcheck disable=2046
+{
+    # Generate a list of repositories in which the package
+    # exists. Then 'cd' to the first found directory to do a
+    # comparison.
+    set -- $(kiss s "${PWD##*/}"); cd "$1"
+
+    # Error if the package exists nowhere but the current
+    # directory and this script would create a broken symlink.
+    [ -z "$2" ] && [ "$PWD" = "$oPWD" ] && {
+        printf 'error: cannot symlink file to itself\n'
+        exit 1
+    }
+
+    # If the first repository in '$KISS_PATH' is the current
+    # directory, use the second repository in the list.
+    [ "$PWD" = "$oPWD" ] && shift
+
+    # Finally, make the link to the file in whatever repository
+    # it was found in.
+    ln -sf "$1/$file" "$file"
+}
+
+printf 'linked %s to %s\n' "$file" "$1"
