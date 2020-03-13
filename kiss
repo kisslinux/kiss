@@ -1059,6 +1059,8 @@ pkg_install() {
         "$sys_db/$pkg_name/post-install" ||:
     fi
 
+    run_hook post-install "$pkg_name" "$sys_db/$pkg_name"
+
     log "$pkg_name" "Installed successfully"
 }
 
