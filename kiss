@@ -583,19 +583,14 @@ pkg_build() {
         # Move to the build directory.
         cd "$mak_dir/$pkg"
 
-        # Copy the build file to the current cache directory so that
-        # it can be modified by package manager hooks. This allows
-        # for simple build changes to be made without the need to
-        # fork the entire package.
-        cp -f "$repo_dir/build" .build
-
         log "$pkg" "Starting build"
+
         run_hook pre-build "$pkg" "$pkg_dir/$pkg"
 
         # Call the build script, log the output to the terminal
         # and to a file. There's no PIPEFAIL in POSIX shelll so
         # we must resort to tricks like killing the script ourselves.
-        { "./.build" "$pkg_dir/$pkg" 2>&1 || {
+        { "$repo_dir/build" "$pkg_dir/$pkg" 2>&1 || {
             log "$pkg" "Build failed"
             log "$pkg" "Log stored to $log_dir/$pkg-$time-$pid"
             run_hook build-fail "$pkg" "$pkg_dir/$pkg"
