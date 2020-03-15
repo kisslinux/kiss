@@ -304,7 +304,7 @@ pkg_extract() {
             # Any other file-types are simply copied to '$mak_dir' which
             # allows for manual extraction.
             *://*.tar.*|*://*.tgz)
-                decompress "$src_dir/$1/${src##*/}" | 
+                decompress "$src_dir/$1/${src##*/}" |
                     tar xf - --strip-components 1 ||
                     die "$1" "Couldn't extract ${src##*/}"
             ;;
@@ -464,7 +464,7 @@ pkg_fixdeps() {
     # first column.
     sort -uk1,1 -o depends depends 2>/dev/null ||:
 
-    # Display a diff of the new dependencies against the old ones. 
+    # Display a diff of the new dependencies against the old ones.
     diff "$dep_file" depends 2>/dev/null ||:
 
     # Remove the depends file if it is empty.
@@ -511,7 +511,7 @@ pkg_tar() {
     read -r version release < "$(pkg_find "$1")/version"
 
     # Create a tar-ball from the contents of the built package.
-    "$tar" cf - -C "$pkg_dir/$1" . | 
+    "$tar" cf - -C "$pkg_dir/$1" . |
         case ${KISS_COMPRESS:=gz} in
             bz2) bzip2 -z ;;
             xz)  xz -zT 0 ;;
@@ -566,7 +566,7 @@ pkg_build() {
     # directory and are up to date.
     for pkg; do
         # Don't check for a pre-built package if it was passed
-        # to KISS directly and install any pre-built binaries if 
+        # to KISS directly and install any pre-built binaries if
         # they exist.
         ! contains "$explicit_build" "$pkg" && pkg_cache "$pkg" && {
             log "$pkg" "Found pre-built binary, installing"
@@ -920,7 +920,7 @@ pkg_install() {
         pkg_name=${pkg_name%#*}
 
     else
-        pkg_cache "$1" || 
+        pkg_cache "$1" ||
             die "package has not been built, run 'kiss b pkg'"
 
         pkg_name=$1
