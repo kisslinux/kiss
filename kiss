@@ -88,6 +88,14 @@ run_hook() {
     TYPE=$1 PKG=$2 DEST=$3 . "$KISS_HOOK"
 }
 
+decompress() {
+    case $1 in
+        *.bz2)      bzip2 -d ;;
+        *.xz)       xz -dcT 0 ;;
+        *.tgz|*.gz) gzip -d ;;
+    esac < "$1"
+}
+
 pkg_lint() {
     # Check that each mandatory file in the package entry exists.
     log "$1" "Checking repository files"
@@ -173,7 +181,7 @@ pkg_list() {
 }
 
 pkg_cache() {
-    read -r version release < "$(pkg_find "$1")/version"
+    read -r version release 2>/dev/null < "$(pkg_find "$1")/version"
 
     set +f; set -f -- "$bin_dir/$1#$version-$release.tar."*
     tar_file=$1
@@ -295,8 +303,9 @@ pkg_extract() {
             # Only 'tar' archives are currently supported for extraction.
             # Any other file-types are simply copied to '$mak_dir' which
             # allows for manual extraction.
-            *://*.tar|*://*.tar.??|*://*.tar.???|*://*.tar.????|*://*.tgz)
-                "$tar" xf "$src_dir/$1/${src##*/}" --strip-components 1 ||
+            *://*.tar.*|*://*.tgz)
+                decompress "$src_dir/$1/${src##*/}" | 
+                    tar xf - --strip-components 1 ||
                     die "$1" "Couldn't extract ${src##*/}"
             ;;
 
@@ -504,8 +513,9 @@ pkg_tar() {
     # Create a tar-ball from the contents of the built package.
     "$tar" cf - -C "$pkg_dir/$1" . | 
         case ${KISS_COMPRESS:=gz} in
-            xz) xz -zT 0 ;;
-            gz) gzip -6  ;;
+            bz2) bzip2 -z ;;
+            xz)  xz -zT 0 ;;
+            gz)  gzip -6  ;;
         esac \
     > "$bin_dir/$1#$version-$release.tar.${KISS_COMPRESS:=gz}"
 
@@ -718,20 +728,20 @@ pkg_verify() {
 
 pkg_conflicts() {
     # Check to see if a package conflicts with another.
-    log "$2" "Checking for package conflicts"
+    log "$1" "Checking for package conflicts"
 
     # Filter the tarball's manifest and select only files
     # and any files they resolve to on the filesystem
     # (/bin/ls -> /usr/bin/ls).
-    "$tar" xf "$1" -O "./$pkg_db/$2/manifest" | while read -r file; do
+    while read -r file; do
         case $file in */) continue; esac
 
         printf '%s/%s\n' \
             "$(readlink -f "$KISS_ROOT/${file%/*}" 2>/dev/null)" \
             "${file##*/}"
-    done > "$cac_dir/$pid-m"
+    done < "$tar_dir/$1/$sys_db/$1/manifest" > "$cac_dir/$pid-m"
 
-    p_name=$2
+    p_name=$1
 
     # Generate a list of all installed package manifests
     # and remove the current package from the list.
@@ -906,30 +916,26 @@ pkg_install() {
     # We don't need to check the repository if this is the case.
     if [ -f "$1" ] && [ -z "${1%%*.tar.*}" ] ; then
         tar_file=$1
+        pkg_name=${1##*/}
+        pkg_name=${pkg_name%#*}
 
     else
-        pkg_cache "$1" || die "$1" "has not been built, run 'kiss b $1'"
+        pkg_cache "$1" || 
+            die "package has not been built, run 'kiss b pkg'"
+
+        pkg_name=$1
     fi
-
-    # Figure out which package the tar-ball installs by checking for
-    # a database entry inside the tar-ball. If no database entry exists,
-    # exit here as the tar-ball is *most likely* not a KISS package.
-    pkg_name=$("$tar" tf "$tar_file" | "$grep" -x "\./$pkg_db/.*/version") ||
-        die "'${tar_file##*/}' is not a valid KISS package"
-
-    pkg_name=${pkg_name%/*}
-    pkg_name=${pkg_name##*/}
 
     mkdir -p "$tar_dir/$pkg_name"
     log "$pkg_name" "Extracting $tar_file"
 
     # Extract the tar-ball to catch any errors before installation begins.
-    case $tar_file in
-        *.xz) xz -dcT 0 ;;
-        *.gz) gzip -d ;;
-    esac < "$tar_file" | "$tar" pxf - -C "$tar_dir/$pkg_name"
+    decompress "$tar_file" | "$tar" pxf - -C "$tar_dir/$pkg_name"
 
     log "$pkg_name" "Checking that all dependencies are installed"
+
+    [ -f "$tar_dir/$pkg_name/$pkg_db/$pkg_name/manifest" ] ||
+        die "'${tar_file##*/}' is not a valid KISS package"
 
     # Make sure that all run-time dependencies are installed prior to
     # installing the package.
@@ -945,7 +951,7 @@ pkg_install() {
 
     run_hook pre-install "$pkg_name" "$tar_dir/$pkg_name"
 
-    pkg_conflicts "$tar_file" "$pkg_name"
+    pkg_conflicts "$pkg_name"
 
     log "$pkg_name" "Installing package incrementally"
 
