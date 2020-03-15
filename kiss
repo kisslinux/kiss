@@ -503,11 +503,11 @@ pkg_tar() {
 
     # Create a tar-ball from the contents of the built package.
     "$tar" cf - -C "$pkg_dir/$1" . | 
-        case ${KISS_COMPRESS:=xz} in
+        case ${KISS_COMPRESS:=gz} in
             xz) xz -zT 0 ;;
             gz) gzip -6  ;;
         esac \
-    > "$bin_dir/$1#$version-$release.tar.${KISS_COMPRESS:=xz}"
+    > "$bin_dir/$1#$version-$release.tar.${KISS_COMPRESS:=gz}"
 
     log "$1" "Successfully created tar-ball"
 }
