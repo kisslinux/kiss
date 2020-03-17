@@ -303,7 +303,7 @@ pkg_extract() {
             # Only 'tar' archives are currently supported for extraction.
             # Any other file-types are simply copied to '$mak_dir' which
             # allows for manual extraction.
-            *://*.tar.*|*://*.tgz)
+            *://*.tar|*://*.tar.??|*://*.tar.???|*://*.tar.????|*://*.tgz)
                 decompress "$src_dir/$1/${src##*/}" |
                     tar xf - --strip-components 1 ||
                     die "$1" "Couldn't extract ${src##*/}"
