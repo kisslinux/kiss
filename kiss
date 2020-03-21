@@ -117,12 +117,7 @@ pkg_find() {
     # Figure out which repository a package belongs to by
     # searching for directories matching the package name
     # in $KISS_PATH/*.
-    [ "$KISS_PATH" ] || die "\$KISS_PATH needs to be set"
-
-    # Turn the argument list into variables as we reset
-    # the list below.
-    query=$1
-    match=$2
+    query=$1 match=$2
 
     # This ugly mess appends '/.' to the end of each path in
     # '$KISS_PATH' as POSIX 'find' has no '-mindepth'/'-maxdepth'.
@@ -1343,6 +1338,10 @@ args() {
 }
 
 main() {
+    # Die here if the user has no set KISS_PATH. This is a rare occurance
+    # as the environment variable should always be defined.
+    [ "$KISS_PATH" ] || die "\$KISS_PATH needs to be set"
+
     # Set the location to the repository and package database.
     pkg_db=var/db/kiss/installed
 
