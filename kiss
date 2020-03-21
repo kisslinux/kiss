@@ -323,8 +323,6 @@ pkg_extract() {
 
 pkg_depends() {
     # Resolve all dependencies and generate an ordered list.
-    repo_dir=$(pkg_find "$1")
-
     # This does a depth-first search. The deepest dependencies are
     # listed first and then the parents in reverse order.
     contains "$deps" "$1" || {
@@ -336,7 +334,7 @@ pkg_depends() {
         # Recurse through the dependencies of the child packages.
         while read -r dep _ || [ "$dep" ]; do
             [ "${dep##\#*}" ] && pkg_depends "$dep"
-        done 2>/dev/null < "$repo_dir/depends" ||:
+        done 2>/dev/null < "$(pkg_find "$1")/depends" ||:
 
         # After child dependencies are added to the list,
         # add the package which depends on them.
@@ -553,6 +551,8 @@ pkg_build() {
     log "Checking to see if any dependencies have already been built"
     log "Installing any pre-built dependencies"
 
+    for pkg; do pkg_lint "$pkg"; done
+
     # Install any pre-built dependencies if they exist in the binary
     # directory and are up to date.
     for pkg; do
@@ -570,7 +570,6 @@ pkg_build() {
         }
     done
 
-    for pkg; do pkg_lint "$pkg"; done
     for pkg; do pkg_sources "$pkg"; done
 
     pkg_verify "$@"
