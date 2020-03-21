@@ -350,22 +350,18 @@ pkg_order() {
     # to be called from 'kiss i'.
     order=; redro=; deps=
 
-    for pkg; do
-        case $pkg in
-            *.tar.*) deps="$deps $pkg "  ;;
-            *)       pkg_depends "$pkg" raw
-        esac
-    done
+    for pkg; do case $pkg in
+        *.tar.*) deps="$deps $pkg "  ;;
+        *)       pkg_depends "$pkg" raw
+    esac; done
 
     # Filter the list, only keeping explicit packages.
     # The purpose of these two loops is to order the
     # argument list based on dependence.
-    for pkg in $deps; do
-        ! contains "$*" "$pkg" || {
-            order="$order $pkg "
-            redro=" $pkg $redro"
-        }
-    done
+    for pkg in $deps; do ! contains "$*" "$pkg" || {
+        order="$order $pkg "
+        redro=" $pkg $redro"
+    }; done
 
     deps=
 }
