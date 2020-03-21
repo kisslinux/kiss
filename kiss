@@ -553,20 +553,15 @@ pkg_build() {
 
     # Install any pre-built dependencies if they exist in the binary
     # directory and are up to date.
-    for pkg do
-        # Don't check for a pre-built package if it was passed
-        # to KISS directly and install any pre-built binaries if
-        # they exist.
-        ! contains "$explicit_build" "$pkg" && pkg_cache "$pkg" && {
-            log "$pkg" "Found pre-built binary, installing"
-            (KISS_FORCE=1 args i "$tar_file")
+    for pkg do ! contains "$explicit_build" "$pkg" && pkg_cache "$pkg" && {
+        log "$pkg" "Found pre-built binary, installing"
+        (KISS_FORCE=1 args i "$tar_file")
 
-            # Remove the now installed package from the build list.
-            # See [1] at top of script.
-            # shellcheck disable=2046,2086
-            set -- $(pop "$pkg" "$@")
-        }
-    done
+        # Remove the now installed package from the build list.
+        # See [1] at top of script.
+        # shellcheck disable=2046,2086
+        set -- $(pop "$pkg" "$@")
+    } done
 
     for pkg do pkg_sources "$pkg"; done
 
@@ -700,16 +695,14 @@ pkg_verify() {
     # Verify all package checksums. This is achieved by generating
     # a new set of checksums and then comparing those with the old
     # set.
-    for pkg do
-        pkg_checksums "$pkg" | cmp -s - "$(pkg_find "$pkg")/checksums" || {
-            log "$pkg" "Checksum mismatch"
+    for pkg do pkg_checksums "$pkg" | cmp - "$(pkg_find "$pkg")/checksums" || {
+        log "$pkg" "Checksum mismatch"
 
-            # Instead of dying above, log it to the terminal. Also define a
-            # variable so we *can* die after all checksum files have been
-            # checked.
-            mismatch="$mismatch$pkg "
-        }
-    done
+        # Instead of dying above, log it to the terminal. Also define a
+        # variable so we *can* die after all checksum files have been
+        # checked.
+        mismatch="$mismatch$pkg "
+    } done
 
     [ -z "$mismatch" ] || die "Checksum mismatch with: ${mismatch% }"
 }
@@ -1121,8 +1114,7 @@ pkg_updates() {
 
                     case $su in
                         su) "$su" -c "git fetch && git merge" "$user" ;;
-
-                        *)  "$su" -u "$user" git fetch
+                         *) "$su" -u "$user" git fetch
                             "$su" -u "$user" git merge
                     esac
                 )
