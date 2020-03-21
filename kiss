@@ -77,7 +77,7 @@ pop() {
     del=$1
     shift
 
-    for i; do [ "$i" = "$del" ] || printf %s " $i "; done
+    for i do [ "$i" = "$del" ] || printf %s " $i "; done
 }
 
 run_hook() {
@@ -167,7 +167,7 @@ pkg_list() {
     [ "$1" = "$sys_db/"\* ] && return 1
 
     # Loop over each package and print its name and version.
-    for pkg; do
+    for pkg do
         [ -d "$pkg" ] || { log "$pkg" "not installed"; return 1; }
 
         read -r version 2>/dev/null < "$pkg/version" || version=null
@@ -348,10 +348,10 @@ pkg_order() {
     # to be called from 'kiss i'.
     order=; redro=; deps=
 
-    for pkg; do case $pkg in
+    for pkg do case $pkg in
         *.tar.*) deps="$deps $pkg "  ;;
         *)       pkg_depends "$pkg" raw
-    esac; done
+    esac done
 
     # Filter the list, only keeping explicit packages.
     # The purpose of these two loops is to order the
@@ -359,7 +359,7 @@ pkg_order() {
     for pkg in $deps; do ! contains "$*" "$pkg" || {
         order="$order $pkg "
         redro=" $pkg $redro"
-    }; done
+    } done
 
     deps=
 }
@@ -519,15 +519,13 @@ pkg_build() {
 
     log "Resolving dependencies"
 
-    for pkg; do
-        contains "$explicit" "$pkg" || {
-            pkg_depends "$pkg" explicit
+    for pkg do contains "$explicit" "$pkg" || {
+        pkg_depends "$pkg" explicit
 
-            # Mark packages passed on the command-line
-            # separately from those detected as dependencies.
-            explicit="$explicit $pkg "
-        }
-    done
+        # Mark packages passed on the command-line
+        # separately from those detected as dependencies.
+        explicit="$explicit $pkg "
+    } done
 
     [ "$pkg_update" ] || explicit_build=$explicit
 
@@ -535,7 +533,7 @@ pkg_build() {
     # package, remove it from the explicit list as it needs to be
     # installed as a dependency.
     # shellcheck disable=2086
-    for pkg; do
+    for pkg do
         contains "$deps" "$pkg" && explicit=$(pop "$pkg" $explicit)
     done
 
@@ -551,11 +549,11 @@ pkg_build() {
     log "Checking to see if any dependencies have already been built"
     log "Installing any pre-built dependencies"
 
-    for pkg; do pkg_lint "$pkg"; done
+    for pkg do pkg_lint "$pkg"; done
 
     # Install any pre-built dependencies if they exist in the binary
     # directory and are up to date.
-    for pkg; do
+    for pkg do
         # Don't check for a pre-built package if it was passed
         # to KISS directly and install any pre-built binaries if
         # they exist.
@@ -570,13 +568,13 @@ pkg_build() {
         }
     done
 
-    for pkg; do pkg_sources "$pkg"; done
+    for pkg do pkg_sources "$pkg"; done
 
     pkg_verify "$@"
 
     # Finally build and create tarballs for all passed packages and
     # dependencies.
-    for pkg; do
+    for pkg do
         log "$pkg" "Building package ($((in = in + 1))/$#)"
 
         pkg_extract "$pkg"
@@ -702,7 +700,7 @@ pkg_verify() {
     # Verify all package checksums. This is achieved by generating
     # a new set of checksums and then comparing those with the old
     # set.
-    for pkg; do
+    for pkg do
         pkg_checksums "$pkg" | cmp -s - "$(pkg_find "$pkg")/checksums" || {
             log "$pkg" "Checksum mismatch"
 
@@ -1075,7 +1073,7 @@ pkg_updates() {
 
     # Update each repository in '$KISS_PATH'. It is assumed that
     # each repository is 'git' tracked.
-    for repo; do
+    for repo do
         # Go to the root of the repository (if it exists).
         cd "$repo"
         cd "$(git rev-parse --show-toplevel 2>/dev/null)" 2>/dev/null ||:
@@ -1287,9 +1285,9 @@ args() {
         ;;
 
         c|checksum)
-            for pkg; do pkg_lint    "$pkg" c; done
-            for pkg; do pkg_sources "$pkg" c; done
-            for pkg; do
+            for pkg do pkg_lint    "$pkg" c; done
+            for pkg do pkg_sources "$pkg" c; done
+            for pkg do
                 pkg_checksums "$pkg" > "$(pkg_find "$pkg")/checksums"
 
                 log "$pkg" "Generated checksums"
@@ -1312,7 +1310,7 @@ args() {
 
         l|list)    pkg_list "$@" ;;
         u|update)  pkg_updates ;;
-        s|search)  for pkg; do pkg_find "$pkg" all; done ;;
+        s|search)  for pkg do pkg_find "$pkg" all; done ;;
         v|version) log kiss 1.8.1 ;;
 
         h|help|-h|--help|'')
