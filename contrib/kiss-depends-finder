@@ -33,7 +33,7 @@ while read -r file; do
             musl|gcc|$1) ;;
             *) printf '%s\n' "$pkg" ;;
         esac
-    done 
+    done
 done < "$db_dir/$1/manifest" | sort -u
 
 printf '\n=> Package dependencies:\n'

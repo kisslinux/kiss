@@ -93,6 +93,7 @@ decompress() {
         *.bz2)      bzip2 -d ;;
         *.xz)       xz -dcT 0 ;;
         *.tgz|*.gz) gzip -d ;;
+        *.zst)      zstd -dc ;;
     esac < "$1"
 }
 
@@ -505,6 +506,7 @@ pkg_tar() {
             bz2) bzip2 -z ;;
             xz)  xz -zT 0 ;;
             gz)  gzip -6  ;;
+            zst) zstd -z  ;;
         esac \
     > "$bin_dir/$1#$version-$release.tar.${KISS_COMPRESS:=gz}"
 
