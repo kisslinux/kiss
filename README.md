@@ -2,7 +2,7 @@
 
 Tiny and straightforward package manager for KISS written in POSIX `sh`.
 
-- Only 600~ lines of POSIX `sh` (*excluding blank lines and comments*).
+- Only 600~ lines of POSIX `sh` (See [cloc](#cloc)).
 - Runtime dependency detection.
 - Incremental package installation.
 - Fast dependency solver.
@@ -37,6 +37,7 @@ Read: https://k1ss.org/guidestones.txt
 
 * [Package format](#package-format)
 * [Extending the package manager](#extending-the-package-manager)
+* [cloc](#cloc)
 
 <!-- vim-markdown-toc -->
 
@@ -70,3 +71,13 @@ The `contrib` directory contains a set of simple scripts to extend the package m
 - `kiss-revdepends`: Display packages which depend on package.
 - `kiss-size`: Show the size on disk for an installed package.
 
+
+## cloc
+
+```
++---------------------------------------+
+| Language  files  blank  comment  code |
+|---------------------------------------|
+| Shell     1      287    408       693 |
++---------------------------------------+
+```
