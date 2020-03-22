@@ -1254,20 +1254,11 @@ args() {
                 pkg_swap "$@"
 
             else
-                set +f
-
-                log Alternatives:
-
                 # Go over each alternative and format the file
                 # name for listing. (pkg_name>usr>bin>ls)
-                for pkg in "$sys_db/../choices"/*; do
+                set +f; for pkg in "$sys_db/../choices"/*; do
                     printf '%s\n' "${pkg##*/}"
-                done |
-
-                sed 's|>| /|; s|>|/|g; /\*/d'
-
-                log note "Think about what you are doing"
-                log note "for this feature requires thought"
+                done | sed 's|>| /|; s|>|/|g; /\*/d'
             fi
         ;;
 
