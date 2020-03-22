@@ -195,8 +195,6 @@ pkg_sources() {
     # having a source of the same name.
     mkdir -p "$src_dir/$1" && cd "$src_dir/$1"
 
-    repo_dir=$(pkg_find "$1")
-
     while read -r src dest || [ "$src" ]; do
         # Comment.
         if [ -z "${src##\#*}" ]; then :
@@ -258,21 +256,19 @@ pkg_sources() {
             }
 
         # Local source.
-        elif [ -f "$repo_dir/$src" ]; then
+        elif [ -f "$(pkg_find "$1")/$src" ]; then
             log "$1" "Found local file '$src'"
 
         else
             die "$1" "No local file '$src'"
         fi
-    done < "$repo_dir/sources"
+    done < "$(pkg_find "$1")/sources"
 }
 
 pkg_extract() {
     # Extract all source archives to the build directory and copy over
     # any local repository files.
     log "$1" "Extracting sources"
-
-    repo_dir=$(pkg_find "$1")
 
     while read -r src dest || [ "$src" ]; do
         mkdir -p "$mak_dir/$1/$dest" && cd "$mak_dir/$1/$dest"
@@ -307,8 +303,8 @@ pkg_extract() {
 
             *)
                 # Local file.
-                if [ -f "$repo_dir/$src" ]; then
-                    cp -f "$repo_dir/$src" .
+                if [ -f "$(pkg_find "$1")/$src" ]; then
+                    cp -f "$(pkg_find "$1")/$src" .
 
                 # Remote file.
                 elif [ -f "$src_dir/$1/${src##*/}" ]; then
@@ -319,7 +315,7 @@ pkg_extract() {
                 fi
             ;;
         esac
-    done < "$repo_dir/sources"
+    done < "$(pkg_find "$1")/sources"
 }
 
 pkg_depends() {
