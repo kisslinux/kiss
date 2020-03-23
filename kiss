@@ -387,24 +387,17 @@ pkg_fixdeps() {
     # simplify path building.
     cd "$pkg_dir/$1/$pkg_db/$1"
 
-    # Make a copy of the depends file if it exists to have a
-    # reference to 'diff' against.
-    if [ -f depends ]; then
-        cp -f depends "$mak_dir/d"
-        dep_file=$mak_dir/d
-    else
-        dep_file=/dev/null
-    fi
-
     # Generate a list of all installed manifests.
-    pkg_name=$1
-    set +f
-    set -f -- "$sys_db/"*/manifest
+    set +f; set -f -- "$sys_db/"*/manifest
+
+    # Cat the current depends file if it exists as we will append
+    # detected dependencies to it.
+    { cat depends 2>/dev/null ||:
 
     # Get a list of binaries and libraries, false files
     # will be found, however it's faster to get 'ldd' to check
     # them anyway than to filter them out.
-    find "$pkg_dir/$pkg_name/" -type f 2>/dev/null |
+    find "$pkg_dir/${PWD##*/}/" -type f 2>/dev/null |
 
     while read -r file; do
         # Run 'ldd' on the file and parse each line. The code
@@ -428,21 +421,16 @@ pkg_fixdeps() {
             case $dep in
                 # Skip listing these packages as dependencies.
                 musl|gcc|${PWD##*/}|"") ;;
-                *) printf '%s\n' "$dep" ;;
+                *) printf '%s\n'  "$dep"
+                   printf 'Found %s\n' "$dep" >/dev/tty
             esac
         done ||:
-    done >> depends
+    done } |
 
-    # Remove duplicate entries from the new depends file.
-    # This removes duplicate lines looking *only* at the
-    # first column.
-    sort -uk1,1 -o depends depends 2>/dev/null ||:
-
-    # Display a diff of the new dependencies against the old ones.
-    diff "$dep_file" depends 2>/dev/null ||:
-
-    # Remove the depends file if it is empty.
-    [ -s depends ] || rm -f depends
+    # Sort the list and remove duplicates. Generate a diff between the
+    # original dependencies and the new dependencies. Finally, apply the
+    # patch directly to the depends file.
+    sort -uk1,1 | diff - depends 2>/dev/null | patch -Rp1 ||:
 }
 
 pkg_manifest() (
