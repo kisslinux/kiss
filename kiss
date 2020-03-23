@@ -101,41 +101,35 @@ pkg_lint() {
     # Check that each mandatory file in the package entry exists.
     log "$1" "Checking repository files"
 
-    repo_dir=$(pkg_find "$1")
+    cd "$(pkg_find "$1")"
+    read -r _ release < version
 
-    cd "$repo_dir" || die "'$repo_dir' not accessible"
+    [ "$release" ] || die "$1" "Release field not found in version file"
     [ -f sources ] || die "$1" "Sources file not found"
     [ -x build ]   || die "$1" "Build file not found or not executable"
     [ -s version ] || die "$1" "Version file not found or empty"
 
-    read -r _ release < version
-    [ "$release" ] || die "Release field not found in version file"
-
-    [ "$2" ] || [ -f checksums ] || die "$pkg" "Checksums are missing"
+    [ "$2" ] || [ -f checksums ] ||
+        die "$1" "Checksums are missing"
 }
 
 pkg_find() {
     # Figure out which repository a package belongs to by
     # searching for directories matching the package name
     # in $KISS_PATH/*.
-    query=$1 match=$2
+    query=$1 match=$2 IFS=:; set --
 
-    # This ugly mess appends '/.' to the end of each path in
-    # '$KISS_PATH' as POSIX 'find' has no '-mindepth'/'-maxdepth'.
-    # See: https://unix.stackexchange.com/a/330372
-    IFS=:; set --
-    for path in $KISS_PATH; do set -- "$@" "$path/."; done
-    IFS=$old_ifs
+    # Both counts of word-splitting is intentional here.
+    # Firstly to split the repositories and secondly to
+    # allow for the query to be a glob.
+    # shellcheck disable=2086
+    for path in $KISS_PATH "$sys_db"; do
+        set +f
 
-    # Find the repository containing a package.
-    # Searches installed packages if the package is absent
-    # from the repositories. This ugly mess is thanks to POSIX
-    # find which has no '-mindepth'/'-maxdepth', etc.
-    # See: https://unix.stackexchange.com/a/330372
-    # See [1] at top of script.
-    # shellcheck disable=2046,2086
-    set -- $(find "$@" "$sys_db/." \( ! -name . -prune \) \
-        ! -name .git -a -name "$query" -type d)
+        for path2 in "$path/"$query; do
+            [ -d "$path2" ] && set -f -- "$@" "$path2"
+        done
+    done
 
     # A package may also not be found due to a repository not being
     # readable by the current user. Either way, we need to die here.
@@ -144,6 +138,8 @@ pkg_find() {
     # Show all search results if called from 'kiss search', else
     # print only the first match.
     [ "$match" ] && printf '%s\n' "$@" || printf '%s\n' "$1"
+
+    IFS=$old_ifs
 }
 
 pkg_list() {
