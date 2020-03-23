@@ -422,7 +422,8 @@ pkg_fixdeps() {
                 # Skip listing these packages as dependencies.
                 musl|gcc|${PWD##*/}|"") ;;
                 *) printf '%s\n'  "$dep"
-                   printf 'Found %s\n' "$dep" >/dev/tty
+                   printf 'Found %s\n' \
+                       "$dep (${file##$pkg_dir/${PWD##*/}})" >/dev/tty
             esac
         done ||:
     done } |
