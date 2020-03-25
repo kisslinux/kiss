@@ -66,16 +66,15 @@ esc() {
     # Escape all required characters in both the search and
     # replace portions of two strings for use in a 'sed' call
     # as "plain-text".
-    printf 's/^%s$/%s/' \
-        "$(printf %s "$1" | sed 's/[]\/$*.^[]/\\&/g')" \
-        "$(printf %s "$2" | sed 's/[\/&]/\\&/g')"
+    printf 's/^%s$/%s/' "$(printf %s "$1" | sed 's/[]\/$*.^[]/\\&/g')" \
+                        "$(printf %s "$2" | sed 's/[\/&]/\\&/g')"
 }
 
 pop() {
     # Remove an item from a "string list". This allows us
     # to remove a 'sed' call and reuse this code throughout.
     del=$1
-    shift
+    shift 2
 
     for i do [ "$i" = "$del" ] || printf %s " $i "; done
 }
@@ -362,18 +361,16 @@ pkg_strip() {
     #       it allows us to remove 'file' from the
     #       core repositories altogether.
     find "$pkg_dir/$1" -type f | while read -r file; do
-        case $(readelf -h "$file" 2>/dev/null) in
+        case $(readelf -h "$file") in
             *" DYN "*)  strip_opt=unneeded ;;
             *" EXEC "*) strip_opt=all ;;
             *" REL "*)  strip_opt=debug ;;
             *) continue
         esac
 
-        # Suppress errors here as some binaries and libraries may
-        # fail to strip. This is OK.
-        strip "--strip-$strip_opt" "$file" 2>/dev/null &&
-            printf 'Stripped %10s %s\n' "($strip_opt)" "${file##$pkg_dir/$1}"
-    done
+        strip "--strip-$strip_opt" "$file" &&
+        printf 'Stripped %10s %s\n' "($strip_opt)" "${file##$pkg_dir/$1}"
+    done 2>/dev/null
 }
 
 pkg_fixdeps() {
@@ -506,8 +503,8 @@ pkg_build() {
     # package, remove it from the explicit list as it needs to be
     # installed as a dependency.
     # shellcheck disable=2086
-    for pkg do
-        contains "$deps" "$pkg" && explicit=$(pop "$pkg" $explicit)
+    for pkg do contains "$deps" "$pkg" &&
+        explicit=$(pop "$pkg" from $explicit)
     done
 
     # See [1] at top of script.
@@ -533,7 +530,7 @@ pkg_build() {
         # Remove the now installed package from the build list.
         # See [1] at top of script.
         # shellcheck disable=2046,2086
-        set -- $(pop "$pkg" "$@")
+        set -- $(pop "$pkg" from "$@")
     } done
 
     for pkg do pkg_sources "$pkg"; done
@@ -698,7 +695,7 @@ pkg_conflicts() {
     # Generate a list of all installed package manifests
     # and remove the current package from the list.
     # shellcheck disable=2046,2086
-    set -- $(set +f; pop "$sys_db/$p_name/manifest" "$sys_db"/*/manifest)
+    set -- $(set +f; pop "$sys_db/$p_name/manifest" from "$sys_db"/*/manifest)
 
     [ -s "$cac_dir/$pid-m" ] || return 0
 
@@ -919,9 +916,7 @@ pkg_install() {
     # Install can also take the full path to a tar-ball.
     # We don't need to check the repository if this is the case.
     if [ -f "$1" ] && [ -z "${1%%*.tar.*}" ] ; then
-        tar_file=$1
-        pkg_name=${1##*/}
-        pkg_name=${pkg_name%#*}
+        tar_file=$1 pkg_name=${1##*/} pkg_name=${pkg_name%#*}
 
     else
         pkg_cache "$1" ||
@@ -1135,13 +1130,11 @@ pkg_updates() {
 
     log "Packages to update: ${outdated% }"
 
-    # Tell 'pkg_build' to always prompt before build.
-    pkg_update=1
-
     # Build all packages requiring an update.
     # See [1] at top of script.
     # shellcheck disable=2046,2086
     {
+        pkg_update=1
         pkg_order $outdated
         pkg_build $order
     }
