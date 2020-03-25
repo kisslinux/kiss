@@ -811,6 +811,58 @@ pkg_swap() {
     sed -i "$(esc "$PWD/$alt" "$2")" "../installed/$1/manifest"
 }
 
+pkg_etc() {
+    [ -d "$tar_dir/$pkg_name/etc" ] || return 0
+
+    (cd "$tar_dir/$pkg_name"
+
+    # Create all directories beforehand.
+    find etc -type d | while read -r dir; do
+        mkdir -p "$KISS_ROOT/$dir"
+    done
+
+    # Handle files in /etc/ based on a 3-way checksum check.
+    find etc ! -type d | while read -r file; do
+        { sum_new=$(sha256sum "$file")
+          sum_sys=$(cd "$KISS_ROOT/"; sha256sum "$file")
+          sum_old=$("$grep" "$file$" "$mak_dir/c"); } 2>/dev/null ||:
+
+        log "$pkg_name" "Doing 3-way handshake for $file"
+        printf '%s\n' "Previous: ${sum_old:-null}"
+        printf '%s\n' "System:   ${sum_sys:-null}"
+        printf '%s\n' "New:      ${sum_new:-null}"
+
+        # Use a case statement to easily compare three strings at
+        # the same time. Pretty nifty.
+        case ${sum_old:-null}${sum_sys:-null}${sum_new} in
+            # old = Y, sys = X, new = Y
+            "${sum_new}${sum_sys}${sum_old}")
+                log "Skipping $file"
+                continue
+            ;;
+
+            # old = X, sys = X, new = X
+            # old = X, sys = Y, new = Y
+            # old = X, sys = X, new = Y
+            "${sum_old}${sum_old}${sum_old}"|\
+            "${sum_old:-null}${sum_sys}${sum_sys}"|\
+            "${sum_sys}${sum_old}"*)
+                log "Installing $file"
+                new=
+            ;;
+
+            # All other cases.
+            *)
+                log WARN "($pkg_name) saving /$file as /$file.new"
+                new=.new
+            ;;
+        esac
+
+        cp -af "$file"  "$KISS_ROOT/${file}${new}"
+        chown root:root "$KISS_ROOT/${file}${new}" 2>/dev/null
+    done) ||:
+}
+
 pkg_remove() {
     # Remove a package and all of its files. The '/etc' directory
     # is handled differently and configuration files are *not*
@@ -927,58 +979,7 @@ pkg_install() {
     # Install the package by using 'rsync' and overwrite any existing files
     # (excluding '/etc/').
     pkg_rsync --info=progress2
-
-    [ -d "$tar_dir/$pkg_name/etc" ] && (
-        cd "$tar_dir/$pkg_name"
-
-        # Create all directories beforehand.
-        find etc -type d | while read -r dir; do
-            mkdir -p "$KISS_ROOT/$dir"
-        done
-
-        # Handle files in /etc/ based on a 3-way checksum check.
-        find etc ! -type d | while read -r file; do
-            {
-                sum_new=$(sha256sum "$file")
-                sum_sys=$(cd "$KISS_ROOT/"; sha256sum "$file")
-                sum_old=$("$grep" "$file$" "$mak_dir/c")
-            } 2>/dev/null ||:
-
-            log "$pkg_name" "Doing 3-way handshake for $file"
-            printf '%s\n' "Previous: ${sum_old:-null}"
-            printf '%s\n' "System:   ${sum_sys:-null}"
-            printf '%s\n' "New:      ${sum_new:-null}"
-
-            # Use a case statement to easily compare three strings at
-            # the same time. Pretty nifty.
-            case ${sum_old:-null}${sum_sys:-null}${sum_new} in
-                # old = Y, sys = X, new = Y
-                ${sum_new}${sum_sys}${sum_old})
-                    log "Skipping $file"
-                    continue
-                ;;
-
-                # old = X, sys = X, new = X
-                # old = X, sys = Y, new = Y
-                # old = X, sys = X, new = Y
-                ${sum_old}${sum_old}${sum_old}|\
-                ${sum_old:-null}${sum_sys}${sum_sys}|\
-                ${sum_sys}${sum_old}*)
-                    log "Installing $file"
-                    new=
-                ;;
-
-                # All other cases.
-                *)
-                    log WARN "($pkg_name) saving /$file as /$file.new"
-                    new=.new
-                ;;
-            esac
-
-            cp -af "$file"  "$KISS_ROOT/${file}${new}"
-            chown root:root "$KISS_ROOT/${file}${new}" 2>/dev/null
-        done ||:
-    )
+    pkg_etc
 
     # Remove any leftover files if this is an upgrade.
     "$grep" -vFxf "$sys_db/$pkg_name/manifest" "$mak_dir/m" 2>/dev/null |
