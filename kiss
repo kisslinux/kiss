@@ -409,19 +409,17 @@ pkg_fixdeps() {
             dep=${dep% *}
 
             # Figure out which package owns the file.
-            dep=$("$grep" -lFx "${dep##$KISS_ROOT}" "$@")
+            own=$("$grep" -lFx "${dep##$KISS_ROOT}" "$@")
+            own=${own%/*}
+            own=${own##*/}
 
-            # Extract package name from 'grep' match.
-            dep=${dep%/*}
-            dep=${dep##*/}
+            # Skip listing these packages as dependencies.
+            case $own in musl|gcc|${PWD##*/}|"") continue; esac
 
-            case $dep in
-                # Skip listing these packages as dependencies.
-                musl|gcc|${PWD##*/}|"") ;;
-                *) printf '%s\n'  "$dep"
-                   printf 'Found %s\n' \
-                       "$dep (${file##$pkg_dir/${PWD##*/}})" >/dev/tty
-            esac
+            printf 'Found %s (%s) in (%s)\n' "$own" "$dep" \
+                "${file##$pkg_dir/${PWD##*/}}" >/dev/tty
+
+            printf '%s\n' "$own"
         done ||:
     done } |
 
