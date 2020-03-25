@@ -949,7 +949,6 @@ pkg_install() {
     [ "$install_dep" ] && die "$1" "Package requires ${install_dep%, }"
 
     run_hook pre-install "$pkg_name" "$tar_dir/$pkg_name"
-
     pkg_conflicts "$pkg_name"
 
     log "$pkg_name" "Installing package incrementally"
