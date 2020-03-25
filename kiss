@@ -970,11 +970,9 @@ pkg_install() {
     cp -f "$sys_db/$pkg_name/etcsums"  "$mak_dir/c" 2>/dev/null ||:
 
     # This is repeated multiple times. Better to make it a function.
-    pkg_rsync() {
-        rsync --chown=root:root --chmod=Du-s,Dg-s,Do-s \
-              -WhHKa --no-compress --exclude /etc "$1" \
-              "$tar_dir/$pkg_name/" "$KISS_ROOT/"
-    }
+    pkg_rsync() { rsync --chown=root:root --chmod=Du-s,Dg-s,Do-s \
+                        -WhHKa --no-compress --exclude /etc "$1" \
+                        "$tar_dir/$pkg_name/" "$KISS_ROOT/"; }
 
     # Install the package by using 'rsync' and overwrite any existing files
     # (excluding '/etc/').
