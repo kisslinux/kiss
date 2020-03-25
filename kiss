@@ -98,7 +98,6 @@ decompress() {
 }
 
 pkg_lint() {
-    # Check that each mandatory file in the package entry exists.
     log "$1" "Checking repository files"
 
     cd "$(pkg_find "$1")"
@@ -372,7 +371,8 @@ pkg_strip() {
 
         # Suppress errors here as some binaries and libraries may
         # fail to strip. This is OK.
-        strip "--strip-$strip_opt" "$file" 2>/dev/null ||:
+        strip "--strip-$strip_opt" "$file" 2>/dev/null &&
+            printf 'Stripped %10s %s\n' "($strip_opt)" "${file##$pkg_dir/$1}"
     done
 }
 

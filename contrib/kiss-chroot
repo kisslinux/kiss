@@ -20,6 +20,7 @@ clean() {
 
     log Cleaning leftover host files; {
         rm -f "$1/root/.ash_history"
+        rm -f "$1/etc/resolv.conf"
     }
 }
 
@@ -38,7 +39,7 @@ main() {
     }
 
     log Copying /etc/resolv.conf from host; {
-         [ -f "$1/etc/resolv.conf" ] || cp /etc/resolv.conf "$1/etc"
+        cp -f /etc/resolv.conf "$1/etc"
     }
 
     log Entering chroot; {
