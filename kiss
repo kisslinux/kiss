@@ -690,14 +690,14 @@ pkg_conflicts() {
             "${file##*/}"
     done < "$tar_dir/$1/$sys_db/$1/manifest" > "$cac_dir/$pid-m"
 
+    [ -s "$cac_dir/$pid-m" ] || return 0
+
     p_name=$1
 
     # Generate a list of all installed package manifests
     # and remove the current package from the list.
     # shellcheck disable=2046,2086
-    set -- $(set +f; pop "$sys_db/$p_name/manifest" from "$sys_db"/*/manifest)
-
-    [ -s "$cac_dir/$pid-m" ] || return 0
+    set -- $(set +f; pop "$sys_db/$1/manifest" from "$sys_db"/*/manifest)
 
     # Enable alternatives automatically if it is safe to do so.
     # This checks to see that the package that is about to be installed
