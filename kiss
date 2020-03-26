@@ -350,8 +350,6 @@ pkg_order() {
 pkg_strip() {
     # Strip package binaries and libraries. This saves space on the
     # system as well as on the tar-balls we ship for installation.
-
-    # Package has stripping disabled, stop here.
     [ -f "$mak_dir/$pkg/nostrip" ] && return
 
     log "$1" "Stripping binaries and libraries"
@@ -370,7 +368,7 @@ pkg_strip() {
 
         strip "--strip-$strip_opt" "$file" &&
         printf 'Stripped %10s %s\n' "($strip_opt)" "${file##$pkg_dir/$1}"
-    done 2>/dev/null
+    done 2>/dev/null ||:
 }
 
 pkg_fixdeps() {
