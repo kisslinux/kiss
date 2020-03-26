@@ -512,10 +512,10 @@ pkg_build() {
     # Only ask for confirmation if more than one package needs to be built.
     [ $# -gt 1 ] || [ "$pkg_update" ] && prompt
 
+    for pkg do pkg_lint "$pkg"; done
+
     log "Checking to see if any dependencies have already been built"
     log "Installing any pre-built dependencies"
-
-    for pkg do pkg_lint "$pkg"; done
 
     # Install any pre-built dependencies if they exist in the binary
     # directory and are up to date.
@@ -543,13 +543,9 @@ pkg_build() {
 
         # Install built packages to a directory under the package name
         # to avoid collisions with other packages.
-        mkdir -p "$pkg_dir/$pkg/$pkg_db"
-
-        # Move to the build directory.
-        cd "$mak_dir/$pkg"
+        mkdir -p "$pkg_dir/$pkg/$pkg_db" && cd "$mak_dir/$pkg"
 
         log "$pkg" "Starting build"
-
         run_hook pre-build "$pkg" "$pkg_dir/$pkg"
 
         # Call the build script, log the output to the terminal
@@ -577,7 +573,6 @@ pkg_build() {
         rm -f "$pkg_dir/$pkg/usr/lib/charset.alias"
 
         log "$pkg" "Successfully built package"
-
         run_hook post-build "$pkg" "$pkg_dir/$pkg"
 
         # Create the manifest file early and make it empty.
@@ -1236,7 +1231,7 @@ args() {
         r|remove)
             pkg_order "$@"
 
-            for pkg in $redro; do 
+            for pkg in $redro; do
                 pkg_remove "$pkg" "${KISS_FORCE:-check}"
             done
         ;;
