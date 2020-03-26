@@ -914,22 +914,20 @@ pkg_install() {
     # Extract the tar-ball to catch any errors before installation begins.
     decompress "$tar_file" | "$tar" pxf - -C "$tar_dir/$pkg_name"
 
-    log "$pkg_name" "Checking that all dependencies are installed"
-
     [ -f "$tar_dir/$pkg_name/$pkg_db/$pkg_name/manifest" ] ||
         die "'${tar_file##*/}' is not a valid KISS package"
 
-    # Make sure that all run-time dependencies are installed prior to
-    # installing the package.
-    [ -f "$tar_dir/$pkg_name/$pkg_db/$pkg_name/depends" ] &&
-    [ -z "$KISS_FORCE" ] &&
-        while read -r dep dep_type || [ "$dep" ]; do
-            [ "${dep##\#*}" ] || continue
-            [ "$dep_type" ]   || pkg_list "$dep" >/dev/null ||
-                install_dep="$install_dep'$dep', "
-        done < "$tar_dir/$pkg_name/$pkg_db/$pkg_name/depends"
+    log "$pkg_name" "Checking that all dependencies are installed"; {
+        [ -f "$tar_dir/$pkg_name/$pkg_db/$pkg_name/depends" ] &&
+        [ -z "$KISS_FORCE" ] &&
+            while read -r dep dep_type || [ "$dep" ]; do
+                [ "${dep##\#*}" ] || continue
+                [ "$dep_type" ]   || pkg_list "$dep" >/dev/null ||
+                    install_dep="$install_dep'$dep', "
+            done < "$tar_dir/$pkg_name/$pkg_db/$pkg_name/depends"
 
-    [ "$install_dep" ] && die "$1" "Package requires ${install_dep%, }"
+        [ "$install_dep" ] && die "$1" "Package requires ${install_dep%, }"
+    }
 
     run_hook pre-install "$pkg_name" "$tar_dir/$pkg_name"
     pkg_conflicts "$pkg_name"
