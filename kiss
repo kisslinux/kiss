@@ -864,20 +864,13 @@ pkg_remove() {
     # overwritten.
     pkg_list "$1" >/dev/null || return
 
-    set +f
-
     # Make sure that nothing depends on this package.
-    [ "$2" = check ] && for file in "$sys_db/"*; do
-        # Check each depends file for the package and if it's
-        # a run-time dependency, append to the $required_by string.
-        "$grep" -qFx "$1" "$file/depends" 2>/dev/null &&
-            required_by="$required_by'${file##*/}', "
-    done
+    [ "$2" = check ] && {
+        log "$1" "Checking for reverse dependencies"
 
-    [ "$required_by" ] &&
-        die "$1" "Package is required by ${required_by%, }"
-
-    set -f
+        (cd "$sys_db"; set +f; "$grep" -lFx "$1" -- */depends) &&
+            die "$1" "Can't remove package, others depend on it"
+    }
 
     # Block being able to abort the script with 'Ctrl+C' during removal.
     # Removes all risk of the user aborting a package removal leaving
@@ -894,12 +887,11 @@ pkg_remove() {
         # manager from removing user edited configuration files.
         [ "${file##/etc/*}" ] || continue
 
-        if [ -d "$KISS_ROOT/$file" ]; then
-            rmdir "$KISS_ROOT/$file" 2>/dev/null || continue
-        else
-            rm -f "$KISS_ROOT/$file"
-        fi
-    done < "$sys_db/$1/manifest"
+        # Lazy removal. Try remove as a directory first before
+        # falling back to a file removal. Removes all files and
+        # only directories if empty.
+        rmdir "$KISS_ROOT/$file" || rm -f "$KISS_ROOT/$file" ||:
+    done < "$sys_db/$1/manifest" 2>/dev/null
 
     # Reset 'trap' to its original value. Removal is done so
     # we no longer need to block 'Ctrl+C'.
