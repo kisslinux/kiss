@@ -78,6 +78,6 @@ The `contrib` directory contains a set of simple scripts to extend the package m
 +---------------------------------------+
 | Language  files  blank  comment  code |
 |---------------------------------------|
-| Shell     1      287    408       693 |
+| Shell     1      271    391       663 |
 +---------------------------------------+
 ```
