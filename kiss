@@ -1016,9 +1016,15 @@ pkg_updates() {
         cd "$repo"
         cd "$(git rev-parse --show-toplevel 2>/dev/null)" 2>/dev/null ||:
 
-        [ -d .git ] || [ "$(git remote 2>/dev/null)" ] || {
+        [ -d .git ] || {
             log "$repo" " "
-            printf '%s\n' "Not a git repository or no remote, skipping."
+            printf '%s\n' "Not a git repository, skipping."
+            continue
+        }
+
+        [ "$(git remote 2>/dev/null)" ] || {
+            log "$repo" " "
+            printf '%s\n' "No remote, skipping."
             continue
         }
 
@@ -1237,7 +1243,7 @@ args() {
         l|list)    pkg_list "$@" ;;
         u|update)  pkg_updates ;;
         s|search)  for pkg do pkg_find "$pkg" all; done ;;
-        v|version) log kiss 1.10.0 ;;
+        v|version) log kiss 1.10.1 ;;
 
         h|help|-h|--help|'')
             log 'kiss [a|b|c|i|l|r|s|u|v] [pkg] [pkg] [pkg]'
