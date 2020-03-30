@@ -405,6 +405,7 @@ pkg_fixdeps() {
             # Extract the file path from 'ldd' output.
             dep=${dep#* => }
             dep=${dep% *}
+            dep=$(readlink -f "$dep")
 
             # Figure out which package owns the file.
             own=$("$grep" -lFx "${dep##$KISS_ROOT}" "$@")
