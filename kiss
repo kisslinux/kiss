@@ -680,7 +680,7 @@ pkg_conflicts() {
         printf '%s/%s\n' \
             "$(readlink -f "$KISS_ROOT/${file%/*}" 2>/dev/null)" \
             "${file##*/}"
-    done < "$tar_dir/$1/$sys_db/$1/manifest" > "$cac_dir/$pid-m"
+    done < "$tar_dir/$1/$pkg_db/$1/manifest" > "$cac_dir/$pid-m"
 
     [ -s "$cac_dir/$pid-m" ] || return 0
 
