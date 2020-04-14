@@ -881,10 +881,11 @@ pkg_remove() {
         # manager from removing user edited configuration files.
         [ "${file##/etc/*}" ] || continue
 
-        # Lazy removal. Try remove as a directory first before
-        # falling back to a file removal. Removes all files and
-        # only directories if empty.
-        rmdir "$KISS_ROOT/$file" || rm -f "$KISS_ROOT/$file" ||:
+        if [ -d "$KISS_ROOT/$file" ]; then
+            rmdir "$KISS_ROOT/$file" 2>/dev/null || continue
+        else
+            rm -f "$KISS_ROOT/$file"
+        fi
     done < "$sys_db/$1/manifest" 2>/dev/null
 
     # Reset 'trap' to its original value. Removal is done so
