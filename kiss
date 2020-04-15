@@ -80,7 +80,7 @@ pop() {
 }
 
 run_hook() {
-    [ "$KISS_HOOK" ] || return 0
+    [ "${KISS_HOOK:-}" ] || return 0
 
     log "$2" "Running $1 hook"
 
