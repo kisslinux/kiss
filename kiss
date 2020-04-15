@@ -1325,6 +1325,10 @@ main() {
     # This is used enough to warrant a place here.
     uid=$(id -u)
 
+    # Make sure that the KISS_ROOT doesn't end with a '/'. This might
+    # break some operations.
+    KISS_ROOT=${KISS_ROOT%/}
+
     # This allows for automatic setup of a KISS chroot and will
     # do nothing on a normal system.
     mkdir -p "${sys_db:=$KISS_ROOT/$pkg_db}" 2>/dev/null ||:
