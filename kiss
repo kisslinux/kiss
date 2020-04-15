@@ -1170,7 +1170,7 @@ args() {
 
     # Parse some arguments earlier to remove the need to duplicate code.
     case $action in
-        c|checksum|s|search)
+        s|search)
             [ "$1" ] || die "'kiss $action' requires an argument"
         ;;
 
@@ -1184,8 +1184,6 @@ args() {
         ;;
 
         i|install|r|remove)
-            [ "$1" ] || die "'kiss $action' requires an argument"
-
             # Rerun the script with 'su' if the user isn't root.
             # Cheeky but 'su' can't be used on shell functions themselves.
             [ "$uid" = 0 ] || {
@@ -1193,6 +1191,12 @@ args() {
                 return
             }
         ;;
+    esac
+
+    # Second early check to use $PWD in place of arguments.
+    case $action in b|build|c|checksum|i|install|r|remove)
+        export KISS_PATH=${PWD%/*}:$KISS_PATH 
+        set -- "${PWD##*/}"
     esac
 
     # Actions can be abbreviated to their first letter. This saves
@@ -1217,9 +1221,6 @@ args() {
         ;;
 
         b|build)
-            # If no arguments were passed, rebuild all packages.
-            [ "$1" ] || { cd "$sys_db" && { set +f; set -f -- *; } }
-
             pkg_build "${@:?No packages installed}"
         ;;
 
