@@ -390,9 +390,14 @@ pkg_fixdeps() {
     # Generate a list of all installed manifests.
     set +f; set -f -- "$sys_db/"*/manifest
 
-    # Cat the current depends file if it exists as we will append
-    # detected dependencies to it.
-    { cat depends 2>/dev/null ||:
+    # Make a copy of the depends file if it exists to have a
+    # reference to 'diff' against.
+    if [ -f depends ]; then
+        cp -f depends "$mak_dir/d"
+        dep_file=$mak_dir/d
+    else
+        dep_file=/dev/null
+    fi
 
     # Get a list of binaries and libraries, false files
     # will be found, however it's faster to get 'ldd' to check
@@ -418,19 +423,20 @@ pkg_fixdeps() {
             own=${own##*/}
 
             # Skip listing these packages as dependencies.
-            case $own in musl|gcc|${PWD##*/}|"") continue; esac
-
-            printf 'Found %s (%s) in (%s)\n' "$own" "$dep" \
-                "${file##$pkg_dir/${PWD##*/}}" >/dev/tty
+            case $own in musl|gcc|"${PWD##*/}"|"") continue; esac
 
             printf '%s\n' "$own"
         done ||:
-    done } |
+    done >> depends
 
-    # Sort the list and remove duplicates. Generate a diff between the
-    # original dependencies and the new dependencies. Finally, apply the
-    # patch directly to the depends file.
-    sort -uk1,1 | diff - depends 2>/dev/null | patch -Rp1 ||:
+    # Remove duplicate entries from the new depends file.
+    # This removes duplicate lines looking *only* at the
+    # first column.
+    sort -uk1,1 -o depends depends 2>/dev/null ||:
+
+    # Display a 'diff' of the new dependencies against
+    # the old ones. '-N' treats non-existent files as blank.
+    diff "$dep_file" depends ||:
 }
 
 pkg_manifest() (
@@ -1194,7 +1200,7 @@ args() {
     esac
 
     # Second early check to use $PWD in place of arguments.
-    case $action in b|build|c|checksum|i|install|r|remove)
+    [ "$1" ] || case $action in b|build|c|checksum|i|install|r|remove)
         export KISS_PATH=${PWD%/*}:$KISS_PATH 
         set -- "${PWD##*/}"
     esac
