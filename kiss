@@ -423,7 +423,7 @@ pkg_fixdeps() {
             own=${own##*/}
 
             # Skip listing these packages as dependencies.
-            case $own in musl|gcc|"${PWD##*/}"|"") continue; esac
+            case $own in musl|gcc|llvm|"${PWD##*/}"|"") continue; esac
 
             printf '%s\n' "$own"
         done ||:
