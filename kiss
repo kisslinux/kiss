@@ -437,6 +437,8 @@ pkg_fixdeps() {
     # Display a 'diff' of the new dependencies against
     # the old ones. '-N' treats non-existent files as blank.
     diff "$dep_file" depends ||:
+
+    [ -s depends ] || rm -f depends 
 }
 
 pkg_manifest() (
