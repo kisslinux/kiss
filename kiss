@@ -1330,7 +1330,7 @@ args() {
         l|list)    pkg_list "$@" ;;
         u|update)  pkg_updates ;;
         s|search)  for pkg do pkg_find "$pkg"; done ;;
-        v|version) log kiss 1.10.3 ;;
+        v|version) log kiss 1.11.0 ;;
 
         h|help|-h|--help|'')
             log 'kiss [a|b|c|i|l|r|s|u|v] [pkg] [pkg] [pkg]'
@@ -1347,9 +1347,7 @@ args() {
 
             log "Installed extensions (kiss-* in \$PATH)"
 
-            KISS_PATH=$PATH
-
-            for path in $(pkg_find kiss-\* all); do
+            for path in $(KISS_PATH=$PATH pkg_find kiss-\* all); do
                 set -- "${path#*/kiss-}" "$@"
                 max=$((${#1} > max ? ${#1} : max))
             done
@@ -1361,10 +1359,10 @@ args() {
         ;;
 
         *) 
-            command -v "kiss-$action" >/dev/null ||
+            util=$(KISS_PATH=$PATH pkg_find "kiss-$action*" 2>/dev/null) ||
                 die "'kiss $action' is not a valid command"
 
-            "kiss-$action" "$@"
+            "$util" "$@"
         ;;
     esac
 }
