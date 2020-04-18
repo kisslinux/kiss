@@ -1,11 +1,15 @@
 #!/bin/sh -ef
 # Turn an installed package into a KISS tarball.
 
-kiss l "${1:-null}" >/dev/null
+# Ignore shellcheck as we want the warning's behavior.
+# shellcheck disable=2015
+[ "$1" ] && kiss l "${1:-null}" >/dev/null || {
+    printf 'usage: kiss-export [pkg]\n'
+    exit 1
+}
 
 # Grab the package's version..
-read -r ver rel 2>/dev/null < \
-    "$KISS_ROOT/var/db/kiss/installed/$1/version"
+read -r ver rel 2>/dev/null < "$KISS_ROOT/var/db/kiss/installed/$1/version"
 
 # Reset the argument list.
 pkg=$1

@@ -1,6 +1,11 @@
 #!/bin/sh -ef
 # Find the maintainer of a package.
 
+[ "$1" ] || {
+    printf 'usage: kiss-maintainer [pkg]\n'
+    exit 1
+}
+
 kiss s "$1" | while read -r repo; do cd "$repo"
     m=$(git log -1 version 2>/dev/null) ||:
     m=${m##*Author: }

@@ -1,4 +1,11 @@
 #!/bin/sh
 # Display a package's original dependencies.
 
+# Ignore shellcheck as we want the warning's behavior.
+# shellcheck disable=2015
+[ "$1" ] && kiss s "${1:-null}" >/dev/null || {
+    printf 'usage: kiss-repodepends [pkg]\n'
+    exit 1
+}
+
 cat "$(kiss s "$1")/depends" 2>/dev/null

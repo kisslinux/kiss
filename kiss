@@ -115,7 +115,7 @@ pkg_find() {
     # Figure out which repository a package belongs to by
     # searching for directories matching the package name
     # in $KISS_PATH/*.
-    query=$1 IFS=:; set --
+    query=$1 all=$2 IFS=:; set --
 
     # Both counts of word-splitting are intentional here.
     # Firstly to split the repositories and secondly to
@@ -137,7 +137,7 @@ pkg_find() {
 
     # Show all search results if called from 'kiss search', else
     # print only the first match.
-    [ -t 1 ] || [ "$2" ] && printf '%s\n' "$@" || printf '%s\n' "$1"
+    [ -t 1 ] || [ "$all" ] && printf '%s\n' "$@" || printf '%s\n' "$1"
 }
 
 pkg_list() {

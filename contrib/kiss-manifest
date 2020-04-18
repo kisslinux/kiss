@@ -1,8 +1,11 @@
 #!/bin/sh -ef
 # Display all files owned by a package.
 
-kiss l "${1:-null}" >/dev/null
+# Ignore shellcheck as we want the warning's behavior.
+# shellcheck disable=2015
+[ "$1" ] && kiss l "${1:-null}" >/dev/null || {
+    printf 'usage: kiss-manifest [pkg]\n'
+    exit 1
+}
 
-db_dir=$KISS_ROOT/var/db/kiss/installed/${1:-null}
-
-cat "$db_dir/manifest" 2>/dev/null
+cat "$KISS_ROOT/var/db/kiss/installed/$1/manifest" 2>/dev/null

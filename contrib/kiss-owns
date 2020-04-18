@@ -5,9 +5,8 @@
 # follow symlinks.
 file=$(readlink -f "$KISS_ROOT/${1##$KISS_ROOT}")
 
-# Check if the file exists and exit if it is not.
 [ -f "$file" ] || {
-    printf '%s\n' "error: file '$1' doesn't exist." >&2
+    printf 'usage: kiss-owns [/path/to/file]\n'
     exit 1
 }
 
