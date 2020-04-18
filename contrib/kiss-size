@@ -1,6 +1,5 @@
 #!/bin/sh -ef
-#
-# kiss-size - Show the size on disk for a package.
+# Show the size on disk for a package.
 
 db_dir=$KISS_ROOT/var/db/kiss/installed/${1-null}
 

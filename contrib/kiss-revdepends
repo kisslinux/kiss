@@ -1,6 +1,5 @@
 #!/bin/sh -e
-#
-# kiss-revdepends - Display packages which depend on package.
+# Display packages which depend on package.
 
 # 'cd' to the database directory as a simple way of
 # stripping the path and performing a 'basename'.

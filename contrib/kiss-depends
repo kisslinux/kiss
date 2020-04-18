@@ -1,6 +1,5 @@
 #!/bin/sh -ef
-#
-# kiss-depends - Display a package's dependencies.
+# Display a package's dependencies.
 
 kiss l "${1:-null}" >/dev/null
 

@@ -1,5 +1,4 @@
 #!/bin/sh
-#
-# kiss-repodepends
+# Display a package's original dependencies.
 
-cat "$(kiss s "$1" | sed 1q)/depends" 2>/dev/null
+cat "$(kiss s "$1")/depends" 2>/dev/null

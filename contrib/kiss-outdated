@@ -1,5 +1,4 @@
 #!/bin/sh
-#
 # Check installed packages for updates.
 
 old_IFS=$IFS

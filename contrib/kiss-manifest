@@ -1,6 +1,5 @@
 #!/bin/sh -ef
-#
-# kiss-manifest - Display all files owned by a package.
+# Display all files owned by a package.
 
 kiss l "${1:-null}" >/dev/null
 

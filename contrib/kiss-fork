@@ -1,4 +1,5 @@
 #!/bin/sh -ef
+# Copy a package's repository files into the current directory.
 
 kiss s "${1:-null}" >/dev/null || {
     printf 'usage: kiss-fork pkg_name\n'

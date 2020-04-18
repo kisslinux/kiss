@@ -125,7 +125,7 @@ pkg_find() {
         set +f
 
         for path2 in "$path/"$query; do
-            [ -d "$path2" ] && set -f -- "$@" "$path2"
+            [ -e "$path2" ] && set -f -- "$@" "$path2"
         done
     done
 
@@ -137,7 +137,7 @@ pkg_find() {
 
     # Show all search results if called from 'kiss search', else
     # print only the first match.
-    [ -t 1 ] && printf '%s\n' "$@" || printf '%s\n' "$1"
+    [ -t 1 ] || [ "$2" ] && printf '%s\n' "$@" || printf '%s\n' "$1"
 }
 
 pkg_list() {
@@ -1334,18 +1334,38 @@ args() {
 
         h|help|-h|--help|'')
             log 'kiss [a|b|c|i|l|r|s|u|v] [pkg] [pkg] [pkg]'
-            log 'alternatives: List and swap to alternatives'
-            log 'build:        Build a package'
-            log 'checksum:     Generate checksums'
-            log 'install:      Install a package'
-            log 'list:         List installed packages'
-            log 'remove:       Remove a package'
-            log 'search:       Search for a package'
-            log 'update:       Check for updates'
-            log 'version:      Package manager version'
+            log 'alternatives List and swap to alternatives'
+            log 'build        Build a package'
+            log 'checksum     Generate checksums'
+            log 'install      Install a package'
+            log 'list         List installed packages'
+            log 'remove       Remove a package'
+            log 'search       Search for a package'
+            log 'update       Check for updates'
+            log 'version      Package manager version
+                '
+
+            log "Installed extensions (kiss-* in \$PATH)"
+
+            KISS_PATH=$PATH
+
+            for path in $(pkg_find kiss-\* all); do
+                set -- "${path#*/kiss-}" "$@"
+                max=$((${#1} > max ? ${#1} : max))
+            done
+
+            for path do
+                printf '\033[31;1m->\033[m %-*s ' "$max" "${path#*/kiss-}"
+                sed -n 's/^# *//;2p' "$(command -v "kiss-$path")"
+            done | sort -uk1 >&2 
         ;;
 
-        *) die "'kiss $action' is not a valid command" ;;
+        *) 
+            command -v "kiss-$action" >/dev/null ||
+                die "'kiss $action' is not a valid command"
+
+            "kiss-$action" "$@"
+        ;;
     esac
 }
 

@@ -1,6 +1,5 @@
 #!/bin/sh -e
-#
-# kiss-orphans - List orphaned packages.
+# List orphaned packages.
 
 cd "$KISS_ROOT/var/db/kiss/installed/"
 

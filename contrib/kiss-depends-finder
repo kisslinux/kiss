@@ -1,5 +1,4 @@
 #!/bin/sh -e
-#
 # Find missing dependencies by parsing 'ldd'.
 
 kiss l "${1:-null}" >/dev/null

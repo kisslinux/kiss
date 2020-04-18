@@ -1,4 +1,5 @@
 #!/bin/sh
+# Create a boilerplate package.
 
 die() {
     printf 'error: %s.\n' "$*" >&2

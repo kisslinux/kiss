@@ -1,9 +1,8 @@
 #!/bin/sh -ef
+# Remove all packages except for the base.
 #
 # Disable word-splittng warnings as they're safe here.
 # shellcheck disable=SC2046
-#
-# kiss-reset: Remove all packages except for the base.
 
 set --
 

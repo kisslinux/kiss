@@ -1,6 +1,5 @@
 #!/bin/sh -ef
-#
-# kiss-export - Turn an installed package into a KISS tarball.
+# Turn an installed package into a KISS tarball.
 
 kiss l "${1:-null}" >/dev/null
 

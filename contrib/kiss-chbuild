@@ -1,5 +1,4 @@
 #!/bin/sh -e
-#
 # Create/destroy temporary chroots.
 
 log() {

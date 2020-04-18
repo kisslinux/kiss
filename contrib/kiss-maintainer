@@ -1,6 +1,5 @@
 #!/bin/sh -ef
-#
-# kiss-maintainer - find the maintainer of a package.
+# Find the maintainer of a package.
 
 kiss s "$1" | while read -r repo; do cd "$repo"
     m=$(git log -1 version 2>/dev/null) ||:

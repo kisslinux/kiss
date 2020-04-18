@@ -1,4 +1,5 @@
 #!/bin/sh -ef
+# Link a repository file to another repository.
 
 [ "$1" ] || {
     printf 'usage: kiss-link file\n'
