@@ -53,12 +53,12 @@ prompt() {
 as_root() {
     # Simple function to run a command as root using either 'sudo',
     # 'doas' or 'su'. Hurrah for choice.
-    [ "$uid" = 0 ] || log "Using '${su:-su}'"
+    [ "$uid" = 0 ] || log "Using '${su:-su}' (to become ${user:=root})"
 
     case $su in
-        *sudo) sudo -E  -- "$@" ;;
-        *doas) doas     -- "$@" ;;
-        *)     su -pc "$* <&3" 3<&0 </dev/tty ;;
+        *sudo) sudo -E -u "$user" -- "$@" ;;
+        *doas) doas    -u "$user" -- "$@" ;;
+        *)     su -pc "$* <&3" "$user" 3<&0 </dev/tty ;;
     esac
 }
 
@@ -1236,7 +1236,17 @@ args() {
             for pkg do pkg_lint    "$pkg" c; done
             for pkg do pkg_sources "$pkg" c; done
             for pkg do
-                pkg_checksums "$pkg" > "$(pkg_find "$pkg")/checksums"
+                pkg_checksums "$pkg" | {
+                    repo_dir=$(pkg_find "$pkg")/checksums
+
+                    if [ -w "$repo_dir" ]; then
+                        tee "$repo_dir"
+                    else
+                        log "$pkg" "Need permissions to generate checksums"
+
+                        user=$(stat -c %U "$repo_dir") as_root tee "$repo_dir"
+                    fi
+                }
 
                 log "$pkg" "Generated checksums"
             done
