@@ -910,25 +910,62 @@ pkg_remove() {
 
 pkg_install() {
     # Install a built package tar-ball.
+    #
+    # Package installation works similarly to the method used by
+    # Slackware in some of their tooling. It's not the obvious
+    # solution to the problem, however it is the best solution
+    # at this given time.
+    #
+    # When an installation is an update to an existing package,
+    # instead of removing the old version first we do something
+    # different.
+    #
+    # The new version is installed overwriting any files which
+    # it has in common with the previously installed version of
+    # the package.
+    #
+    # A "diff" is then generated between the old and new versions
+    # and contains any files existing in the old version but not
+    # the new version.
+    #
+    # The package manager then goes and removes these files which
+    # leaves us with the new package version in the file system
+    # and all traces of the old version gone.
+    #
+    # For good measure the package manager will then install the
+    # new package an additional two times. Firstly to ensure that
+    # the above diff didn't contain anything incorrect. And
+    # Secondly to confirm that everything is sane.
+    #
+    # This is the better method as it is "seamless". An update to
+    # busybox won't create a window in which there is no access
+    # to all of its utilities to give an example.
 
     # Install can also take the full path to a tar-ball.
     # We don't need to check the repository if this is the case.
     if [ -f "$1" ] && [ -z "${1%%*.tar.*}" ] ; then
         tar_file=$1 pkg_name=${1##*/} pkg_name=${pkg_name%#*}
 
-    else
-        pkg_cache "$1" ||
-            die "package has not been built, run 'kiss b pkg'"
-
+    elif pkg_cache "$1"; then
         pkg_name=$1
+
+    else
+        die "package has not been built, run 'kiss b pkg'"
     fi
 
     mkdir -p "$tar_dir/$pkg_name"
     log "$pkg_name" "Extracting $tar_file"
 
-    # Extract the tar-ball to catch any errors before installation begins.
+    # The tarball is extracted to a temporary directory where its
+    # contents are then "installed" to the filesystem using 'rsync'.
+    #
+    # Running this step as soon as possible allows us to also check
+    # the validity of the tarball and bail out early if needed.
     decompress "$tar_file" | "$tar" pxf - -C "$tar_dir/$pkg_name"
 
+    # Naively assume that the existence of a manifest file is all
+    # that determines a valid KISS package from an invalid one.
+    # This should be a fine assumption to make in 99.99% of cases.
     [ -f "$tar_dir/$pkg_name/$pkg_db/$pkg_name/manifest" ] ||
         die "'${tar_file##*/}' is not a valid KISS package"
 
@@ -959,17 +996,40 @@ pkg_install() {
     cp -f "$sys_db/$pkg_name/manifest" "$mak_dir/m" 2>/dev/null ||:
     cp -f "$sys_db/$pkg_name/etcsums"  "$mak_dir/c" 2>/dev/null ||:
 
-    # This is repeated multiple times. Better to make it a function.
+    # This rsync command is used to install the tarball's contents to the
+    # filesystem. Your first thought is most probably something along these
+    # lines; "Why don't you just use tar extraction for installation directly?"
+    #
+    # The tar command has no real standard for available features, command-line
+    # flags or behavior. This makes satisfying the requirements for installation
+    # difficult and error-prone across implementations of tar.
+    #
+    # We need to exclude /etc from the tarball, ensure permissions are all owned
+    # by root:root, dump suid/guid permissions from directories and overwrite
+    # all existing files.
+    #
+    # Rsync ticks all boxes here and it being a "single implementation" of itself
+    # ensures portability everywhere so long as rsync is available. To top it all
+    # off, rsync is really handy to have around regardless.
     pkg_rsync() { rsync --chown=root:root --chmod=Du-s,Dg-s,Do-s \
                         -WhHKa --no-compress --exclude /etc "$1" \
                         "$tar_dir/$pkg_name/" "$KISS_ROOT/"; }
-
-    # Install the package by using 'rsync' and overwrite any existing files
-    # (excluding '/etc/').
     pkg_rsync --info=progress2
+
+    # Handle /etc/ files in a special way (via a 3-way checksum) to determine
+    # how these files should be installed. Do we overwrite the existing file?
+    # Do we install it as $file.new to avoid deleting user configuration? etc.
+    #
+    # This is more or less similar to Arch Linux's Pacman with the user manually
+    # handling the .new files when and if they appear.
     pkg_etc
 
-    # Remove any leftover files if this is an upgrade.
+    # This is the aforementioned step removing any files from the old version of
+    # the package if the installation is an update. Each file type has to be
+    # specially handled to ensure no system breakage occurs.
+    #
+    # Files in /etc/ are skipped entirely as they'll be handled via a 3-way
+    # checksum system due to the nature of their existence.
     "$grep" -vFxf "$sys_db/$pkg_name/manifest" "$mak_dir/m" 2>/dev/null |
 
     while read -r file; do
@@ -995,8 +1055,12 @@ pkg_install() {
         fi
     done ||:
 
-    # Install the package again to fix any non-leftover files being
-    # removed above.
+    # Install the package an additional two times. The first being to fix
+    # any potential issues (rare) with the above removal of old files. 
+    # The second rsync call confirms that nothing else need to be done.
+    #
+    # This takes zero time at all if unneeded as rsync is incremental.
+    # If there is nothing to be done, nothing will be done.
     { pkg_rsync --; pkg_rsync --; } ||:
 
     # Reset 'trap' to its original value. Installation is done so
