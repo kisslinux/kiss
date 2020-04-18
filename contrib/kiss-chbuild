@@ -5,19 +5,12 @@ log() {
     printf '\033[31;1m->\033[m %s.\n' "$@"
 }
 
-clean() {
-    log "Destroying chroot"
-
-    su -c "rm -rf chroot-$pid" || clean
-}
-
-pid=$$
-url=https://github.com/kisslinux/repo/releases/download/1.9.11/
-
 cd "${cac_dir:=$KISS_ROOT${XDG_CACHE_HOME:-$HOME/.cache}/kiss}"
 
 [ -f kiss-chroot.tar.xz ] || {
     log "Downloading chroot tarball"
+
+    url=https://github.com/kisslinux/repo/releases/download/1.9.11/
     wget "$url/kiss-chroot.tar.xz"
 }
 
@@ -27,9 +20,7 @@ cd "${cac_dir:=$KISS_ROOT${XDG_CACHE_HOME:-$HOME/.cache}/kiss}"
 }
 
 log "Creating temporary chroot"
-cp -a kiss-chroot "chroot-$pid"
-
-trap clean EXIT INT
+cp -a kiss-chroot "chroot-$$"
 
 log "Entering chroot"
-su -c "kiss-chroot chroot-$pid"
+su -c "kiss-chroot chroot-$$; rm -rf chroot-$$"
