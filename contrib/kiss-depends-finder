@@ -34,7 +34,7 @@ while read -r file; do
 
         # Skip listing these packages as dependencies.
         case $pkg in
-            musl|gcc|"$1") ;;
+            musl|gcc|llvm|"$1") ;;
             *) printf '%s\n' "$pkg" ;;
         esac
     done

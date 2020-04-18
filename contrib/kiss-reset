@@ -1,12 +1,11 @@
-#!/bin/sh -ef
+#!/bin/sh -e
 # Remove all packages except for the base.
-#
-# Disable word-splittng warnings as they're safe here.
-# shellcheck disable=SC2046
 
 set --
 
-while read -r pkg _; do
+for pkg in "$KISS_ROOT/var/db/kiss/installed/"*; do
+    pkg=${pkg##*/}
+
     case $pkg in
         baselayout|binutils|bison|busybox|bzip2|curl|flex|gcc|git|\
         gzip|kiss|libressl|linux-headers|m4|make|musl|pkgconf|rsync|\
@@ -14,9 +13,7 @@ while read -r pkg _; do
 
         *) set -- "$@" "$pkg" ;;
     esac
-done <<EOF
-$(kiss l)
-EOF
+done
 
 [ "$1" ] && {
     printf 'WARNING: This will remove \033[1m%s\033[m package(s).\n' "$#"
