@@ -23,36 +23,32 @@ clean() {
     }
 }
 
-main() {
-    [ -z "$1" ]        && die Need a path to the chroot
-    [ -d "$1" ]        || die Given path does not exist
-    [ "$(id -u)" = 0 ] || die Script needs to be run as root
+[ -z "$1" ]        && die Need a path to the chroot
+[ -d "$1" ]        || die Given path does not exist
+[ "$(id -u)" = 0 ] || die Script needs to be run as root
 
-    trap 'clean "$1"' EXIT INT
+trap 'clean "$1"' EXIT INT
 
-    log Mounting /dev, /proc and /sys from host; {
-        mountpoint -q "$1/dev"  || mount -o bind /dev "$1/dev"
-        mountpoint -q "$1/proc" || mount -t proc proc "$1/proc"
-        mountpoint -q "$1/sys"  || mount -t sysfs sys "$1/sys"
+log Mounting /dev, /proc and /sys from host; {
+    mountpoint -q "$1/dev"  || mount -o bind /dev "$1/dev"
+    mountpoint -q "$1/proc" || mount -t proc proc "$1/proc"
+    mountpoint -q "$1/sys"  || mount -t sysfs sys "$1/sys"
 
-    }
-
-    log Copying /etc/resolv.conf from host; {
-        cp -f /etc/resolv.conf "$1/etc"
-    }
-
-    log Entering chroot; {
-        chroot "$1" /usr/bin/env -i \
-            HOME=/root \
-            TERM="$TERM" \
-            SHELL=/bin/sh \
-            USER=root \
-            KISS_ASROOT=1 \
-            CFLAGS="${2:--march=x86-64 -mtune=generic -pipe -Os}" \
-            CXXFLAGS="${2:--march=x86-64 -mtune=generic -pipe -Os}" \
-            MAKEFLAGS="-j$(nproc 2>/dev/null || echo 1)" \
-            /bin/sh -l
-    }
 }
 
-main "$@"
+log Copying /etc/resolv.conf from host; {
+    cp -f /etc/resolv.conf "$1/etc"
+}
+
+log Entering chroot; {
+    chroot "$1" /usr/bin/env -i \
+        HOME=/root \
+        TERM="$TERM" \
+        SHELL=/bin/sh \
+        USER=root \
+        KISS_ASROOT=1 \
+        CFLAGS="${2:--march=x86-64 -mtune=generic -pipe -Os}" \
+        CXXFLAGS="${2:--march=x86-64 -mtune=generic -pipe -Os}" \
+        MAKEFLAGS="-j$(nproc 2>/dev/null || echo 1)" \
+        /bin/sh -l
+}

@@ -2,45 +2,30 @@
 # Create a boilerplate package.
 
 die() {
-    printf 'error: %s.\n' "$*" >&2
+    printf '%s\n' "$*"
     exit 1
 }
 
 log() {
-    printf '=> %s.\n' "$*"
+    printf '=> %s.\n' "$1"
 }
 
-main() {
-    [ "$1" ] || {
-        log Create boilerplate KISS packages
-        log Usage: kiss-new name version source
+[ "$1" ]      || die "usage: kiss-new [name] [version] [source]"
+[ -d "$1" ]   && die "error: Package $1 already exists"
+mkdir -p "$1" || die "error: Couldn't create directory in $PWD"
+cd "$1"       || die "error: Couldn't enter directory $1/"
 
-        exit
-    }
-
-    [ -d "$1" ] &&
-        die Package "$1" already exists.
-
-    mkdir -p "$1" ||
-        die Couldn\'t create directory in "$PWD"
-
-    cd "$1" ||
-        die Couldn\'t enter directory "$1/"
-
-    log Creating build file; {
-        printf '#!/bin/sh -e\n' > build
-        chmod +x build
-    }
-
-    log Creating version file with "'${2%% *} 1'"; {
-         printf '%s\n' "${2%% *} 1" > version
-    }
-
-    log Creating sources file with "'$3'"; {
-        printf '%s\n' "$3" > sources
-    }
-
-    log Package "$1" created in "$PWD"
+log "Creating build file"; {
+    printf '#!/bin/sh -e\n' > build
+    chmod +x build
 }
 
-main "$@"
+log "Creating version file with '${2%% *} 1'"; {
+     printf '%s\n' "${2%% *} 1" > version
+}
+
+log "Creating sources file with '$3'"; {
+    printf '%s\n' "$3" > sources
+}
+
+log "Package $1 created in $PWD"
