@@ -100,7 +100,7 @@ pkg_lint() {
     log "$1" "Checking repository files"
 
     cd "$(pkg_find "$1")"
-    read -r _ release < version
+    read -r _ release 2>/dev/null < version || die "Version file not found"
 
     [ "$release" ] || die "$1" "Release field not found in version file"
     [ -f sources ] || die "$1" "Sources file not found"
