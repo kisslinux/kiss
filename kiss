@@ -1297,14 +1297,14 @@ args() {
             for pkg do pkg_sources "$pkg" c; done
             for pkg do
                 pkg_checksums "$pkg" | {
-                    repo_dir=$(pkg_find "$pkg")/checksums
+                    repo_dir=$(pkg_find "$pkg")
 
                     if [ -w "$repo_dir" ]; then
-                        tee "$repo_dir"
+                        tee "$repo_dir/checksums"
                     else
                         log "$pkg" "Need permissions to generate checksums"
 
-                        user=$(stat -c %U "$repo_dir") as_root tee "$repo_dir"
+                        user=$(stat -c %U "$repo_dir") as_root tee "$repo_dir/checksums"
                     fi
                 }
 
