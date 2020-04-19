@@ -434,8 +434,7 @@ pkg_fixdeps() {
     # first column.
     sort -uk1,1 -o depends depends 2>/dev/null ||:
 
-    # Display a 'diff' of the new dependencies against
-    # the old ones. '-N' treats non-existent files as blank.
+    # Display a 'diff' of the new dependencies against the old ones. 
     diff -U 3 "$dep_file" depends ||:
 
     # Remove the package's depends file if it's empty.
