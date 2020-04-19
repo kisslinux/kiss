@@ -137,7 +137,7 @@ pkg_find() {
 
     # Show all search results if called from 'kiss search', else
     # print only the first match.
-    [ -t 1 ] || [ "$all" ] && printf '%s\n' "$@" || printf '%s\n' "$1"
+    [ "$all" ] && printf '%s\n' "$@" || printf '%s\n' "$1"
 }
 
 pkg_list() {
@@ -1329,7 +1329,7 @@ args() {
         b|build)   pkg_build "${@:?No packages installed}" ;;
         l|list)    pkg_list "$@" ;;
         u|update)  pkg_updates ;;
-        s|search)  for pkg do pkg_find "$pkg"; done ;;
+        s|search)  for pkg do pkg_find "$pkg" all; done ;;
         v|version) log kiss 1.11.0 ;;
 
         h|help|-h|--help|'')
