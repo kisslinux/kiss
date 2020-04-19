@@ -125,7 +125,7 @@ pkg_find() {
         set +f
 
         for path2 in "$path/"$query; do
-            [ -e "$path2" ] && set -f -- "$@" "$path2"
+            [ -x "$path2" ] || [ -d "$path2" ] && set -f -- "$@" "$path2"
         done
     done
 
