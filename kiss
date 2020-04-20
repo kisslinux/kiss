@@ -129,7 +129,7 @@ pkg_find() {
         done
     done
 
-    IFS=
+    unset IFS
 
     # A package may also not be found due to a repository not being
     # readable by the current user. Either way, we need to die here.
@@ -1086,7 +1086,7 @@ pkg_updates() {
     # Create a list of all repositories.
     # See [1] at top of script.
     # shellcheck disable=2046,2086
-    { IFS=:; set -- $KISS_PATH; IFS=; }
+    { IFS=:; set -- $KISS_PATH; unset IFS; }
 
     # Update each repository in '$KISS_PATH'. It is assumed that
     # each repository is 'git' tracked.
