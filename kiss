@@ -1236,7 +1236,7 @@ args() {
     # This handles the globbing characters '*', '!', '[' and ']' as per:
     # https://pubs.opengroup.org/onlinepubs/009695399/utilities/xcu_chap02.html
     [ "${action##[as]*}" ] &&
-        case $@ in *\**|*\!*|*\[*|*\]*)
+        case $* in *\**|*\!*|*\[*|*\]*)
             die "Arguments contain invalid characters: '!*[]'"
         esac
 
