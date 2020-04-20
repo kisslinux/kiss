@@ -129,7 +129,7 @@ pkg_find() {
         done
     done
 
-    IFS=$old_ifs
+    IFS=
 
     # A package may also not be found due to a repository not being
     # readable by the current user. Either way, we need to die here.
@@ -1086,7 +1086,7 @@ pkg_updates() {
     # Create a list of all repositories.
     # See [1] at top of script.
     # shellcheck disable=2046,2086
-    { IFS=:; set -- $KISS_PATH; IFS=$old_ifs; }
+    { IFS=:; set -- $KISS_PATH; IFS=; }
 
     # Update each repository in '$KISS_PATH'. It is assumed that
     # each repository is 'git' tracked.
@@ -1382,10 +1382,6 @@ main() {
     # instances to be run at once. Store the value in another variable so
     # that it doesn't change beneath us.
     pid=${KISS_PID:-$$}
-
-    # Store the original value of IFS so we can revert back to it if the
-    # variable is ever changed.
-    old_ifs=$IFS
 
     # Force the C locale to speed up things like 'grep' which disable unicode
     # etc when this is set. We don't need unicode and a speed up is always
