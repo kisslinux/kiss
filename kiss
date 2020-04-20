@@ -344,7 +344,7 @@ pkg_order() {
     # Filter the list, only keeping explicit packages.
     # The purpose of these two loops is to order the
     # argument list based on dependence.
-    for pkg in $deps; do ! contains "$*" "$pkg" || {
+    for pkg in $deps; do contains "$*" "$pkg" && {
         order="$order $pkg "
         redro=" $pkg $redro"
     } done
