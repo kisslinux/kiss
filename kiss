@@ -1227,7 +1227,7 @@ args() {
 
     # 'dash' exits on error here if 'shift' is used and there are zero
     # arguments despite trapping the error ('|| :').
-    shift "$(($# > 0 ? 1 : 0))"
+    shift "$(($# ? 1 : 0))"
 
     # Unless this is a search, sanitize the user's input. The call to
     # 'pkg_find()' supports basic globbing, ensure input doesn't expand
