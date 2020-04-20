@@ -1386,7 +1386,7 @@ main() {
     # Force the C locale to speed up things like 'grep' which disable unicode
     # etc when this is set. We don't need unicode and a speed up is always
     # welcome.
-    export LC_ALL=C
+    export LC_ALL=C LANG=C
 
     # Catch errors and ensure that build files and directories are cleaned
     # up before we die. This occurs on 'Ctrl+C' as well as success and error.
