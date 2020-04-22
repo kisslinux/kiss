@@ -1161,9 +1161,12 @@ pkg_updates() {
                 # ownership of files and directories in the rare
                 # case that the repository is owned by a 3rd user.
                 (
-                    user=$(stat -c %U "$PWD")
+                    user=$(stat -c %U "$PWD") || user=root
 
-                    [ "${user:=root}" = root ] ||
+                    id -u "$user" >/dev/null 2>&1 ||
+                        user=root
+
+                    [ "$user" = root ] ||
                         log "Dropping permissions to $user for pull"
 
                     case $su in
