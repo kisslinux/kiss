@@ -813,7 +813,7 @@ pkg_swap() {
     sed -i "$(esc "$PWD/$alt" "$2")" "../installed/$1/manifest"
 }
 
-pkg_install_files() (
+pkg_install_files() {
     awk '{L[n++]=$0}END{while(n--)print L[n]}' "$2/$pkg_db/${2##*/}/manifest" |
 
     while read -r line; do
@@ -826,7 +826,7 @@ pkg_install_files() (
 
         chown -h root:root "$line"
     done
-)
+}
 
 pkg_etc() {
     [ -d "$tar_dir/$pkg_name/etc" ] || return 0
