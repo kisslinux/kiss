@@ -1013,7 +1013,7 @@ pkg_install() {
     while read -r line; do
         perms=$(stat -c %a "$tar_dir/$pkg_name/$line")
 
-        case $line in 
+        case $line in /etc/*) ;;
             */) [ -d "$line" ] || mkdir -m "$perms" "$line" ;;
              *) cp -Pp "$tar_dir/$pkg_name/$line" "${line%/*}" ;;
         esac
@@ -1066,7 +1066,7 @@ pkg_install() {
     while read -r line; do
         perms=$(stat -c %a "$tar_dir/$pkg_name/$line")
 
-        case $line in 
+        case $line in /etc/*) ;;
             */) [ -d "$line" ] || mkdir -m "$perms" "$line" ;;
              *) [ -e "$line" ] || cp -p "$tar_dir/$pkg_name/$line" "${line%/*}" 
         esac
