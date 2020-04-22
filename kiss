@@ -814,12 +814,16 @@ pkg_swap() {
 }
 
 pkg_install_files() {
+    # Store the total lines in the manifest file for use in the
+    # installation counter output.
+    man_tot=$(wc -l < "$2/$pkg_db/${2##*/}/manifest")
+
     # Reverse the manifest file so that we start shallow and go
     # deeper as we iterate over each item. This is needed so that
     # directories are created going down the tree.
     awk '{L[n++]=$0}END{while(n--)print L[n]}' "$2/$pkg_db/${2##*/}/manifest" |
 
-    while read -r line; do
+    while read -r line; do i=$((i+1))
         # Grab the octal permissions so that directory creation
         # preserves permissions.
         perms=$(stat -c %a "$2/$line")
@@ -837,7 +841,11 @@ pkg_install_files() {
         # Set the ownership of the result to root:root. This is
         # KISS' method to avoid the whole fakeroot mess.
         chown -h root:root "$line"
+
+        printf '%s %s (%s)\e[K\r' "$3" "$i/$man_tot" "$line"
     done
+
+    printf '\n'
 }
 
 pkg_etc() {
@@ -1030,7 +1038,7 @@ pkg_install() {
     cp -f "$sys_db/$pkg_name/etcsums"  "$mak_dir/c" 2>/dev/null ||:
 
     # Install the package's files by iterating over its manifest.
-    pkg_install_files -z "$tar_dir/$pkg_name"
+    pkg_install_files -z "$tar_dir/$pkg_name" "Installing file"
 
     # Handle /etc/ files in a special way (via a 3-way checksum) to determine
     # how these files should be installed. Do we overwrite the existing file?
@@ -1073,7 +1081,7 @@ pkg_install() {
 
     # Install the package's files a second time to fix any mess caused by the
     # above removal of the previous version of the package.
-    pkg_install_files -e "$tar_dir/$pkg_name"
+    pkg_install_files -e "$tar_dir/$pkg_name" "  Checking file"
 
     # Reset 'trap' to its original value. Installation is done so
     # we no longer need to block 'Ctrl+C'.
