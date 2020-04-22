@@ -971,13 +971,16 @@ pkg_install() {
 
     # Ensure that the tarball's manifest is correct by checking that
     # each file and directory inside of it actually exists.
-    while read -r line; do [ -e "$tar_dir/$pkg_name/$line" ] || 
-        die "File $line missing from tarball but mentioned in manifest"
-    done < "$tar_dir/$pkg_name/$pkg_db/$pkg_name/manifest"
+    [ "$KISS_FORCE" = 1 ] || {
+        log "$pkg_name" "Checking that manifest is valid"
+        while read -r line; do 
+            [ -L "$tar_dir/$pkg_name/$line" ] ||
+            [ -e "$tar_dir/$pkg_name/$line" ] || 
+                die "File $line missing from tarball but mentioned in manifest"
+        done < "$tar_dir/$pkg_name/$pkg_db/$pkg_name/manifest"
 
-    log "$pkg_name" "Checking that all dependencies are installed"; {
+        log "$pkg_name" "Checking that all dependencies are installed"
         [ -f "$tar_dir/$pkg_name/$pkg_db/$pkg_name/depends" ] &&
-        [ -z "$KISS_FORCE" ] &&
             while read -r dep dep_type || [ "$dep" ]; do
                 [ "${dep##\#*}" ] || continue
                 [ "$dep_type" ]   || pkg_list "$dep" >/dev/null ||
