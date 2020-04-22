@@ -850,7 +850,7 @@ pkg_install_files() {
         # and this is fine.
         [ -d "$line" ] || chmod "$perms" "$line" 2>/dev/null ||:
 
-        printf '%s %s (%s)\e[K\r' "$3" "$i/$man_tot" "$line"
+        printf '%s %s (%s)\e[J\r' "$3" "$i/$man_tot" "$line"
     done
 
     printf '\n'
