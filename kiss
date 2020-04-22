@@ -846,8 +846,9 @@ pkg_install_files() {
         # chown as chown will reset suid/guid when ownership changes.
         #
         # This only runs on non-directories as we desire the reset
-        # behavior mentioned above.
-        [ -d "$line" ] || chmod "$perms" "$line"
+        # behavior mentioned above. This may fail (broken symlinks)
+        # and this is fine.
+        [ -d "$line" ] || chmod "$perms" "$line" 2>/dev/null ||:
 
         printf '%s %s (%s)\e[K\r' "$3" "$i/$man_tot" "$line"
     done
