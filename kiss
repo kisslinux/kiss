@@ -819,7 +819,7 @@ pkg_install_files() {
     # directories are created going down the tree.
     sort "$2/$pkg_db/${2##*/}/manifest" |
 
-    while read -r line; do i=$((i+1))
+    while read -r line; do
         # Grab the octal permissions so that directory creation
         # preserves permissions.
         perms=$(stat -c %a "$2/$line")
@@ -833,14 +833,14 @@ pkg_install_files() {
             */) [ -d "$line" ] || 
                    install -o root -g root -m "$perms" -d "$line" ;;
 
-            *) test "$1" "$line" ||
+             *) test "$1" "$line" ||
 
-               if [ -L "$2/$line" ]; then
-                   cp -fPp "$2/$line" "${line%/*}" 
-                   chown -h root:root "$line"
-               else
-                   install -o root -g root -m "$perms" "$2/$line" "$line"
-               fi
+                if [ -L "$2/$line" ]; then
+                    cp -fPp "$2/$line" "${line%/*}" 
+                    chown -h root:root "$line"
+                else
+                    install -o root -g root -m "$perms" "$2/$line" "$line"
+                fi
         esac
     done
 }
