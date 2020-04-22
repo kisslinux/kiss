@@ -449,7 +449,7 @@ pkg_manifest() (
 
     # This function runs as a sub-shell to avoid having to 'cd' back to the
     # prior directory before being able to continue.
-    cd "$pkg_dir/$1"
+    cd "${2:-$pkg_dir}/$1"
 
     # find: Print all files and directories and append '/' to directories.
     # sort: Sort the output in *reverse*. Directories appear *after* their
@@ -457,7 +457,7 @@ pkg_manifest() (
     # sed:  Remove the first character in each line (./dir -> /dir) and
     #       remove all lines which only contain '.'.
     find . -type d -exec printf '%s/\n' {} + -o -print |
-        sort -r | sed '/^\.\/$/d;ss.ss' > "$pkg_dir/$1/$pkg_db/$1/manifest"
+        sort -r | sed '/^\.\/$/d;ss.ss' > "${2:-$pkg_dir}/$1/$pkg_db/$1/manifest"
 )
 
 pkg_etcsums() (
@@ -738,7 +738,7 @@ pkg_conflicts() {
         #
         # Pretty nifty huh?
         while IFS=: read -r _ con; do
-            log "$p_name" "Found conflict ($con), adding choice"
+            printf '%s\n' "Found conflict $con"
 
             # Create the "choices" directory inside of the tarball.
             # This directory will store the conflicting file.
@@ -759,12 +759,11 @@ pkg_conflicts() {
                 log "this must be fixed in $p_name. Contact the maintainer"
                 die "by checking 'git log' or by running 'kiss-maintainer'"
             }
-
-            # Rewrite the package's manifest to update its location
-            # to its new spot (and name) in the choices directory.
-            sed -i "$(esc "$con" "/$cho_dir/$p_name$con_name")" \
-                "$tar_dir/$p_name/$pkg_db/$p_name/manifest"
         done
+
+        # Rewrite the package's manifest to update its location
+        # to its new spot (and name) in the choices directory.
+        pkg_manifest "$p_name" "$tar_dir" 2>/dev/null
 
     elif "$grep" -Fxf "$cac_dir/$pid-m" -- "$@"; then
         log "Package '$p_name' conflicts with another package" "" "!>"
