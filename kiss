@@ -842,6 +842,13 @@ pkg_install_files() {
         # KISS' method to avoid the whole fakeroot mess.
         chown -h root:root "$line"
 
+        # Preserve permissions by using chmod. This runs after
+        # chown as chown will reset suid/guid when ownership changes.
+        #
+        # This only runs on non-directories as we desire the reset
+        # behavior mentioned above.
+        [ -d "$line" ] || chmod "$perms" "$line"
+
         printf '%s %s (%s)\e[K\r' "$3" "$i/$man_tot" "$line"
     done
 
