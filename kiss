@@ -813,6 +813,48 @@ pkg_swap() {
     sed -i "$(esc "$PWD/$alt" "$2")" "../installed/$1/manifest"
 }
 
+pkg_install_files() {
+    # Store the total lines in the manifest file for use in the
+    # installation counter output.
+    man_tot=$(wc -l < "$2/$pkg_db/${2##*/}/manifest")
+
+    # Reverse the manifest file so that we start shallow and go
+    # deeper as we iterate over each item. This is needed so that
+    # directories are created going down the tree.
+    awk '{L[n++]=$0}END{while(n--)print L[n]}' "$2/$pkg_db/${2##*/}/manifest" |
+
+    while read -r line; do i=$((i+1))
+        # Grab the octal permissions so that directory creation
+        # preserves permissions.
+        perms=$(stat -c %a "$2/$line")
+
+        # Copy files and create directories (preserving permissions),
+        # skipping anything located in /etc/.
+        #
+        # The 'test' will run with '-e' for no-overwrite and '-z'
+        # for overwrite. 
+        case $line in /etc/*) ;;
+            */) [ -d "$line" ]    || mkdir -m "$perms" "$line" ;;
+             *) test "$1" "$line" || cp -fPp "$2/$line" "${line%/*}" ;;
+        esac
+
+        # Set the ownership of the result to root:root. This is
+        # KISS' method to avoid the whole fakeroot mess.
+        chown -h root:root "$line"
+
+        # Preserve permissions by using chmod. This runs after
+        # chown as chown will reset suid/guid when ownership changes.
+        #
+        # This only runs on non-directories as we desire the reset
+        # behavior mentioned above.
+        [ -d "$line" ] || chmod "$perms" "$line"
+
+        printf '%s %s (%s)\e[K\r' "$3" "$i/$man_tot" "$line"
+    done
+
+    printf '\n'
+}
+
 pkg_etc() {
     [ -d "$tar_dir/$pkg_name/etc" ] || return 0
 
@@ -957,7 +999,7 @@ pkg_install() {
     log "$pkg_name" "Extracting $tar_file"
 
     # The tarball is extracted to a temporary directory where its
-    # contents are then "installed" to the filesystem using 'rsync'.
+    # contents are then "installed" to the filesystem.
     #
     # Running this step as soon as possible allows us to also check
     # the validity of the tarball and bail out early if needed.
@@ -1005,25 +1047,8 @@ pkg_install() {
     cp -f "$sys_db/$pkg_name/manifest" "$mak_dir/m" 2>/dev/null ||:
     cp -f "$sys_db/$pkg_name/etcsums"  "$mak_dir/c" 2>/dev/null ||:
 
-    # This rsync command is used to install the tarball's contents to the
-    # filesystem. Your first thought is most probably something along these
-    # lines; "Why don't you just use tar extraction for installation directly?"
-    #
-    # The tar command has no real standard for available features, command-line
-    # flags or behavior. This makes satisfying the requirements for installation
-    # difficult and error-prone across implementations of tar.
-    #
-    # We need to exclude /etc from the tarball, ensure permissions are all owned
-    # by root:root, dump suid/guid permissions from directories and overwrite
-    # all existing files.
-    #
-    # Rsync ticks all boxes here and it being a "single implementation" of itself
-    # ensures portability everywhere so long as rsync is available. To top it all
-    # off, rsync is really handy to have around regardless.
-    pkg_rsync() { rsync --chown=root:root --chmod=Du-s,Dg-s,Do-s \
-                        -WhHKa --no-compress --exclude /etc "$1" \
-                        "$tar_dir/$pkg_name/" "$KISS_ROOT/"; }
-    pkg_rsync --info=progress2
+    # Install the package's files by iterating over its manifest.
+    pkg_install_files -z "$tar_dir/$pkg_name" "Installing file"
 
     # Handle /etc/ files in a special way (via a 3-way checksum) to determine
     # how these files should be installed. Do we overwrite the existing file?
@@ -1064,13 +1089,9 @@ pkg_install() {
         fi
     done ||:
 
-    # Install the package an additional two times. The first being to fix
-    # any potential issues (rare) with the above removal of old files. 
-    # The second rsync call confirms that nothing else need to be done.
-    #
-    # This takes zero time at all if unneeded as rsync is incremental.
-    # If there is nothing to be done, nothing will be done.
-    { pkg_rsync --; pkg_rsync --; } ||:
+    # Install the package's files a second time to fix any mess caused by the
+    # above removal of the previous version of the package.
+    pkg_install_files -e "$tar_dir/$pkg_name" "  Checking file"
 
     # Reset 'trap' to its original value. Installation is done so
     # we no longer need to block 'Ctrl+C'.
