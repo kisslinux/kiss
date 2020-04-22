@@ -814,16 +814,28 @@ pkg_swap() {
 }
 
 pkg_install_files() {
+    # Reverse the manifest file so that we start shallow and go
+    # deeper as we iterate over each item. This is needed so that
+    # directories are created going down the tree.
     awk '{L[n++]=$0}END{while(n--)print L[n]}' "$2/$pkg_db/${2##*/}/manifest" |
 
     while read -r line; do
+        # Grab the octal permissions so that directory creation
+        # preserves permissions.
         perms=$(stat -c %a "$2/$line")
 
+        # Copy files and create directories (preserving permissions),
+        # skipping anything located in /etc/.
+        #
+        # The 'test' will run with '-e' for no-overwrite and '-z'
+        # for overwrite. 
         case $line in /etc/*) ;;
             */) [ -d "$line" ]    || mkdir -m "$perms" "$line" ;;
              *) test "$1" "$line" || cp -fPp "$2/$line" "${line%/*}" ;;
         esac
 
+        # Set the ownership of the result to root:root. This is
+        # KISS' method to avoid the whole fakeroot mess.
         chown -h root:root "$line"
     done
 }
