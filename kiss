@@ -371,8 +371,7 @@ pkg_strip() {
             *) continue
         esac
 
-        strip "--strip-$strip_opt" "$file" &&
-        printf 'Stripped %10s %s\n' "($strip_opt)" "${file##$pkg_dir/$1}"
+        strip "--strip-$strip_opt" "$file" 2>/dev/null
     done 2>/dev/null ||:
 }
 
