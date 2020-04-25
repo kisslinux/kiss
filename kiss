@@ -832,7 +832,7 @@ pkg_install_files() {
             *)  test "$1" "$line" ||
 
                 if [ -L "$2/$line" ]; then 
-                    [ -d "$2/$line" ] && continue
+                    [ -d "$line" ] && continue
 
                     cp -fPp "$2/$line" "${line%/*}" 
                     chown -h root:root "$line"
