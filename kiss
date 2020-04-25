@@ -23,7 +23,6 @@ log() {
     # '\033[m':           Reset text formatting.
     # '${3:-->}':         If the 3rd argument is missing, set prefix to '->'.
     # '${2:+\033[1;3Xm}': If the 2nd argument exists, set text style of '$1'.
-    # '${2:+\033[m}':     If the 2nd argument exists, reset text formatting.
     printf '\033[1;33m%s \033[m%b%s\033[m %s\n' \
            "${3:-->}" "${2:+\033[1;36m}" "$1" "$2" >&2
 }
@@ -146,7 +145,7 @@ pkg_list() {
     # file read.
 
     # Change directories to the database. This allows us to
-    # avoid having to 'basename' each path. .
+    # avoid having to 'basename' each path.
     cd "$sys_db" 2>/dev/null
 
     # Optional arguments can be passed to check for specific
@@ -278,9 +277,9 @@ pkg_extract() {
             # Git repository, comment or blank line.
             git+*|\#*|'') continue ;;
 
-            # Only 'tar' archives are currently supported for extraction.
-            # Any other file-types are simply copied to '$mak_dir' which
-            # allows for manual extraction.
+            # Only 'tar' and 'zip' archives are currently supported for
+            # extraction. Other filetypes are simply copied to '$mak_dir'
+            # which allows for manual extraction.
             *://*.tar|*://*.tar.??|*://*.tar.???|*://*.tar.????|*://*.tgz)
                 decompress "$src_dir/$1/${src##*/}" |
                     tar xf - --strip-components 1 ||
@@ -354,7 +353,7 @@ pkg_order() {
 
 pkg_strip() {
     # Strip package binaries and libraries. This saves space on the
-    # system as well as on the tar-balls we ship for installation.
+    # system as well as on the tarballs we ship for installation.
     [ -f "$mak_dir/$pkg/nostrip" ] && return
 
     log "$1" "Stripping binaries and libraries"
@@ -472,14 +471,14 @@ pkg_etcsums() (
 )
 
 pkg_tar() {
-    # Create a tar-ball from the built package's files.
-    # This tar-ball also contains the package's database entry.
-    log "$1" "Creating tar-ball"
+    # Create a tarball from the built package's files.
+    # This tarball also contains the package's database entry.
+    log "$1" "Creating tarball"
 
     # Read the version information to name the package.
     read -r version release < "$(pkg_find "$1")/version"
 
-    # Create a tar-ball from the contents of the built package.
+    # Create a tarball from the contents of the built package.
     "$tar" cf - -C "$pkg_dir/$1" . | case ${KISS_COMPRESS:=gz} in
         bz2) bzip2 -z ;;
         gz)  gzip -6  ;;
@@ -487,11 +486,11 @@ pkg_tar() {
         zst) zstd -z  ;;
     esac > "$bin_dir/$1#$version-$release.tar.${KISS_COMPRESS:=gz}"
 
-    log "$1" "Successfully created tar-ball"
+    log "$1" "Successfully created tarball"
 }
 
 pkg_build() {
-    # Build packages and turn them into packaged tar-balls. This function
+    # Build packages and turn them into packaged tarballs. This function
     # also checks checksums, downloads sources and ensure all dependencies
     # are installed.
     pkg_build=1
@@ -527,8 +526,7 @@ pkg_build() {
 
     for pkg do pkg_lint "$pkg"; done
 
-    log "Checking to see if any dependencies have already been built"
-    log "Installing any pre-built dependencies"
+    log "Checking for pre-built dependencies"
 
     # Install any pre-built dependencies if they exist in the binary
     # directory and are up to date.
@@ -828,10 +826,10 @@ pkg_install_files() {
         # The 'test' will run with '-e' for no-overwrite and '-z'
         # for overwrite. 
         case $line in /etc/*) ;;
-            */) [ -d "$line" ] || 
-                   install -o root -g root -m "$perms" -d "$line" ;;
+            */) [ -d "$line" ] ||
+                    install -o root -g root -m "$perms" -d "$line" ;;
 
-             *) test "$1" "$line" ||
+            *)  test "$1" "$line" ||
 
                 if [ -L "$2/$line" ]; then
                     cp -fPp "$2/$line" "${line%/*}" 
@@ -939,7 +937,7 @@ pkg_remove() {
 }
 
 pkg_install() {
-    # Install a built package tar-ball.
+    # Install a built package tarball.
     #
     # Package installation works similarly to the method used by
     # Slackware in some of their tooling. It's not the obvious
@@ -971,7 +969,7 @@ pkg_install() {
     # busybox won't create a window in which there is no access
     # to all of its utilities to give an example.
 
-    # Install can also take the full path to a tar-ball.
+    # Install can also take the full path to a tarball.
     # We don't need to check the repository if this is the case.
     if [ -f "$1" ] && [ -z "${1%%*.tar.*}" ] ; then
         tar_file=$1 pkg_name=${1##*/} pkg_name=${pkg_name%#*}
@@ -1133,7 +1131,7 @@ pkg_updates() {
             # repository.
             case $(git config merge.verifySignatures) in
                 true) log "$PWD" "[signed ✓] " ;;
-                *)    log "$PWD" " "  ;;
+                *)    log "$PWD" " " ;;
             esac
 
             if [ -w "$PWD" ] && [ "$uid" != 0 ]; then
