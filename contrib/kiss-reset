@@ -8,8 +8,7 @@ for pkg in "$KISS_ROOT/var/db/kiss/installed/"*; do
 
     case $pkg in
         baselayout|binutils|bison|busybox|bzip2|curl|flex|gcc|git|\
-        gzip|kiss|libressl|linux-headers|m4|make|musl|pkgconf|rsync|\
-        xz|zlib) ;;
+        gzip|kiss|libressl|linux-headers|m4|make|musl|pkgconf|xz|zlib) ;;
 
         *) set -- "$@" "$pkg" ;;
     esac
