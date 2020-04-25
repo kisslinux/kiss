@@ -4,9 +4,11 @@
 # Ignore shellcheck as we want the warning's behavior.
 # shellcheck disable=2015
 [ "$1" ] && kiss s "${1:-null}" >/dev/null || {
-    printf 'usage: kiss-fork [pkg]\n'
+    printf 'usage: [kiss-fork [pkg]] [index]\n'
     exit 1
 }
+
+num=$2
 
 # Disable this warning as globbing is disabled and word splitting
 # is intentional. This grabs the location of the package's files.
@@ -14,7 +16,12 @@
 (
     set -- $(kiss s "$1")
 
-    cp -r "$1" .
+    shift "${num:-0}"
+
+    [ -d "$1" ] && {
+        printf 'found package in %s\n' "$1"
+        cp -r "$1" .
+    }
 )
 
 printf 'forked package to %s\n' "$PWD/$1"
