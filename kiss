@@ -818,7 +818,7 @@ pkg_install_files() {
     while read -r line; do
         # Grab the octal permissions so that directory creation
         # preserves permissions.
-        perms=$(stat -c %a "$2/$line")
+        rwx=$(stat -c %a "$2/$line")
 
         # Copy files and create directories (preserving permissions),
         # skipping anything located in /etc/.
@@ -827,17 +827,19 @@ pkg_install_files() {
         # for overwrite. 
         case $line in /etc/*) ;;
             */) [ -d "$line" ] ||
-                    install -o root -g root -m "$perms" -d "$line" ;;
+                    install -o root -g root -m "$rwx" \
+                        -d "$KISS_ROOT/$line" ;;
 
-            *)  test "$1" "$line" ||
+            *)  test "$1" "$KISS_ROOT/$line" ||
 
                 if [ -L "$2/$line" ]; then 
-                    [ -d "$line" ] && continue
+                    [ -d "$KISS_ROOT/$line" ] && continue
 
                     cp -fPp "$2/$line" "${line%/*}" 
-                    chown -h root:root "$line"
+                    chown -h root:root "$KISS_ROOT/$line"
                 else
-                    install -o root -g root -m "$perms" "$2/$line" "$line"
+                    install -o root -g root -m "$rwx" \
+                        "$2/$line" "$KISS_ROOT/$line"
                 fi
         esac
     done
