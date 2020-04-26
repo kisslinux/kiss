@@ -205,7 +205,7 @@ pkg_sources() {
                 # Git has no option to clone a repository to a
                 # specific location so we must do it ourselves
                 # beforehand.
-                cd "$mak_dir/$1/$dest" 2>/dev/null
+                cd "$mak_dir/$1/$dest" 2>/dev/null || die
 
                 # Clear the argument list as we'll be overwriting
                 # it below based on what kind of checkout we're
