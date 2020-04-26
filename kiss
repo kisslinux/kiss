@@ -826,13 +826,24 @@ pkg_install_files() {
         # The 'test' will run with '-e' for no-overwrite and '-z'
         # for overwrite.
         case $line in /etc/*) ;;
-            */) [ -d "$line" ] ||
-                    install -o root -g root -m "$rwx" \
-                        -d "$KISS_ROOT/$line" ;;
+            */) 
+                # Skip directories if they already exist in the file system.
+                # (Think /usr/bin, /usr/lib, etc).
+                [ -d "$line" ] ||
+                    install -o root -g root -m "$rwx" -d "$KISS_ROOT/$line"
+
+                # Strip setgid/setsid from directories to avoid
+                # absolute and utter chaos.
+                chmod -s "$KISS_ROOT/$line" 
+            ;;
 
             *)  test "$1" "$KISS_ROOT/$line" ||
 
+                # Treat symlinks differently as the 'install' command
+                # will resolve them (we don't want this).
                 if [ -h "$2/$line" ]; then 
+                    # Skip symlinks which already exist as directories.
+                    # (Think baselayout being updated)
                     [ -d "$KISS_ROOT/$line" ] && continue
 
                     cp -fPp "$2/$line" "${line%/*}"
@@ -1354,7 +1365,7 @@ args() {
         l|list)    pkg_list "$@" ;;
         u|update)  pkg_updates ;;
         s|search)  for pkg do pkg_find "$pkg" all; done ;;
-        v|version) printf '1.12.1\n' ;;
+        v|version) printf '1.12.2\n' ;;
 
         h|help|-h|--help|'')
             log 'kiss [a|b|c|i|l|r|s|u|v] [pkg] [pkg] [pkg]'
