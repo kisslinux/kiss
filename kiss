@@ -832,7 +832,7 @@ pkg_install_files() {
 
             *)  test "$1" "$KISS_ROOT/$line" ||
 
-                if [ -L "$2/$line" ]; then 
+                if [ -h "$2/$line" ]; then 
                     [ -d "$KISS_ROOT/$line" ] && continue
 
                     cp -fPp "$2/$line" "${line%/*}" 
@@ -1006,7 +1006,7 @@ pkg_install() {
     [ "$KISS_FORCE" = 1 ] || {
         log "$pkg_name" "Checking that manifest is valid"
         while read -r line; do 
-            [ -L "$tar_dir/$pkg_name/$line" ] ||
+            [ -h "$tar_dir/$pkg_name/$line" ] ||
             [ -e "$tar_dir/$pkg_name/$line" ] || 
                 die "File $line missing from tarball but mentioned in manifest"
         done < "$tar_dir/$pkg_name/$pkg_db/$pkg_name/manifest"
@@ -1063,15 +1063,15 @@ pkg_install() {
         case $file in /etc/*) continue; esac
 
         # Remove files.
-        if [ -f "$file" ] && [ ! -L "$file" ]; then
+        if [ -f "$file" ] && [ ! -h "$file" ]; then
             rm -f "$file"
 
         # Remove file symlinks.
-        elif [ -L "$file" ] && [ ! -d "$file" ]; then
+        elif [ -h "$file" ] && [ ! -d "$file" ]; then
             unlink "$file" ||:
 
         # Skip directory symlinks.
-        elif [ -L "$file" ] && [ -d "$file" ]; then :
+        elif [ -h "$file" ] && [ -d "$file" ]; then :
 
         # Remove directories if empty.
         elif [ -d "$file" ]; then
