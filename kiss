@@ -818,7 +818,19 @@ pkg_install_files() {
     while read -r line; do
         # Grab the octal permissions so that directory creation
         # preserves permissions.
-        rwx=$(stat -c %a "$2/$line")
+        rwx=$(ls -ld "$2/$line") oct='' b='' o=0 
+
+        # Convert the output of 'ls' (rwxrwx---) to octal. This is simply 
+        # a 1-9 loop with the second digit being the value of the field.
+        for c in 14 22 31 44 52 61 74 82 91; do rwx=${rwx#?}
+            case $rwx in 
+                [rwx]*): $((o+=${c#?})) ;;
+                 [st]*): $((o+=1)) $((b+=4 / (${c%?}/3))) ;;
+                 [ST]*): $((b+=1)) ;;
+            esac
+
+            [ "$((${c%?} % 3))" = 0 ] && oct=$oct$o o=0
+        done
 
         # Copy files and create directories (preserving permissions),
         # skipping anything located in /etc/.
@@ -830,11 +842,7 @@ pkg_install_files() {
                 # Skip directories if they already exist in the file system.
                 # (Think /usr/bin, /usr/lib, etc).
                 [ -d "$line" ] ||
-                    install -o root -g root -m "$rwx" -d "$KISS_ROOT/$line"
-
-                # Strip setgid/setsid from directories to avoid
-                # absolute and utter chaos.
-                chmod -s "$KISS_ROOT/$line" 
+                    install -o root -g root -m "$oct" -d "$KISS_ROOT/$line"
             ;;
 
             *)  test "$1" "$KISS_ROOT/$line" ||
@@ -849,7 +857,7 @@ pkg_install_files() {
                     cp -fPp "$2/$line" "${line%/*}"
                     chown -h root:root "$KISS_ROOT/$line"
                 else
-                    install -o root -g root -m "$rwx" \
+                    install -o root -g root -m "$b$oct" \
                         "$2/$line" "$KISS_ROOT/$line"
                 fi
         esac
