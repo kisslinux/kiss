@@ -913,7 +913,7 @@ pkg_etc() {
 
             # All other cases.
             *)
-                log WARN "($pkg_name) saving /$file as /$file.new"
+                war "$pkg_name" "saving /$file as /$file.new"
                 new=.new
             ;;
         esac
