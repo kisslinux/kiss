@@ -27,9 +27,12 @@ log() {
            "${3:-->}" "${2:+\033[1;36m}" "$1" "$2" >&2
 }
 
+war() {
+    log "$1" "$2" WARNING
+}
+
 die() {
-    # Print a message and exit with '1' (error).
-    log "$1" "$2" "!>"
+    log "$1" "$2" ERROR
     exit 1
 }
 
@@ -110,7 +113,7 @@ pkg_lint() {
         die "$1" "Checksums are missing"
 
     case $PWD in "$KISS_ROOT/var/db/kiss/installed"*) 
-        log "$1" "WARN: This package no longer exists in the repositories"
+        war "$1" "no longer exists in the repositories"
     esac
 }
 
