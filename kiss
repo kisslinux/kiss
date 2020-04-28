@@ -818,7 +818,18 @@ pkg_install_files() {
     while read -r line; do
         # Grab the octal permissions so that directory creation
         # preserves permissions.
-        rwx=$(stat -c %a "$2/$line")
+        o=0 b=0 rwx=''
+        out=$(ls -ld "$1")
+        for c in 1 2 3 4 5 6 7 8 9; do
+            out=${out#?}
+            case $out in
+                [rwx]*) : "$((o += c % 3 ? (c % 3 % 2 ? 4 : 2) : 1))" ;;
+                [ST]*) : "$((b += c > 3 ? (c > 6 ? 1 : 2) : 4))" ;;
+                [st]*) : "$((b += c > 3 ? (c > 6 ? 1 : 2) : 4))" "$((o += 1))" ;;
+            esac
+            [ "$((c % 3))" -eq 0 ] && rwx=$rwx$o o=0
+        done
+        rwx=$b$rwx
 
         # Copy files and create directories (preserving permissions),
         # skipping anything located in /etc/.
