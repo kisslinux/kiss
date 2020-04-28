@@ -108,6 +108,10 @@ pkg_lint() {
 
     [ "$2" ] || [ -f checksums ] ||
         die "$1" "Checksums are missing"
+
+    case $PWD in "$KISS_ROOT/var/db/kiss/installed"*) 
+        log "$1" "WARN: This package no longer exists in the repositories"
+    esac
 }
 
 pkg_find() {
