@@ -1087,7 +1087,7 @@ pkg_install() {
 
         # Remove file symlinks.
         elif [ -h "$file" ] && [ ! -d "$file" ]; then
-            unlink "$file" ||:
+            rm -f "$file"
 
         # Skip directory symlinks.
         elif [ -h "$file" ] && [ -d "$file" ]; then :
