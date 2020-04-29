@@ -550,6 +550,7 @@ pkg_build() {
     for pkg do pkg_sources "$pkg"; done
 
     pkg_verify "$@"
+    log "$pkg" "Verified all checksums"
 
     # Finally build and create tarballs for all passed packages and
     # dependencies.
