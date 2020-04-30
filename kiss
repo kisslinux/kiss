@@ -519,7 +519,7 @@ pkg_etcsums() (
     # prior directory before being able to continue.
     cd "$pkg_dir/$1/etc" 2>/dev/null || return 0; cd ..
 
-    find etc -type f -exec shasum -a 256 {} + > "$pkg_dir/$1/$pkg_db/$1/etcsums"
+    find etc -type f -exec sha256sum {} + > "$pkg_dir/$1/$pkg_db/$1/etcsums"
 )
 
 pkg_tar() (
@@ -711,9 +711,9 @@ pkg_checksums() {
             die "$1" "Couldn't find source '$src'"
         fi
 
-        # An easy way to get 'shasum' to print with the 'basename'
+        # An easy way to get 'sha256sum' to print with the 'basename'
         # of files is to 'cd' to the file's directory beforehand.
-        (cd "$src_path" && shasum -a 256 "${src##*/}") ||
+        (cd "$src_path" && sha256sum "${src##*/}") ||
             die "$1" "Failed to generate checksums"
     done < "$(pkg_find "$1")/sources"
 }
