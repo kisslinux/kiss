@@ -673,7 +673,7 @@ pkg_verify() {
     # Verify all package checksums. This is achieved by generating
     # a new set of checksums and then comparing those with the old
     # set.
-    for pkg do pkg_checksums "$pkg" | cmp - "$(pkg_find "$pkg")/checksums" || {
+    for pkg do pkg_checksums "$pkg" | diff - "$(pkg_find "$pkg")/checksums" || {
         log "$pkg" "Checksum mismatch"
 
         # Instead of dying above, log it to the terminal. Also define a
