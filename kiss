@@ -98,6 +98,51 @@ decompress() {
     esac < "$1"
 }
 
+readlink() {
+    # This is a 'readlink' utility written with POSIX utilities.
+    # 'ls' is used to obtain the target of the symlink.
+    #
+    # This is fine _despite_ the usual gaggle about 'ls' and its
+    # use in scripting. The POSIX specification states that the
+    # link target must be the exact contents of the link.
+    #
+    # The specification:
+    #
+    # > If the file is a symbolic link and the -L option is not 
+    #   specified, this information shall be about the link 
+    #   itself and the <pathname> field shall be of the form: 
+    # 
+    # > "%s -> %s", <pathname of link>, <contents of link>
+
+    # Ignore '-f' if passed to the function to maintain 
+    # compatibility with regular 'readlink'.
+    [ "$1" = -f ] && shift
+
+    # Go to the file's directory and follow any symlinks along
+    # the way. This is fine as we're safe to assume that all
+    # input is a full path to something.
+    cd -P "${1%/*}"
+
+    # Grab the file's information from 'ls' and give the fully
+    # resolved path to the symlink file as input.
+    lso=$(ls -ld "$PWD/${1##*/}") target=
+
+    # Strip everything before the nearest '->' (arrow) and 
+    # construct the final path. If the file isn't a symlink, just 
+    # print it as-is.
+    case $lso in *' -> '*) 
+        target=${lso##*" -> "} target=$PWD/${target##*/}
+    esac
+
+    # If we've failed to resolve to anything, fallback to treating
+    # the file as if it weren't a symlink. This also handles cases
+    # where a file may include ' -> ' in its name.
+    [ -e "$target" ] || target=$PWD/${1##*/}
+
+    cd - >/dev/null
+    printf '%s\n' "$target"
+}
+
 pkg_lint() {
     log "$1" "Checking repository files"
 
@@ -289,7 +334,7 @@ pkg_extract() {
             # which allows for manual extraction.
             *://*.tar|*://*.tar.??|*://*.tar.???|*://*.tar.????|*://*.tgz)
                 decompress "$src_dir/$1/${src##*/}" |
-                    tar xf - --strip-components 1 ||
+                    "$tar" xf - --strip-components 1 ||
                     die "$1" "Couldn't extract ${src##*/}"
             ;;
 
@@ -420,7 +465,7 @@ pkg_fixdeps() {
             # Extract the file path from 'ldd' output.
             dep=${dep#* => }
             dep=${dep% *}
-            dep=$(readlink -f "$dep")
+            dep=$("$readlink" -f "$dep")
 
             # Figure out which package owns the file.
             own=$("$grep" -lFx "${dep##$KISS_ROOT}" "$@")
@@ -477,7 +522,7 @@ pkg_etcsums() (
     find etc -type f -exec shasum -a 256 {} + > "$pkg_dir/$1/$pkg_db/$1/etcsums"
 )
 
-pkg_tar() {
+pkg_tar() (
     # Create a tarball from the built package's files.
     # This tarball also contains the package's database entry.
     log "$1" "Creating tarball"
@@ -485,8 +530,12 @@ pkg_tar() {
     # Read the version information to name the package.
     read -r version release < "$(pkg_find "$1")/version"
 
+    # Use 'cd' to avoid needing tar's '-C' flag which may not
+    # be portable across implementations.
+    cd "$pkg_dir/$1"
+
     # Create a tarball from the contents of the built package.
-    "$tar" cf - -C "$pkg_dir/$1" . | case ${KISS_COMPRESS:=gz} in
+    "$tar" cf - . | case ${KISS_COMPRESS:=gz} in
         bz2) bzip2 -z ;;
         gz)  gzip -6  ;;
         xz)  xz -zT 0 ;;
@@ -494,7 +543,7 @@ pkg_tar() {
     esac > "$bin_dir/$1#$version-$release.tar.${KISS_COMPRESS:=gz}"
 
     log "$1" "Successfully created tarball"
-}
+)
 
 pkg_build() {
     # Build packages and turn them into packaged tarballs. This function
@@ -696,7 +745,7 @@ pkg_conflicts() {
         case $file in */) continue; esac
 
         printf '%s/%s\n' \
-            "$(readlink -f "$KISS_ROOT/${file%/*}" 2>/dev/null)" \
+            "$("$readlink" -f "$KISS_ROOT/${file%/*}" 2>/dev/null)" \
             "${file##*/}"
     done < "$tar_dir/$1/$pkg_db/$1/manifest" > "$cac_dir/$pid-m"
 
@@ -1027,7 +1076,11 @@ pkg_install() {
     #
     # Running this step as soon as possible allows us to also check
     # the validity of the tarball and bail out early if needed.
-    decompress "$tar_file" | "$tar" pxf - -C "$tar_dir/$pkg_name"
+    (
+        cd "$tar_dir/$pkg_name"
+
+        decompress "$tar_file" | "$tar" pxf - 
+    )
 
     # Naively assume that the existence of a manifest file is all
     # that determines a valid KISS package from an invalid one.
@@ -1473,6 +1526,10 @@ main() {
     # Store the date and time of script invocation to be used as the name
     # of the log files the package manager creates uring builds.
     time=$(date '+%Y-%m-%d-%H:%M')
+
+    # Check to see if the readlink command exists in the system. If it does
+    # not, fallback to a POSIX shell implementation of 'readlink'.
+    readlink=$(command -v readlink) || readlink=readlink
 
     # Make note of the user's current ID to do root checks later on.
     # This is used enough to warrant a place here.
