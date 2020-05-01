@@ -1,5 +1,5 @@
 #!/bin/sh -ef
-# Copy a package's repository files into the current directory.
+# Copy a package's repository files into the current directory
 
 # Ignore shellcheck as we want the warning's behavior.
 # shellcheck disable=2015

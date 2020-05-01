@@ -1,5 +1,5 @@
 #!/bin/sh -e
-# Remove all packages except for the base.
+# Remove all packages except for the base
 
 set --
 

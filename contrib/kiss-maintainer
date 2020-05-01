@@ -1,5 +1,5 @@
 #!/bin/sh -ef
-# Find the maintainer of a package.
+# Find the maintainer of a package
 
 [ "$1" ] || {
     printf 'usage: kiss-maintainer [pkg]\n'

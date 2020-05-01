@@ -1,5 +1,5 @@
 #!/bin/sh
-# Create a boilerplate package.
+# Create a boilerplate package
 
 die() {
     printf '%s\n' "$*"

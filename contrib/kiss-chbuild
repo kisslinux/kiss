@@ -1,5 +1,5 @@
 #!/bin/sh -e
-# Create/destroy temporary chroots.
+# Create/destroy temporary chroots
 
 log() {
     printf '\033[31;1m->\033[m %s.\n' "$@"

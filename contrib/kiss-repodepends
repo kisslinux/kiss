@@ -1,5 +1,5 @@
 #!/bin/sh
-# Display a package's original dependencies.
+# Display a package's original dependencies
 
 # Ignore shellcheck as we want the warning's behavior.
 # shellcheck disable=2015

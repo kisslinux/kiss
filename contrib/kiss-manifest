@@ -1,5 +1,5 @@
 #!/bin/sh -ef
-# Display all files owned by a package.
+# Display all files owned by a package
 
 # Ignore shellcheck as we want the warning's behavior.
 # shellcheck disable=2015

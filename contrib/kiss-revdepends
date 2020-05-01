@@ -1,5 +1,5 @@
 #!/bin/sh -e
-# Display packages which depend on package.
+# Display packages which depend on package
 
 # Ignore shellcheck as we want the warning's behavior.
 # shellcheck disable=2015

@@ -1,5 +1,5 @@
 #!/bin/sh -e
-# Check which package owns a file.
+# Check which package owns a file
 
 # Strip 'KISS_ROOT' from the file path if passed and
 # follow symlinks.

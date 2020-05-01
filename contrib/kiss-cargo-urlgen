@@ -1,5 +1,5 @@
 #!/bin/sh
-# Generate sources for rust packages.
+# Generate sources for rust packages
 
 [ "$1" ] || {
     printf 'usage: kiss-cargo-urlgen [crate-ver] [crate-ver]\n'

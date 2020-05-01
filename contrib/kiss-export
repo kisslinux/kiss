@@ -1,5 +1,5 @@
 #!/bin/sh -ef
-# Turn an installed package into a KISS tarball.
+# Turn an installed package into a KISS tarball
 
 # Ignore shellcheck as we want the warning's behavior.
 # shellcheck disable=2015

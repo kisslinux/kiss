@@ -1,5 +1,5 @@
 #!/bin/sh -ef
-# Show the size on disk for a package.
+# Show the size on disk for a package
 
 # Ignore shellcheck as we want the warning's behavior.
 # shellcheck disable=2015
