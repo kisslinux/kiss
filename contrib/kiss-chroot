@@ -12,6 +12,7 @@ die() {
 
 clean() {
     log Unmounting /dev, /proc and /sys from chroot; {
+        umount "$1/sys/firmware/efi/efivars" 2>/dev/null ||:
         umount "$1/dev"  ||:
         umount "$1/proc" ||:
         umount "$1/sys"  ||:
@@ -34,6 +35,8 @@ log Mounting /dev, /proc and /sys from host; {
     mountpoint -q "$1/proc" || mount -t proc proc "$1/proc"
     mountpoint -q "$1/sys"  || mount -t sysfs sys "$1/sys"
 
+    mountpoint -q "$1/sys/firmware/efi/efivars" ||
+        mount -t efivarfs efivarfs "$1/sys/firmware/efi/efivars" 2>/dev/null ||:
 }
 
 log Copying /etc/resolv.conf from host; {
