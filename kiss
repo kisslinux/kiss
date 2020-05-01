@@ -108,13 +108,13 @@ readlink() {
     #
     # The specification:
     #
-    # > If the file is a symbolic link and the -L option is not 
-    #   specified, this information shall be about the link 
-    #   itself and the <pathname> field shall be of the form: 
-    # 
+    # > If the file is a symbolic link and the -L option is not
+    #   specified, this information shall be about the link
+    #   itself and the <pathname> field shall be of the form:
+    #
     # > "%s -> %s", <pathname of link>, <contents of link>
 
-    # Ignore '-f' if passed to the function to maintain 
+    # Ignore '-f' if passed to the function to maintain
     # compatibility with regular 'readlink'.
     [ "$1" = -f ] && shift
 
@@ -127,10 +127,10 @@ readlink() {
     # resolved path to the symlink file as input.
     lso=$(ls -ld "$PWD/${1##*/}") target=
 
-    # Strip everything before the nearest '->' (arrow) and 
-    # construct the final path. If the file isn't a symlink, just 
+    # Strip everything before the nearest '->' (arrow) and
+    # construct the final path. If the file isn't a symlink, just
     # print it as-is.
-    case $lso in *' -> '*) 
+    case $lso in *' -> '*)
         target=${lso##*" -> "} target=$PWD/${target##*/}
     esac
 
@@ -171,7 +171,7 @@ pkg_lint() {
     [ "$2" ] || [ -f checksums ] ||
         die "$1" "Checksums are missing"
 
-    case $PWD in "$KISS_ROOT/var/db/kiss/installed"*) 
+    case $PWD in "$KISS_ROOT/var/db/kiss/installed"*)
         war "$1" "no longer exists in the repositories"
     esac
 }
@@ -896,12 +896,12 @@ pkg_install_files() {
     while read -r line; do
         # Grab the octal permissions so that directory creation
         # preserves permissions.
-        rwx=$(ls -ld "$2/$line") oct='' b='' o=0 
+        rwx=$(ls -ld "$2/$line") oct='' b='' o=0
 
-        # Convert the output of 'ls' (rwxrwx---) to octal. This is simply 
+        # Convert the output of 'ls' (rwxrwx---) to octal. This is simply
         # a 1-9 loop with the second digit being the value of the field.
         for c in 14 22 31 44 52 61 74 82 91; do rwx=${rwx#?}
-            case $rwx in 
+            case $rwx in
                 [rwx]*): $((o+=${c#?})) ;;
                  [st]*): $((o+=1)) $((b+=4 / (${c%?}/3))) ;;
                  [ST]*): $((b+=1)) ;;
@@ -916,7 +916,7 @@ pkg_install_files() {
         # The 'test' will run with '-e' for no-overwrite and '-z'
         # for overwrite.
         case $line in /etc/*) ;;
-            */) 
+            */)
                 # Skip directories if they already exist in the file system.
                 # (Think /usr/bin, /usr/lib, etc).
                 [ -d "$line" ] ||
@@ -927,7 +927,7 @@ pkg_install_files() {
 
                 # Treat symlinks differently as the 'install' command
                 # will resolve them (we don't want this).
-                if [ -h "$2/$line" ]; then 
+                if [ -h "$2/$line" ]; then
                     # Skip symlinks which already exist as directories.
                     # (Think baselayout being updated)
                     [ -d "$KISS_ROOT/$line" ] && continue
@@ -1093,7 +1093,7 @@ pkg_install() {
     (
         cd "$tar_dir/$pkg_name"
 
-        decompress "$tar_file" | "$tar" pxf - 
+        decompress "$tar_file" | "$tar" pxf -
     )
 
     # Naively assume that the existence of a manifest file is all
@@ -1106,9 +1106,9 @@ pkg_install() {
     # each file and directory inside of it actually exists.
     [ "$KISS_FORCE" = 1 ] || {
         log "$pkg_name" "Checking that manifest is valid"
-        while read -r line; do 
+        while read -r line; do
             [ -h "$tar_dir/$pkg_name/$line" ] ||
-            [ -e "$tar_dir/$pkg_name/$line" ] || 
+            [ -e "$tar_dir/$pkg_name/$line" ] ||
                 die "File $line missing from tarball but mentioned in manifest"
         done < "$tar_dir/$pkg_name/$pkg_db/$pkg_name/manifest"
 
