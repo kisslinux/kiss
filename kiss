@@ -11,6 +11,53 @@
 # [1] Warnings related to word splitting and globbing are disabled.
 # All word splitting in this script is *safe* and intentional.
 #
+# REGARDING PORTABILITY
+#
+# - Anything with a specification should follow it (POSIX, BSD, etc).
+# - Anything without a specification which has ONLY a single (widely used)
+#   implementation will be considered portable (git, curl, etc).
+#
+#   POSIX utilities
+#   - sh        (POSIX)
+#   - find      (POSIX) -type f, -type d, -exec {} [+;], -o, -print, !
+#   - ls        (POSIX) -l, -d
+#   - sed       (POSIX) -n, s/<search>/<replace>/g, /<delete>/d
+#   - grep      (POSIX) -l, -F, -x, -f, -q, -v
+#   - sort      (POSIX) -r, -u, -k
+#   - tee       (POSIX)
+#   - date      (POSIX)
+#   - mkdir     (POSIX) -p
+#   - rm        (POSIX) -f, -r
+#   - rmdir     (POSIX)
+#   - cp        (POSIX) -f, -P, -p, -L, -R
+#   - mv        (POSIX) -f
+#   - chown     (POSIX) -h
+#   - diff      (POSIX) -U
+#
+#   BSD utilities
+#   - install   (BSD, not POSIX) (still portable) -o, -g, -m, -d
+#
+#   Misc
+#   - readlink  (NOT POSIX) (fallback shell implementation)
+#   - su*       (sudo, doas, su) (in order, optional)
+#   - git       (downloads from git) (must link to curl)
+#   - curl      (needed by git)
+#
+#   Compiler/libc utilities (depends cc & libc)
+#   - readelf   (Part of compiler toolchain) (GNU, LLVM or elfutils)
+#   - strip     (Part of compiler toolchain) (GNU, LLVM or elfutils)
+#   - ldd       (Part of libc)
+#
+#   Tarball compression
+#   - tar       (no standard (well... pax)) (must have --strip-components 1)
+#               (busybox, GNU, libarchive, FreeBSD, NetBSD, etc)
+#   - bzip2     (widely used) -d, -z
+#   - xz        (widely used) -d, -z, -c, -T
+#   - gzip      (widely used) -d, -6
+#   - zstd      (optional)    -d, -z, -c
+#   - unzip     (optional)
+#   - sha256sum (checksums) (NO standard) (fallback openssl implementation)
+#
 # Dylan Araps.
 
 log() {
