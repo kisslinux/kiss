@@ -143,6 +143,20 @@ readlink() {
     printf '%s\n' "$target"
 }
 
+sha256sum() {
+    # This is an implementation of 'sha256sum' using openssl/libressl.
+    # The checksums are merely extracted from the output and reformatted
+    # to match that of 'sha256sum'.
+    #
+    # This _only_ runs when the 'sha256sum' command is _not_ available
+    # in the host machine. It's a fallback.
+    IFS='= ' read -r _ _sum <<EOF
+$(openssl dgst -sha256 "$1")
+EOF
+
+    printf '%s  %s\n' "$_sum" "$1"
+}
+
 pkg_lint() {
     log "$1" "Checking repository files"
 
@@ -519,7 +533,7 @@ pkg_etcsums() (
     # prior directory before being able to continue.
     cd "$pkg_dir/$1/etc" 2>/dev/null || return 0; cd ..
 
-    find etc -type f -exec sha256sum {} + > "$pkg_dir/$1/$pkg_db/$1/etcsums"
+    find etc -type f -exec "$sha256sum" {} + > "$pkg_dir/$1/$pkg_db/$1/etcsums"
 )
 
 pkg_tar() (
@@ -713,7 +727,7 @@ pkg_checksums() {
 
         # An easy way to get 'sha256sum' to print with the 'basename'
         # of files is to 'cd' to the file's directory beforehand.
-        (cd "$src_path" && sha256sum "${src##*/}") ||
+        (cd "$src_path" && "$sha256sum" "${src##*/}") ||
             die "$1" "Failed to generate checksums"
     done < "$(pkg_find "$1")/sources"
 }
@@ -940,8 +954,8 @@ pkg_etc() {
 
     # Handle files in /etc/ based on a 3-way checksum check.
     find etc ! -type d | while read -r file; do
-        { sum_new=$(sha256sum "$file")
-          sum_sys=$(cd "$KISS_ROOT/"; sha256sum "$file")
+        { sum_new=$("$sha256sum" "$file")
+          sum_sys=$(cd "$KISS_ROOT/"; "$sha256sum" "$file")
           sum_old=$("$grep" "$file$" "$mak_dir/c"); } 2>/dev/null ||:
 
         log "$pkg_name" "Doing 3-way handshake for $file"
@@ -1530,6 +1544,10 @@ main() {
     # Check to see if the readlink command exists in the system. If it does
     # not, fallback to a POSIX shell implementation of 'readlink'.
     readlink=$(command -v readlink) || readlink=readlink
+
+    # Check to see if the sha256sum command exists in the system. If it does
+    # not, fallback to using openssl.
+    sha256sum=$(command -v sha256sum) || sha256sum=sha256sum
 
     # Make note of the user's current ID to do root checks later on.
     # This is used enough to warrant a place here.
