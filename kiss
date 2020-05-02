@@ -145,7 +145,7 @@ decompress() {
     esac < "$1"
 }
 
-readlink() {
+readlink() (
     # This is a 'readlink' utility written with POSIX utilities.
     # 'ls' is used to obtain the target of the symlink.
     #
@@ -186,9 +186,8 @@ readlink() {
     # where a file may include ' -> ' in its name.
     [ -e "$target" ] || target=$PWD/${1##*/}
 
-    cd - >/dev/null
     printf '%s\n' "$target"
-}
+)
 
 sha256sum() {
     # This is an implementation of 'sha256sum' using openssl/libressl.
