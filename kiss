@@ -1139,7 +1139,7 @@ pkg_install() {
     (
         cd "$tar_dir/$pkg_name"
 
-        decompress "$tar_file" | "$tar" pxf -
+        decompress "$tar_file" | "$tar" xf -
     )
 
     # Naively assume that the existence of a manifest file is all
