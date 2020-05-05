@@ -142,6 +142,7 @@ decompress() {
         *.xz)       xz -dcT 0 ;;
         *.tgz|*.gz) gzip -d ;;
         *.zst)      zstd -dc ;;
+        *.tar)      cat ;;
     esac < "$1"
 }
 
@@ -394,7 +395,8 @@ pkg_extract() {
             # which allows for manual extraction.
             *://*.tar|*://*.tar.??|*://*.tar.???|*://*.tar.????|*://*.tgz)
                 decompress "$src_dir/$1/${src##*/}" |
-                    "$tar" xf - --strip-components 1 ||
+
+                "$tar" xf - --strip-components 1 ||
                     die "$1" "Couldn't extract ${src##*/}"
             ;;
 
