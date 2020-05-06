@@ -820,17 +820,20 @@ pkg_conflicts() {
     # shellcheck disable=2046,2086
     set -- $(set +f; pop "$sys_db/$1/manifest" from "$sys_db"/*/manifest)
 
+    # Store the list of found conflicts in a file as we'll be using the
+    # information multiple times. Storing things in the cache dir allows
+    # us to be lazy as they'll be automatically removed on script end.
+    "$grep" -Fxf "$cac_dir/$pid-m" -- "$@" > "$cac_dir/$pid-c" ||:
+
     # Enable alternatives automatically if it is safe to do so.
     # This checks to see that the package that is about to be installed
     # doesn't overwrite anything it shouldn't in '/var/db/kiss/installed'.
-    "$grep" -Fxf "$cac_dir/$pid-m" -- "$@" |
-    "$grep" -q ":/var/db/kiss/installed/" || choice_auto=1
+    "$grep" -q ":/var/db/kiss/installed/" "$cac_dir/$pid-c" || choice_auto=1
 
     # Use 'grep' to list matching lines between the to
     # be installed package's manifest and the above filtered
     # list.
     if [ "$KISS_CHOICE" != 0 ] && [ "$choice_auto" = 1 ]; then
-        "$grep" -Fxf "$cac_dir/$pid-m" -- "$@" |
 
         # This is a novel way of offering an "alternatives" system.
         # It is entirely dynamic and all "choices" are created and
@@ -875,13 +878,13 @@ pkg_conflicts() {
                 log "this must be fixed in $p_name. Contact the maintainer"
                 die "by checking 'git log' or by running 'kiss-maintainer'"
             }
-        done
+        done < "$cac_dir/$pid-c"
 
         # Rewrite the package's manifest to update its location
         # to its new spot (and name) in the choices directory.
         pkg_manifest "$p_name" "$tar_dir" 2>/dev/null
 
-    elif "$grep" -Fxf "$cac_dir/$pid-m" -- "$@"; then
+    elif [ -s "$cac_dir/$pid-c" ]; then
         log "Package '$p_name' conflicts with another package" "" "!>"
         log "Run 'KISS_CHOICE=1 kiss i $p_name' to add conflicts" "" "!>"
         die "as alternatives."
