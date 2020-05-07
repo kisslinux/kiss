@@ -139,11 +139,11 @@ run_hook() {
 decompress() {
     case $1 in
         *.bz2)       bzip2 -d ;;
-        *.xz)        xz -dcT 0 ;;
-        *.tgz|*.gz)  gzip -d ;;
-        *.zst)       zstd -dc ;;
         *.lzma|*.lz) lzma -dc  ;;
         *.tar)       cat ;;
+        *.tgz|*.gz)  gzip -d ;;
+        *.xz)        xz -dcT 0 ;;
+        *.zst)       zstd -dc ;;
     esac < "$1"
 }
 
@@ -603,9 +603,9 @@ pkg_tar() (
     "$tar" cf - . | case ${KISS_COMPRESS:=gz} in
         bz2)  bzip2 -z ;;
         gz)   gzip -6  ;;
+        lzma) lzma -z  ;;
         xz)   xz -zT 0 ;;
         zst)  zstd -z  ;;
-        lzma) lzma -z  ;;
     esac > "$bin_dir/$1#$version-$release.tar.${KISS_COMPRESS:=gz}"
 
     log "$1" "Successfully created tarball"
