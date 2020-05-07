@@ -75,11 +75,11 @@ log() {
 }
 
 war() {
-    log "$1" "$2" WARNING
+    log "$1" "$2" "${3:-WARNING}"
 }
 
 die() {
-    log "$1" "$2" ERROR
+    log "$1" "$2" "${3:-ERROR}"
     exit 1
 }
 
@@ -878,7 +878,7 @@ pkg_conflicts() {
                 log "/sbin instead of /usr/bin (example)"
                 log "Before this package can be used as an alternative,"
                 log "this must be fixed in $p_name. Contact the maintainer"
-                die "by checking 'git log' or by running 'kiss-maintainer'"
+                die "by finding their details via 'kiss-maintainer'" "" "!>"
             }
         done < "$cac_dir/$pid-c"
 
@@ -889,7 +889,7 @@ pkg_conflicts() {
     elif [ -s "$cac_dir/$pid-c" ]; then
         log "Package '$p_name' conflicts with another package" "" "!>"
         log "Run 'KISS_CHOICE=1 kiss i $p_name' to add conflicts" "" "!>"
-        die "as alternatives."
+        die "as alternatives." "" "!>"
     fi
 }
 
