@@ -146,7 +146,7 @@ decompress() {
     esac < "$1"
 }
 
-readlink() (
+readlink_sh() (
     # This is a 'readlink' utility written with POSIX utilities.
     # 'ls' is used to obtain the target of the symlink.
     #
@@ -190,7 +190,7 @@ readlink() (
     printf '%s\n' "$target"
 )
 
-sha256sum() {
+sha256sum_sh() {
     # This is an implementation of 'sha256sum' using openssl/libressl.
     # The checksums are merely extracted from the output and reformatted
     # to match that of 'sha256sum'.
@@ -1594,11 +1594,11 @@ main() {
 
     # Check to see if the readlink command exists in the system. If it does
     # not, fallback to a POSIX shell implementation of 'readlink'.
-    readlink=$(command -v readlink) || readlink=readlink
+    readlink=$(command -v readlink) || readlink=readlink_sh
 
     # Check to see if the sha256sum command exists in the system. If it does
     # not, fallback to using openssl.
-    sha256sum=$(command -v sha256sum) || sha256sum=sha256sum
+    sha256sum=$(command -v sha256sum) || sha256sum=sha256sum_sh
 
     # Make note of the user's current ID to do root checks later on.
     # This is used enough to warrant a place here.
