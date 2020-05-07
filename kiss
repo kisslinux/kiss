@@ -197,6 +197,8 @@ sha256sum_sh() {
     #
     # This _only_ runs when the 'sha256sum' command is _not_ available
     # in the host machine. It's a fallback.
+    [ -f "$1" ] || return
+
     IFS='= ' read -r _ _sum <<EOF
 $(openssl dgst -sha256 "$1")
 EOF
