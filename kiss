@@ -1392,7 +1392,8 @@ pkg_clean() {
 
     # Create a list containing the current invocation's temporary
     # files and directories.
-    set +f -- "$mak_dir" "$pkg_dir" "$tar_dir" "$cac_dir/$pid-m"
+    set +f -- "$mak_dir" "$pkg_dir" "$tar_dir" \
+              "$cac_dir/$pid-m" "$cac_dir/$pid-c"
 
     # Go through the cache and add any entries which don't belong
     # to a currently running kiss instance.
@@ -1518,7 +1519,7 @@ args() {
         l|list)    pkg_list "$@" ;;
         u|update)  pkg_updates ;;
         s|search)  for pkg do pkg_find "$pkg" all; done ;;
-        v|version) printf '1.13.3\n' ;;
+        v|version) printf '1.13.4\n' ;;
 
         h|help|-h|--help|'')
             log 'kiss [a|b|c|i|l|r|s|u|v] [pkg] [pkg] [pkg]'
