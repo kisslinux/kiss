@@ -395,10 +395,10 @@ pkg_extract() {
             git+*|\#*|'') continue ;;
 
             # Tarballs of any kind. This is a shell equivalent of
-            # GNU tar's '--strip-components 1'. 
+            # GNU tar's '--strip-components 1'.
             *://*.tar|*://*.tar.??|*://*.tar.???|*://*.tar.????|*://*.tgz)
-                decompress "$src_dir/$1/${src##*/}" > .ktar 
-                
+                decompress "$src_dir/$1/${src##*/}" > .ktar
+
                 "$tar" xf .ktar ||
                     die "$1" "Couldn't extract ${src##*/}"
 
