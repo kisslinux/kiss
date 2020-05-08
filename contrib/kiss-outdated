@@ -1,5 +1,5 @@
 #!/bin/sh
-# Check installed packages for updates
+# Check repository packages for updates
 
 old_IFS=$IFS
 
