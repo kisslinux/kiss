@@ -49,8 +49,7 @@
 #   - ldd       (Part of libc)
 #
 #   Tarball compression
-#   - tar       (no standard (well... pax)) (must have --strip-components 1)
-#               (busybox, GNU, libarchive, FreeBSD, NetBSD, etc)
+#   - tar       (as portable as can be) (cf, tf, xf)
 #   - bzip2     (widely used) -d, -z
 #   - xz        (widely used) -d, -z, -c, -T
 #   - gzip      (widely used) -d, -6
