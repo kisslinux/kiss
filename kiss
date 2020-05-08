@@ -55,6 +55,8 @@
 #   - gzip      (widely used) -d, -6
 #   - zstd      (optional)    -d, -z, -c
 #   - unzip     (optional)
+#   - lzma      (optional)
+#   - lzip      (optional)
 #   - sha256sum (checksums) (NO standard) (fallback openssl implementation)
 #
 # Dylan Araps.
