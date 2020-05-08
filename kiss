@@ -394,16 +394,38 @@ pkg_extract() {
             # Git repository, comment or blank line.
             git+*|\#*|'') continue ;;
 
-            # Only 'tar' and 'zip' archives are currently supported for
-            # extraction. Other filetypes are simply copied to '$mak_dir'
-            # which allows for manual extraction.
+            # Tarballs of any kind. This is a shell equivalent of
+            # GNU tar's '--strip-components 1'. 
             *://*.tar|*://*.tar.??|*://*.tar.???|*://*.tar.????|*://*.tgz)
-                decompress "$src_dir/$1/${src##*/}" |
-
-                "$tar" xf - --strip-components 1 ||
+                decompress "$src_dir/$1/${src##*/}" > .ktar 
+                
+                "$tar" xf .ktar ||
                     die "$1" "Couldn't extract ${src##*/}"
+
+                tar tf .ktar | while read -r dir; do dir=${dir%/*}
+                    # Some tarballs contain './' as the top-level directory,
+                    # we need to skip these occurances.
+                    [ -d "${dir#.}" ] || continue
+
+                    # First attempt to move all files up a directory level,
+                    # if any files/directories fail (due to mv's lack of
+                    # directory merge capability), simply do the exercise
+                    # again and copy-merge the remaining files/directories.
+                    find "$dir/." ! -name . -prune -exec mv -f   {} . + ||
+                    find "$dir/." ! -name . -prune -exec cp -fRp {} . +
+
+                    # Remove the directory now that all files have been
+                    # transferred out of it. This can't be a simple 'rmdir'
+                    # as we may leave files in here due above.
+                    rm -rf "$dir"
+                done 2>/dev/null
+
+                # Clean up after ourselves and remove the temporary tar
+                # archive we've created. Not needed at all really.
+                rm -f .ktar
             ;;
 
+            # Zip archives.
             *://*.zip)
                 unzip "$src_dir/$1/${src##*/}" ||
                     die "$1" "Couldn't extract ${src##*/}"
