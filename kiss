@@ -231,17 +231,17 @@ pkg_find() {
     # Figure out which repository a package belongs to by
     # searching for directories matching the package name
     # in $KISS_PATH/*.
-    query=$1 all=$2 IFS=:; set --
+    query=$1 all=$2 what=$3 IFS=:; set --
 
     # Both counts of word-splitting are intentional here.
     # Firstly to split the repositories and secondly to
     # allow for the query to be a glob.
     # shellcheck disable=2086
-    for path in $KISS_PATH "$sys_db"; do
+    for path in $KISS_PATH "${what:-$sys_db}"; do
         set +f
 
         for path2 in "$path/"$query; do
-            [ -x "$path2" ] || [ -d "$path2" ] && set -f -- "$@" "$path2"
+            test "${what:--d}" "$path2" && set -f -- "$@" "$path2"
         done
     done
 
@@ -1538,7 +1538,7 @@ args() {
 
             set --
 
-            for path in $(KISS_PATH=$PATH pkg_find kiss-\* all); do
+            for path in $(KISS_PATH=$PATH pkg_find kiss-\* all -x); do
                 [ -x "$path" ] && set -- "${path#*/kiss-}" "$@"
                 max=$((${#1} > max ? ${#1} : max))
             done
@@ -1550,7 +1550,7 @@ args() {
         ;;
 
         *)
-            util=$(KISS_PATH=$PATH pkg_find "kiss-$action*" 2>/dev/null) ||
+            util=$(KISS_PATH=$PATH pkg_find "kiss-$action*" "" -x 2>/dev/null) ||
                 die "'kiss $action' is not a valid command"
 
             "$util" "$@"
