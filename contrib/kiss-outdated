@@ -3,21 +3,24 @@
 
 old_IFS=$IFS
 
-# List via arguments or all installed packages.
-if [ "$1" ]; then
-    set -- printf '%s\n' "$@"
-else
-    set -- kiss l
-fi
+kiss s "${@:-*}" | (while read -r pkg_loc _; do {
+    read -r ver _ < "$pkg_loc/version"
 
-"$@" | (while read -r pkg _; do {
-    read -r ver _ < "/var/db/kiss/installed/$pkg/version"
+    pkg=${pkg_loc##*/}
 
     # Fix some package names.
     case $pkg in
-        *-bin) fix=${pkg%%-bin} ;;
+        *-bin)   fix=${pkg%%-bin} ;;
+        *[0-9]r) fix=${pkg%%r} ;;
     esac
     
+    # Ignore duplicates.
+    # shellcheck disable=2106
+    case $seen in
+        *" ${fix:-$pkg} "*) continue ;;
+        *) seen=" $seen ${fix:-$pkg} " ;;
+    esac
+
     # Grab the repology version from the SVG file.
     rep=$(curl -s "https://repology.org/badge/latest-versions/${fix:-$pkg}.svg")
     rep=${rep%</text>*}
