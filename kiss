@@ -401,23 +401,30 @@ pkg_extract() {
                 "$tar" xf .ktar ||
                     die "$1" "Couldn't extract ${src##*/}"
 
-                "$tar" tf .ktar | while read -r dir; do dir=${dir%/*}
+                "$tar" tf .ktar | while IFS=/ read -r dir _; do
                     # Some tarballs contain './' as the top-level directory,
                     # we need to skip these occurances.
                     [ -d "${dir#.}" ] || continue
+
+                    # Move the directory to prevent naming conflicts between
+                    # the child and parent
+                    mv -f "$dir" "$$-$dir"
 
                     # First attempt to move all files up a directory level,
                     # if any files/directories fail (due to mv's lack of
                     # directory merge capability), simply do the exercise
                     # again and copy-merge the remaining files/directories.
-                    find "$dir/." ! -name . -prune -exec mv -f   {} . + ||
-                    find "$dir/." ! -name . -prune -exec cp -fRp {} . +
+                    {
+                        find "$$-$dir/." ! -name . -prune -exec mv -f   {} . + ||
+                        find "$$-$dir/." ! -name . -prune -exec cp -fRp {} . +
+
+                    } 2>/dev/null
 
                     # Remove the directory now that all files have been
                     # transferred out of it. This can't be a simple 'rmdir'
                     # as we may leave files in here due to above.
-                    rm -rf "$dir"
-                done 2>/dev/null
+                    rm -rf "$$-$dir"
+                done
 
                 # Clean up after ourselves and remove the temporary tar
                 # archive we've created. Not needed at all really.
