@@ -402,7 +402,7 @@ pkg_extract() {
                 "$tar" xf .ktar ||
                     die "$1" "Couldn't extract ${src##*/}"
 
-                tar tf .ktar | while read -r dir; do dir=${dir%/*}
+                "$tar" tf .ktar | while read -r dir; do dir=${dir%/*}
                     # Some tarballs contain './' as the top-level directory,
                     # we need to skip these occurances.
                     [ -d "${dir#.}" ] || continue
@@ -416,7 +416,7 @@ pkg_extract() {
 
                     # Remove the directory now that all files have been
                     # transferred out of it. This can't be a simple 'rmdir'
-                    # as we may leave files in here due above.
+                    # as we may leave files in here due to above.
                     rm -rf "$dir"
                 done 2>/dev/null
 
