@@ -1,10 +1,8 @@
 #!/bin/sh
 # Check repository packages for updates
 
-old_IFS=$IFS
-
 kiss s "${@:-*}" | (while read -r pkg_loc _; do {
-    read -r ver _ < "$pkg_loc/version"
+    read -r ver _ 2>/dev/null < "$pkg_loc/version"
 
     pkg=${pkg_loc##*/}
 
@@ -29,8 +27,8 @@ kiss s "${@:-*}" | (while read -r pkg_loc _; do {
     # Skip these.
     # shellcheck disable=2106
     {
-        [ "${rep:--}" = - ] && continue
-        [ "$ver" = git ]    && continue
+        case $rep in -|''|' ') continue; esac
+        case $ver in git)      continue; esac
     }
 
     # Split the comma separated list.
@@ -39,7 +37,7 @@ kiss s "${@:-*}" | (while read -r pkg_loc _; do {
         IFS=', ' 
         set -f
         set +f -- $rep
-        IFS=$old_IFS
+        unset IFS
     }
 
     # Parse comma separated version lists.
