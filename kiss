@@ -34,9 +34,6 @@
 #   - chown     (POSIX) -h
 #   - diff      (POSIX) -U
 #
-#   BSD utilities
-#   - install   (BSD, not POSIX) (still portable) -o, -g, -m, -d
-#
 #   Misc
 #   - su*       (sudo, doas, su) (in order, optional)
 #   - git       (downloads from git) (must link to curl)
@@ -1049,8 +1046,8 @@ pkg_install_files() {
                     cp -fPp "$2/$line" "${line%/*}"
                     chown -h root:root "$KISS_ROOT/$line"
                 else
-                    install -o root -g root -m "$b$oct" \
-                        "$2/$line" "$KISS_ROOT/$line"
+                    cp -f "$2/$line" "$KISS_ROOT/$line"
+                    chmod "$b$oct"   "$KISS_ROOT/$line"
                 fi
         esac
     done
