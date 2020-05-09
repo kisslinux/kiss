@@ -1,8 +1,11 @@
 #!/bin/sh
 # Check repository packages for updates
+#
+# Intended behavior.
+# shellcheck disable=2106
 
 kiss s "${@:-*}" | (while read -r pkg_loc _; do {
-    read -r ver _ 2>/dev/null < "$pkg_loc/version"
+    read -r ver _ 2>/dev/null < "$pkg_loc/version" || continue
 
     pkg=${pkg_loc##*/}
 
@@ -11,7 +14,7 @@ kiss s "${@:-*}" | (while read -r pkg_loc _; do {
         *-bin)   fix=${pkg%%-bin} ;;
         *[0-9]r) fix=${pkg%%r} ;;
     esac
-    
+
     # Ignore duplicates.
     # shellcheck disable=2106
     case $seen in
@@ -25,16 +28,16 @@ kiss s "${@:-*}" | (while read -r pkg_loc _; do {
     rep=${rep##*>}
 
     # Skip these.
-    # shellcheck disable=2106
     {
         case $rep in -|''|' ') continue; esac
         case $ver in git)      continue; esac
     }
 
     # Split the comma separated list.
+    # Intentional (and safe) splitting.
     # shellcheck disable=2086
     {
-        IFS=', ' 
+        IFS=', '
         set -f
         set +f -- $rep
         unset IFS
