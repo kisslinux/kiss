@@ -835,6 +835,8 @@ pkg_conflicts() {
     while read -r file; do
         case $file in */) continue; esac
 
+        # False positive.
+        # shellcheck disable=2031
         old_PWD=$PWD file=$KISS_ROOT/${file#/}
 
         # Attempt to resolve symlinks by using 'cd'.
