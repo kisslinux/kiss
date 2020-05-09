@@ -1034,8 +1034,7 @@ pkg_install_files() {
             */)
                 # Skip directories if they already exist in the file system.
                 # (Think /usr/bin, /usr/lib, etc).
-                [ -d "$line" ] ||
-                    install -o root -g root -m "$oct" -d "$KISS_ROOT/$line"
+                [ -d "$line" ] || mkdir -m "$oct" "$KISS_ROOT/$line"
             ;;
 
             *)  test "$1" "$KISS_ROOT/$line" ||
