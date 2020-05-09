@@ -38,7 +38,6 @@
 #   - install   (BSD, not POSIX) (still portable) -o, -g, -m, -d
 #
 #   Misc
-#   - readlink  (NOT POSIX) (fallback shell implementation)
 #   - su*       (sudo, doas, su) (in order, optional)
 #   - git       (downloads from git) (must link to curl)
 #   - curl      (needed by git)
@@ -148,50 +147,6 @@ decompress() {
         *.zst)      zstd -dc ;;
     esac < "$1"
 }
-
-readlink_sh() (
-    # This is a 'readlink' utility written with POSIX utilities.
-    # 'ls' is used to obtain the target of the symlink.
-    #
-    # This is fine _despite_ the usual gaggle about 'ls' and its
-    # use in scripting. The POSIX specification states that the
-    # link target must be the exact contents of the link.
-    #
-    # The specification:
-    #
-    # > If the file is a symbolic link and the -L option is not
-    #   specified, this information shall be about the link
-    #   itself and the <pathname> field shall be of the form:
-    #
-    # > "%s -> %s", <pathname of link>, <contents of link>
-
-    # Ignore '-f' if passed to the function to maintain
-    # compatibility with regular 'readlink'.
-    [ "$1" = -f ] && shift
-
-    # Go to the file's directory and follow any symlinks along
-    # the way. This is fine as we're safe to assume that all
-    # input is a full path to something.
-    cd -P "${1%/*}"
-
-    # Grab the file's information from 'ls' and give the fully
-    # resolved path to the symlink file as input.
-    lso=$(ls -ld "$PWD/${1##*/}") target=
-
-    # Strip everything before the nearest '->' (arrow) and
-    # construct the final path. If the file isn't a symlink, just
-    # print it as-is.
-    case $lso in *' -> '*)
-        target=${lso##*" -> "} target=$PWD/${target##*/}
-    esac
-
-    # If we've failed to resolve to anything, fallback to treating
-    # the file as if it weren't a symlink. This also handles cases
-    # where a file may include ' -> ' in its name.
-    [ -e "$target" ] || target=$PWD/${1##*/}
-
-    printf '%s\n' "$target"
-)
 
 sha256sum_sh() {
     # This is an implementation of 'sha256sum' using openssl/libressl.
@@ -574,14 +529,37 @@ pkg_fixdeps() {
             [ "${dep##*ldd*}" ] || continue
 
             # Extract the file path from 'ldd' output.
-            dep=${dep#* => }
-            dep=${dep% *}
-            dep=$("$readlink" -f "$dep")
+            dep=${dep#* => } dep=${dep% *} old_PWD=$PWD
+
+            # False positive (we need to modify PWD).
+            # shellcheck disable=2030
+            cd -P "${dep%/*}" 2>/dev/null || PWD=${1%/*}
+
+            # 'ls' is used to obtain the target of the symlink.
+            #
+            # This is fine _despite_ the usual gaggle about 'ls' and its
+            # use in scripting. The POSIX specification states that the
+            # link target must be the exact contents of the link.
+            #
+            # The specification:
+            #
+            # > If the file is a symbolic link and the -L option is not
+            #   specified, this information shall be about the link
+            #   itself and the <pathname> field shall be of the form:
+            #
+            # > "%s -> %s", <pathname of link>, <contents of link>
+            lso=$(ls -ld "$PWD/${dep##*/}" 2>/dev/null) &&
+            case $lso in *' -> '*)
+                lso=${lso##*" -> "} dep=$PWD/${lso##*/}
+            esac
+
+            # We need to go back to where we came from as the old PWD
+            # stores the name of the current package.
+            cd "$old_PWD"
 
             # Figure out which package owns the file.
             own=$("$grep" -lFx "${dep##$KISS_ROOT}" "$@")
-            own=${own%/*}
-            own=${own##*/}
+            own=${own%/*} own=${own##*/}
 
             # Skip listing these packages as dependencies.
             case $own in musl|gcc|llvm|"${PWD##*/}"|"") continue; esac
@@ -857,9 +835,16 @@ pkg_conflicts() {
     while read -r file; do
         case $file in */) continue; esac
 
-        printf '%s/%s\n' \
-            "$("$readlink" -f "$KISS_ROOT/${file%/*}" 2>/dev/null)" \
-            "${file##*/}"
+        old_PWD=$PWD file=$KISS_ROOT/${file#/}
+
+        # Attempt to resolve symlinks by using 'cd'.
+        # If this fails, fallback to the file's parent
+        # directory.
+        cd -P "${file%/*}" 2>/dev/null || PWD=${file%/*}
+
+        printf '%s\n' "$PWD/${file##*/}"
+
+        cd "$old_PWD"
     done < "$tar_dir/$1/$pkg_db/$1/manifest" > "$cac_dir/$pid-m"
 
     [ -s "$cac_dir/$pid-m" ] || return 0
@@ -1643,10 +1628,6 @@ main() {
     # Store the date and time of script invocation to be used as the name
     # of the log files the package manager creates uring builds.
     time=$(date '+%Y-%m-%d-%H:%M')
-
-    # Check to see if the readlink command exists in the system. If it does
-    # not, fallback to a POSIX shell implementation of 'readlink'.
-    readlink=$(command -v readlink) || readlink=readlink_sh
 
     # Check to see if the sha256sum command exists in the system. If it does
     # not, fallback to using openssl.
