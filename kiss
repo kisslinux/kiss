@@ -56,7 +56,7 @@
 #   - unzip     (optional)
 #   - lzma      (optional)
 #   - lzip      (optional)
-#   - sha256sum (checksums) (NO standard)
+#   - sha256    (checksums) (NO standard) (multiple fallbacks)
 #
 # Dylan Araps.
 
@@ -147,6 +147,26 @@ decompress() {
         *.zst)      zstd -dc ;;
     esac < "$1"
 }
+
+sh256() {
+    # There's no standard utility to generate sha256 checksums.
+    # This is a simple wrapper around sha256sum, sha256, shasum
+    # and openssl which will use whatever is available.
+    #
+    # All utilities must match 'sha256sum' output.
+    #
+    # Example: '<checksum>  <file>'
+    [ -e "$1" ] || return 0
+
+    read -r hash file <<-EOF
+        $(shas256sum "$1" ||
+          sha256 -r "$1" ||
+          openssl dgst -sha256 -r "$1" ||
+          shasum -a 256 "$1")
+	EOF
+
+    printf '%s  %s\n' "$hash" "${file#\*}"
+} 2>/dev/null
 
 pkg_lint() {
     log "$1" "Checking repository files"
@@ -592,7 +612,9 @@ pkg_etcsums() (
     # prior directory before being able to continue.
     cd "$pkg_dir/$1/etc" 2>/dev/null || return 0; cd ..
 
-    find etc -type f -exec sha256sum {} + > "$pkg_dir/$1/$pkg_db/$1/etcsums"
+    find etc -type f | while read -r line; do
+        sh256 "$line"
+    done > "$pkg_dir/$1/$pkg_db/$1/etcsums"
 )
 
 pkg_tar() (
@@ -788,7 +810,7 @@ pkg_checksums() {
 
         # An easy way to get 'sha256sum' to print with the 'basename'
         # of files is to 'cd' to the file's directory beforehand.
-        (cd "$src_path" && sha256sum "${src##*/}") ||
+        (cd "$src_path" && sh256 "${src##*/}") ||
             die "$1" "Failed to generate checksums"
     done < "$(pkg_find "$1")/sources"
 }
@@ -1027,8 +1049,8 @@ pkg_etc() {
 
     # Handle files in /etc/ based on a 3-way checksum check.
     find etc ! -type d | while read -r file; do
-        { sum_new=$(sha256sum "$file")
-          sum_sys=$(cd "$KISS_ROOT/"; sha256sum "$file")
+        { sum_new=$(sh256 "$file")
+          sum_sys=$(cd "$KISS_ROOT/"; sh256 "$file")
           sum_old=$("$grep" "$file$" "$mak_dir/c"); } 2>/dev/null ||:
 
         log "$pkg_name" "Doing 3-way handshake for $file"
