@@ -175,11 +175,10 @@ pkg_lint() {
     read -r _ release 2>/dev/null < version || die "Version file not found"
 
     [ "$release" ] || die "$1" "Release field not found in version file"
-    [ -f sources ] || die "$1" "Sources file not found"
     [ -x build ]   || die "$1" "Build file not found or not executable"
     [ -s version ] || die "$1" "Version file not found or empty"
 
-    [ "$2" ] || [ -f checksums ] ||
+    [ ! -f sources ] || [ "$2" ] || [ -f checksums ] ||
         die "$1" "Checksums are missing"
 
     case $PWD in "$KISS_ROOT/var/db/kiss/installed"*)
@@ -250,6 +249,11 @@ pkg_cache() {
 pkg_sources() {
     # Download any remote package sources. The existence of local
     # files is also checked.
+    repo_dir=$(pkg_find "$1")
+
+    # Support packages without sources. Simply do nothing.
+    [ -f "$repo_dir/sources" ] || return 0
+
     log "$1" "Downloading sources"
 
     # Store each downloaded source in a directory named after the
@@ -324,12 +328,17 @@ pkg_sources() {
         else
             die "$1" "No local file '$src'"
         fi
-    done < "$(pkg_find "$1")/sources"
+    done < "$repo_dir/sources"
 }
 
 pkg_extract() {
     # Extract all source archives to the build directory and copy over
     # any local repository files.
+    repo_dir=$(pkg_find "$1")
+
+    # Support packages without sources. Simply do nothing.
+    [ -f "$repo_dir/sources" ] || return 0
+
     log "$1" "Extracting sources"
 
     while read -r src dest || [ "$src" ]; do
@@ -412,7 +421,7 @@ pkg_extract() {
                 fi
             ;;
         esac
-    done < "$(pkg_find "$1")/sources"
+    done < "$repo_dir/sources"
 }
 
 pkg_depends() {
@@ -708,7 +717,8 @@ pkg_build() {
 
         # Install built packages to a directory under the package name
         # to avoid collisions with other packages.
-        mkdir -p "$pkg_dir/$pkg/$pkg_db" && cd "$mak_dir/$pkg"
+        mkdir -p "$pkg_dir/$pkg/$pkg_db" "$mak_dir/$pkg"
+        cd "$mak_dir/$pkg"
 
         log "$pkg" "Starting build"
         run_hook pre-build "$pkg" "$pkg_dir/$pkg"
@@ -785,6 +795,11 @@ pkg_build() {
 
 pkg_checksums() {
     # Generate checksums for packages.
+    repo_dir=$(pkg_find "$1")
+
+    # Support packages without sources. Simply do nothing.
+    [ -f "$repo_dir/sources" ] || return 0
+
     while read -r src _ || [ "$src" ]; do
         # Comment.
         if [ -z "${src##\#*}" ]; then
@@ -812,21 +827,25 @@ pkg_checksums() {
         # of files is to 'cd' to the file's directory beforehand.
         (cd "$src_path" && sh256 "${src##*/}") ||
             die "$1" "Failed to generate checksums"
-    done < "$(pkg_find "$1")/sources"
+    done < "$repo_dir/sources"
 }
 
 pkg_verify() {
     # Verify all package checksums. This is achieved by generating
     # a new set of checksums and then comparing those with the old
     # set.
-    for pkg do pkg_checksums "$pkg" | diff - "$(pkg_find "$pkg")/checksums" || {
-        log "$pkg" "Checksum mismatch"
+    for pkg do repo_dir=$(pkg_find "$pkg")
+        [ -f "$repo_dir/sources" ] || continue
 
-        # Instead of dying above, log it to the terminal. Also define a
-        # variable so we *can* die after all checksum files have been
-        # checked.
-        mismatch="$mismatch$pkg "
-    } done
+        pkg_checksums "$pkg" | diff - "$repo_dir/checksums" || {
+            log "$pkg" "Checksum mismatch"
+
+            # Instead of dying above, log it to the terminal. Also define a
+            # variable so we *can* die after all checksum files have been
+            # checked.
+            mismatch="$mismatch$pkg "
+        }
+    done
 
     [ -z "$mismatch" ] || die "Checksum mismatch with: ${mismatch% }"
 }
@@ -1519,9 +1538,15 @@ args() {
             for pkg do pkg_lint    "$pkg" c; done
             for pkg do pkg_sources "$pkg" c; done
             for pkg do
-                pkg_checksums "$pkg" | {
-                    repo_dir=$(pkg_find "$pkg")
+                repo_dir=$(pkg_find "$pkg")
 
+                # Support packages without sources. Simply do nothing.
+                [ -f "$repo_dir/sources" ] || {
+                    log "$pkg" "No sources file, skipping checksums"
+                    continue
+                }
+
+                pkg_checksums "$pkg" | {
                     if [ -w "$repo_dir" ]; then
                         tee "$repo_dir/checksums"
                     else
