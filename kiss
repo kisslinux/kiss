@@ -44,12 +44,12 @@
 #   - curl      (needed by git)
 #
 #   Compiler/libc utilities (depends cc & libc)
-#   - readelf   (Part of compiler toolchain) (GNU, LLVM or elfutils)
-#   - strip     (Part of compiler toolchain) (GNU, LLVM or elfutils)
-#   - ldd       (Part of libc)
+#   - readelf   (optional) (Part of compiler toolchain) (GNU, LLVM or elfutils)
+#   - strip     (optional) (Part of compiler toolchain) (GNU, LLVM or elfutils)
+#   - ldd       (optional) (Part of libc)
 #
 #   Tarball compression
-#   - tar       (as portable as can be) (cf, tf, xf)
+#   - tar       (as portable as can be) (merely: cf, tf, xf)
 #   - bzip2     (widely used) -d, -z
 #   - xz        (widely used) -d, -z, -c, -T
 #   - gzip      (widely used) -d, -6
@@ -506,6 +506,16 @@ pkg_strip() {
 
     log "$1" "Stripping binaries and libraries"
 
+    command -v strip >/dev/null 2>&1 || {
+        war "strip not found, skipping binary stripping"
+        return 0
+    }
+
+    command -v readelf >/dev/null 2>&1 || {
+        war "readelf not found, skipping binary stripping"
+        return 0
+    }
+
     # Strip only files matching the below ELF types.
     # NOTE: 'readelf' is used in place of 'file' as
     #       it allows us to remove 'file' from the
@@ -528,6 +538,11 @@ pkg_fixdeps() {
     # libraries and or dependencies pulled in by the package's
     # build suite.
     log "$1" "Checking for missing dependencies"
+
+    command -v ldd >/dev/null 2>&1 || {
+        war "ldd not found, skipping dependency fixer"
+        return 0
+    }
 
     # Go to the directory containing the built package to
     # simplify path building.
