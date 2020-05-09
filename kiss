@@ -1,12 +1,8 @@
-#!/bin/sh -ef
+#!/bin/sh
 # shellcheck source=/dev/null
 #
 # This is a simple package manager written in POSIX 'sh' for use
 # in KISS Linux (https://k1ss.org).
-#
-# This script runs with '-ef' meaning:
-# '-e': Abort on any non-zero exit code.
-# '-f': Disable globbing globally.
 #
 # [1] Warnings related to word splitting and globbing are disabled.
 # All word splitting in this script is *safe* and intentional.
@@ -1619,6 +1615,9 @@ args() {
 }
 
 main() {
+    # Globally disable globbing and enable exit-on-error.
+    set -ef
+
     # Die here if the user has no set KISS_PATH. This is a rare occurance
     # as the environment variable should always be defined.
     [ "$KISS_PATH" ] || die "\$KISS_PATH needs to be set"
