@@ -569,7 +569,9 @@ pkg_fixdeps() {
             own=${own%/*} own=${own##*/}
 
             # Skip listing these packages as dependencies.
-            case $own in musl|gcc|llvm|"${PWD##*/}"|"") continue; esac
+            case $own in musl|gcc|llvm|"${PWD##*/}"|"${PWD##*/}-bin"|"")
+                continue
+            esac
 
             printf '%s\n' "$own"
         done ||:
