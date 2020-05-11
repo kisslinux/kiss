@@ -136,7 +136,7 @@ decompress() {
         *.lz)       lzip -dc ;;
         *.tar)      cat ;;
         *.tgz|*.gz) gzip -d ;;
-        *.xz)       xz -dcT 0 ;;
+        *.xz|*.txz) xz -dcT 0 ;;
         *.zst)      zstd -dc ;;
     esac < "$1"
 }
@@ -359,7 +359,7 @@ pkg_extract() {
 
             # Tarballs of any kind. This is a shell equivalent of
             # GNU tar's '--strip-components 1'.
-            *://*.tar|*://*.tar.??|*://*.tar.???|*://*.tar.????|*://*.tgz)
+            *://*.tar|*://*.tar.??|*://*.tar.???|*://*.tar.????|*://*.t?z)
                 decompress "$src_dir/$1/${src##*/}" > .ktar
 
                 "$tar" xf .ktar ||
