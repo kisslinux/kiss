@@ -986,7 +986,7 @@ pkg_swap() {
         cp  -Pf "$2" "$pkg_owns>${alt#*>}"
 
         sed "$(esc "$2" "$PWD/$pkg_owns>${alt#*>}")" \
-            "../installed/$pkg_owns/manifest" > "$mak_dir/.$1"
+            "../installed/$pkg_owns/manifest" | sort -r > "$mak_dir/.$1"
 
         mv -f "$mak_dir/.$1" "../installed/$pkg_owns/manifest"
     fi
@@ -996,7 +996,7 @@ pkg_swap() {
     mv  -f "$alt" "$2"
 
     sed "$(esc "$PWD/$alt" "$2")" \
-        "../installed/$1/manifest" > "$mak_dir/.$1"
+        "../installed/$1/manifest" | sort -r > "$mak_dir/.$1"
 
     mv -f "$mak_dir/.$1" "../installed/$1/manifest"
 }
