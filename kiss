@@ -718,7 +718,7 @@ pkg_build() {
 
         # Log the version so we can pass it to the package build file
         # for the occasional use.
-        read -r build_version < "$repo_dir/version"
+        read -r build_version _ < "$repo_dir/version"
 
         log "$pkg" "Starting build"
         run_hook pre-build "$pkg" "$pkg_dir/$pkg"
