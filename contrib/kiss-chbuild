@@ -10,7 +10,7 @@ cd "${cac_dir:=$KISS_ROOT${XDG_CACHE_HOME:-$HOME/.cache}/kiss}"
 [ -f kiss-chroot.tar.xz ] || {
     log "Downloading chroot tarball"
 
-    url=https://github.com/kisslinux/repo/releases/download/1.9.11/
+    url=https://github.com/kisslinux/repo/releases/download/1.10.0/
     wget "$url/kiss-chroot.tar.xz"
 }
 
