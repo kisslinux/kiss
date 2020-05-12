@@ -34,6 +34,7 @@
 #   - su*       (sudo, doas, su) (in order, optional)
 #   - git       (downloads from git) (must link to curl)
 #   - curl      (needed by git)
+#   - sha256    (multiple fallbacks: sha256sum, shasum, sha256, openssl, etc)
 #
 #   Compiler/libc utilities (depends cc & libc)
 #   - readelf   (optional) (Part of compiler toolchain) (GNU, LLVM or elfutils)
@@ -49,7 +50,6 @@
 #   - unzip     (optional)
 #   - lzma      (optional)
 #   - lzip      (optional)
-#   - sha256    (checksums) (NO standard) (multiple fallbacks)
 #
 # Dylan Araps.
 
@@ -886,7 +886,7 @@ pkg_conflicts() {
     # Store the list of found conflicts in a file as we'll be using the
     # information multiple times. Storing things in the cache dir allows
     # us to be lazy as they'll be automatically removed on script end.
-    "$grep" -Fxf "$cac_dir/$pid-m" -- "$@" > "$cac_dir/$pid-c" ||:
+    "$grep" -Fxf "$cac_dir/$pid-m" -- "$@" 2>/dev/null > "$cac_dir/$pid-c" ||:
 
     # Enable alternatives automatically if it is safe to do so.
     # This checks to see that the package that is about to be installed
@@ -1045,7 +1045,7 @@ pkg_install_files() {
                     # (Think baselayout being updated)
                     [ -d "$KISS_ROOT/$line" ] && continue
 
-                    cp -fPp "$2/$line" "${line%/*}"
+                    cp -fPp "$2/$line" "$KISS_ROOT/${line%/*}"
                     chown -h root:root "$KISS_ROOT/$line"
                 else
                     cp -f "$2/$line" "$KISS_ROOT/$line"
