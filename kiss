@@ -1046,7 +1046,7 @@ pkg_install_files() {
                     [ -d "$KISS_ROOT/$line" ] && continue
 
                     cp -fPp "$2/$line" "$KISS_ROOT/$line"
-                    chown -h root:root "$KISS_ROOT/$line"
+                    chown -h "$USER:$USER" "$KISS_ROOT/$line"
                 else
                     cp -f "$2/$line" "$KISS_ROOT/$line"
                     chmod "$b$oct"   "$KISS_ROOT/$line"
