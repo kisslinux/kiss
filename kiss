@@ -45,7 +45,7 @@ prompt() {
     # POSIX 'read' has none of the "nice" options like '-n', '-p'
     # etc etc. This is the most basic usage of 'read'.
     # '_' is used as 'dash' errors when no variable is given to 'read'.
-    read -r _
+    [ "$KISS_NOPROMPT" = 1 ] || read -r _
 }
 
 as_root() {
