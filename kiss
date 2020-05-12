@@ -1679,7 +1679,7 @@ main() {
 
     # Create the required temporary directories and set the variables
     # which point to them.
-    mkdir -p "${cac_dir:=$KISS_ROOT${XDG_CACHE_HOME:-$HOME/.cache}/kiss}" \
+    mkdir -p "${cac_dir:=${XDG_CACHE_HOME:-$HOME/.cache}/kiss}" \
              "${mak_dir:=$cac_dir/build-$pid}" \
              "${pkg_dir:=$cac_dir/pkg-$pid}" \
              "${tar_dir:=$cac_dir/extract-$pid}" \
