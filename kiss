@@ -1033,7 +1033,7 @@ pkg_install_files() {
             */)
                 # Skip directories if they already exist in the file system.
                 # (Think /usr/bin, /usr/lib, etc).
-                [ -d "$line" ] || mkdir -m "$oct" "$KISS_ROOT/$line"
+                [ -d "$KISS_ROOT/$line" ] || mkdir -m "$oct" "$KISS_ROOT/$line"
             ;;
 
             *)  test "$1" "$KISS_ROOT/$line" ||
@@ -1045,7 +1045,7 @@ pkg_install_files() {
                     # (Think baselayout being updated)
                     [ -d "$KISS_ROOT/$line" ] && continue
 
-                    cp -fPp "$2/$line" "$KISS_ROOT/${line%/*}"
+                    cp -fPp "$2/$line" "$KISS_ROOT/$line"
                     chown -h root:root "$KISS_ROOT/$line"
                 else
                     cp -f "$2/$line" "$KISS_ROOT/$line"
