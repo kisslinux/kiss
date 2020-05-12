@@ -1454,7 +1454,8 @@ pkg_clean() {
     # Go through the cache and add any entries which don't belong
     # to a currently running kiss instance.
     for dir in "$cac_dir/"[bep]*-[0-9]*; do
-        [ -e "/proc/${dir##*-}" ] || set -- "$@" "$dir"
+        [ -e "/proc/${dir##*-}" ] && continue
+        [ -e "$dir" ]             && set -- "$@" "$dir"
     done
 
     rm -rf -- "$@" >/dev/null 2>&1 ||:
