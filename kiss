@@ -1303,9 +1303,9 @@ pkg_install() {
     trap pkg_clean EXIT INT
 
     if [ -x "$sys_db/$pkg_name/post-install" ]; then
-        log "$pkg_name" "Running post-install script"
-        "$sys_db/$pkg_name/post-install" ||:
-    fi
+        log "$pkg_name" "post-install log"
+        "$sys_db/$pkg_name/post-install"
+    fi 2>&1 | tee -a "$log_dir/post-install-$time-$pid" >/dev/null
 
     run_hook post-install "$pkg_name" "$sys_db/$pkg_name"
 
@@ -1619,6 +1619,11 @@ args() {
             "$util" "$@"
         ;;
     esac
+
+    if [ -s "$log_dir/post-install-$time-$pid" ]; then
+        cat "$log_dir/post-install-$time-$pid"
+        log "Post-install log stored to $log_dir/post-install-$time-$pid"
+    fi
 }
 
 main() {
