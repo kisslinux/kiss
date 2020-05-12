@@ -1457,7 +1457,7 @@ pkg_clean() {
         [ -e "/proc/${dir##*-}" ] || set -- "$@" "$dir"
     done
 
-    rm -rf -- "$@"
+    rm -rf -- "$@" >/dev/null 2>&1 ||:
 }
 
 args() {
