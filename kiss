@@ -33,7 +33,7 @@
 #   Misc
 #   - su*       (sudo, doas, su) (in order, optional)
 #   - git       (downloads from git) (must link to curl)
-#   - curl      (needed by git)
+#   - curl      (downloads over http) (also needed by git)
 #   - sha256    (multiple fallbacks: sha256sum, shasum, sha256, openssl, etc)
 #
 #   Compiler/libc utilities (depends cc & libc)
