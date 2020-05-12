@@ -53,6 +53,12 @@ export KISS_PATH=/var/db/kiss/repo/core:/var/db/kiss/repo/extra:/var/db/kiss/rep
 # Set it to '1' to force.
 export KISS_FORCE=0
 
+# Disable main() from running, allowing kiss to be sourced
+#
+# Set it to '1' to disable main(), set it to '2' to also prevent certain
+# functions from exiting to allow the caller to handle errors themselves
+export KISS_LIBRARY=0
+
 # Hook into kiss through a script.
 #
 # This can be used set custom CFLAGS per package, modify builds,

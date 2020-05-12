@@ -26,8 +26,9 @@ war() {
 }
 
 die() {
-    log "$1" "$2" "${3:-ERROR}"
-    exit 1
+    log "$2" "$3" "${4:-ERROR}"
+    [ "$((KISS_LIBRARY != 2 || $1))" -eq 0 ] || exit 1
+    return 1
 }
 
 contains() {
@@ -132,15 +133,15 @@ pkg_lint() {
     log "$1" "Checking repository files"
 
     cd "$(pkg_find "$1")"
-    read -r _ release 2>/dev/null < version || die "Version file not found"
+    read -r _ release 2>/dev/null < version || die 1 "Version file not found"
 
-    [ "$release" ] || die "$1" "Release field not found in version file"
-    [ -x build ]   || die "$1" "Build file not found or not executable"
+    [ "$release" ] || die 1 "$1" "Release field not found in version file"
+    [ -x build ]   || die 1 "$1" "Build file not found or not executable"
     [ -f sources ] || war "$1" "Sources file not found"
-    [ -s version ] || die "$1" "Version file not found or empty"
+    [ -s version ] || die 1 "$1" "Version file not found or empty"
 
     [ ! -f sources ] || [ "$2" ] || [ -f checksums ] ||
-        die "$1" "Checksums are missing"
+        die 1 "$1" "Checksums are missing"
 
     case $PWD in "$KISS_ROOT/var/db/kiss/installed"*)
         war "$1" "no longer exists in the repositories"
@@ -169,7 +170,7 @@ pkg_find() {
 
     # A package may also not be found due to a repository not being
     # readable by the current user. Either way, we need to die here.
-    [ "$1" ] || die "Package '$query' not in any repository"
+    [ "$1" ] || die 1 "Package '$query' not in any repository"
 
     # Show all search results if called from 'kiss search', else
     # print only the first match.
@@ -247,7 +248,7 @@ pkg_sources() {
                 # Git has no option to clone a repository to a
                 # specific location so we must do it ourselves
                 # beforehand.
-                cd "$mak_dir/$1/$dest" 2>/dev/null || die
+                cd "$mak_dir/$1/$dest" 2>/dev/null || die 1
 
                 # Clear the argument list as we'll be overwriting
                 # it below based on what kind of checkout we're
@@ -271,7 +272,7 @@ pkg_sources() {
                 # needed later (when a commit is desired).
                 git clone --depth=1 "$@" .
 
-            ) || die "$1" "Failed to clone $src"
+            ) || die 1 "$1" "Failed to clone $src"
 
         # Remote source.
         elif [ -z "${src##*://*}" ]; then
@@ -279,7 +280,7 @@ pkg_sources() {
 
             curl "$src" -fLo "${src##*/}" || {
                 rm -f "${src##*/}"
-                die "$1" "Failed to download $src"
+                die 1 "$1" "Failed to download $src"
             }
 
         # Local source.
@@ -287,7 +288,7 @@ pkg_sources() {
             log "$1" "Found local file '$src'"
 
         else
-            die "$1" "No local file '$src'"
+            die 1 "$1" "No local file '$src'"
         fi
     done < "$repo_dir/sources"
 }
@@ -318,7 +319,7 @@ pkg_extract() {
                 # Try to checkout the repository. If we fail here,
                 # the requested commit doesn't exist.
                 git -c advice.detachedHead=false checkout "${src##*#}" ||
-                    die "Commit hash ${src##*#} doesn't exist"
+                    die 1 "Commit hash ${src##*#} doesn't exist"
             ;;
 
             # Git repository, comment or blank line.
@@ -330,7 +331,7 @@ pkg_extract() {
                 decompress "$src_dir/$1/${src##*/}" > .ktar
 
                 "$tar" xf .ktar ||
-                    die "$1" "Couldn't extract ${src##*/}"
+                    die 1 "$1" "Couldn't extract ${src##*/}"
 
                 "$tar" tf .ktar | while IFS=/ read -r dir _; do
                     # Some tarballs contain './' as the top-level directory,
@@ -365,7 +366,7 @@ pkg_extract() {
             # Zip archives.
             *://*.zip)
                 unzip "$src_dir/$1/${src##*/}" ||
-                    die "$1" "Couldn't extract ${src##*/}"
+                    die 1 "$1" "Couldn't extract ${src##*/}"
             ;;
 
             *)
@@ -378,7 +379,7 @@ pkg_extract() {
                     cp -f "$src_dir/$1/${src##*/}" .
 
                 else
-                    die "$1" "Local file $src not found"
+                    die 1 "$1" "Local file $src not found"
                 fi
             ;;
         esac
@@ -787,13 +788,13 @@ pkg_checksums() {
 
         # Die here if source for some reason, doesn't exist.
         else
-            die "$1" "Couldn't find source '$src'"
+            die 1 "$1" "Couldn't find source '$src'"
         fi
 
         # An easy way to get 'sha256sum' to print with the 'basename'
         # of files is to 'cd' to the file's directory beforehand.
         (cd "$src_path" && sh256 "${src##*/}") ||
-            die "$1" "Failed to generate checksums"
+            die 1 "$1" "Failed to generate checksums"
     done < "$repo_dir/sources"
 }
 
@@ -814,7 +815,7 @@ pkg_verify() {
         }
     done
 
-    [ -z "$mismatch" ] || die "Checksum mismatch with: ${mismatch% }"
+    [ -z "$mismatch" ] || die 1 "Checksum mismatch with: ${mismatch% }"
 }
 
 pkg_conflicts() {
@@ -906,7 +907,7 @@ pkg_conflicts() {
                 log "/sbin instead of /usr/bin (example)"
                 log "Before this package can be used as an alternative,"
                 log "this must be fixed in $p_name. Contact the maintainer"
-                die "by finding their details via 'kiss-maintainer'" "" "!>"
+                die 1 "by finding their details via 'kiss-maintainer'" "" "!>"
             }
         done < "$cac_dir/$pid-c"
 
@@ -917,7 +918,7 @@ pkg_conflicts() {
     elif [ -s "$cac_dir/$pid-c" ]; then
         log "Package '$p_name' conflicts with another package" "" "!>"
         log "Run 'KISS_CHOICE=1 kiss i $p_name' to add conflicts" "" "!>"
-        die "as alternatives." "" "!>"
+        die 1 "as alternatives." "" "!>"
     fi
 }
 
@@ -929,7 +930,7 @@ pkg_swap() {
     cd "$sys_db/../choices"
 
     [ -f "$alt" ] || [ -h "$alt" ] ||
-        die "Alternative '$1 $2' doesn't exist"
+        die 1 "Alternative '$1 $2' doesn't exist"
 
     if [ -f "$2" ]; then
         # Figure out which package owns the file we are going to
@@ -944,7 +945,7 @@ pkg_swap() {
         pkg_owns=${pkg_owns##*/}
 
         [ "$pkg_owns" ] ||
-            die "File '$2' exists on filesystem but isn't owned"
+            die 1 "File '$2' exists on filesystem but isn't owned"
 
         log "Swapping '$2' from '$pkg_owns' to '$1'"
 
@@ -1085,7 +1086,7 @@ pkg_remove() {
         log "$1" "Checking for reverse dependencies"
 
         (cd "$sys_db"; set +f; "$grep" -lFx "$1" -- */depends) &&
-            die "$1" "Can't remove package, others depend on it"
+            die 1 "$1" "Can't remove package, others depend on it"
     }
 
     # Block being able to abort the script with 'Ctrl+C' during removal.
@@ -1159,7 +1160,7 @@ pkg_install() {
         pkg_name=$1
 
     else
-        die "package has not been built, run 'kiss b pkg'"
+        die 1 "package has not been built, run 'kiss b pkg'"
     fi
 
     mkdir -p "$tar_dir/$pkg_name"
@@ -1180,7 +1181,7 @@ pkg_install() {
     # that determines a valid KISS package from an invalid one.
     # This should be a fine assumption to make in 99.99% of cases.
     [ -f "$tar_dir/$pkg_name/$pkg_db/$pkg_name/manifest" ] ||
-        die "'${tar_file##*/}' is not a valid KISS package"
+        die 1 "'${tar_file##*/}' is not a valid KISS package"
 
     # Ensure that the tarball's manifest is correct by checking that
     # each file and directory inside of it actually exists.
@@ -1189,7 +1190,7 @@ pkg_install() {
         while read -r line; do
             [ -h "$tar_dir/$pkg_name/$line" ] ||
             [ -e "$tar_dir/$pkg_name/$line" ] ||
-                die "File $line missing from tarball but mentioned in manifest"
+                die 1 "File $line missing from tarball but mentioned in manifest"
         done < "$tar_dir/$pkg_name/$pkg_db/$pkg_name/manifest"
 
         log "$pkg_name" "Checking that all dependencies are installed"
@@ -1200,7 +1201,7 @@ pkg_install() {
                     install_dep="$install_dep'$dep', "
             done < "$tar_dir/$pkg_name/$pkg_db/$pkg_name/depends"
 
-        [ "$install_dep" ] && die "$1" "Package requires ${install_dep%, }"
+        [ "$install_dep" ] && die 1 "$1" "Package requires ${install_dep%, }"
     }
 
     run_hook pre-install "$pkg_name" "$tar_dir/$pkg_name"
@@ -1445,13 +1446,13 @@ args() {
     # https://pubs.opengroup.org/onlinepubs/009695399/utilities/xcu_chap02.html
     [ "${action##[as]*}" ] &&
         case "$*" in *\**|*\!*|*\[*|*\]*)
-            die "Arguments contain invalid characters: '!*[]' ($*)"
+            die 1 "Arguments contain invalid characters: '!*[]' ($*)"
         esac
 
     # Parse some arguments earlier to remove the need to duplicate code.
     case $action in
         s|search)
-            [ "$1" ] || die "'kiss $action' requires an argument"
+            [ "$1" ] || die 1 "'kiss $action' requires an argument"
         ;;
 
         a|alternatives)
@@ -1581,7 +1582,7 @@ args() {
 
         *)
             util=$(KISS_PATH=$PATH pkg_find "kiss-$action*" "" -x 2>/dev/null) ||
-                die "'kiss $action' is not a valid command"
+                die 1 "'kiss $action' is not a valid command"
 
             "$util" "$@"
         ;;
@@ -1599,7 +1600,7 @@ main() {
 
     # Die here if the user has no set KISS_PATH. This is a rare occurance
     # as the environment variable should always be defined.
-    [ "$KISS_PATH" ] || die "\$KISS_PATH needs to be set"
+    [ "$KISS_PATH" ] || die 1 "\$KISS_PATH needs to be set"
 
     # Allow the user to disable colors in output via an environment variable.
     # Check this once so as to not slow down printing.
@@ -1670,4 +1671,4 @@ main() {
     args "$@"
 }
 
-main "$@"
+[ "${KISS_LIBRARY:=0}" -ne 0 ] || main "$@"
