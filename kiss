@@ -1585,7 +1585,7 @@ args() {
         v|version) printf '1.14.0\n' ;;
 
         h|help|-h|--help|'')
-            log 'kiss [a|b|c|i|l|r|s|u|v] [pkg] [pkg] [pkg]'
+            log 'kiss [a|b|c|i|l|r|s|u|v] [pkg]...'
             log 'alternatives List and swap to alternatives'
             log 'build        Build a package'
             log 'checksum     Generate checksums'
