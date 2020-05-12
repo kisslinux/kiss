@@ -983,9 +983,9 @@ pkg_swap() {
 
         # Convert the current owner to an alternative and rewrite
         # its manifest file to reflect this.
-        cp  -Pf "$2" "$pkg_owns>${alt#*>}"
+        cp  -Pf "$KISS_ROOT/$2" "$pkg_owns>${alt#*>}"
 
-        sed "$(esc "$2" "$PWD/$pkg_owns>${alt#*>}")" \
+        sed "$(esc "$2" "${PWD#$KISS_ROOT}/$pkg_owns>${alt#*>}")" \
             "../installed/$pkg_owns/manifest" | sort -r > "$mak_dir/.$1"
 
         mv -f "$mak_dir/.$1" "../installed/$pkg_owns/manifest"
@@ -993,9 +993,9 @@ pkg_swap() {
 
     # Convert the desired alternative to a real file and rewrite
     # the manifest file to reflect this. The reverse of above.
-    mv  -f "$alt" "$2"
+    mv -f "$alt" "$KISS_ROOT/$2"
 
-    sed "$(esc "$PWD/$alt" "$2")" \
+    sed "$(esc "${PWD#$KISS_ROOT}/$alt" "$2")" \
         "../installed/$1/manifest" | sort -r > "$mak_dir/.$1"
 
     mv -f "$mak_dir/.$1" "../installed/$1/manifest"
