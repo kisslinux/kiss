@@ -20,7 +20,7 @@
 #   - sed       (POSIX) -n, s/<search>/<replace>/g, /<delete>/d
 #   - grep      (POSIX) -l, -F, -x, -f, -q, -v
 #   - sort      (POSIX) -r, -u, -k
-#   - tee       (POSIX)
+#   - tee       (POSIX) -a
 #   - date      (POSIX)
 #   - mkdir     (POSIX) -p
 #   - rm        (POSIX) -f, -r
