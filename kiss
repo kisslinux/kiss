@@ -76,7 +76,20 @@ pop() {
 }
 
 run_hook() {
-    [ "${KISS_HOOK:-}" ] || return 0
+    # Provide a default post-build hook to remove files
+    # and directories for things we don't support out of
+    # the box. One can simply define their own hook to
+    # override this behavior.
+    [ "${KISS_HOOK:-}" ] || {
+        case $1 in post-build)
+            rm -rf "$3/usr/share/gettext"
+            rm -rf "$3/usr/share/polkit-1"
+            rm -rf "$3/usr/share/locale"
+            rm -rf "$3/usr/share/info"
+        esac
+
+        return 0
+    }
 
     log "$2" "Running $1 hook"
 
