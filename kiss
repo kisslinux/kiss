@@ -869,7 +869,7 @@ pkg_conflicts() {
         # directory.
         cd -P "${file%/*}" 2>/dev/null || PWD=${file%/*}
 
-        printf '%s\n' "$PWD/${file##*/}"
+        printf '%s\n' "${PWD#$KISS_ROOT}/${file##*/}"
 
         cd "$old_PWD"
     done < "$tar_dir/$1/$pkg_db/$1/manifest" > "$cac_dir/$pid-m"
@@ -1490,7 +1490,7 @@ args() {
         a|alternatives)
             # Rerun the script with 'su' if the user isn't root.
             # Cheeky but 'su' can't be used on shell functions themselves.
-            [ -z "$1" ] || [ "$uid" = 0 ] || {
+            [ -z "$1" ] || [ -w "$KISS_ROOT/" ] || [ "$uid" = 0 ] || {
                 as_root kiss "$action" "$@"
                 return
             }
@@ -1499,7 +1499,7 @@ args() {
         i|install|r|remove)
             # Rerun the script with 'su' if the user isn't root.
             # Cheeky but 'su' can't be used on shell functions themselves.
-            [ "$uid" = 0 ] || {
+            [ -w "$KISS_ROOT/" ] || [ "$uid" = 0 ] || {
                 KISS_FORCE="$KISS_FORCE" as_root kiss "$action" "$@"
                 return
             }
@@ -1673,9 +1673,13 @@ main() {
     # break some operations.
     KISS_ROOT=${KISS_ROOT%/}
 
+    # Define this variable but don't create its directory structure from
+    # the get go. It will be created as needed by package installation.
+    sys_db=$KISS_ROOT/$pkg_db
+
     # This allows for automatic setup of a KISS chroot and will
     # do nothing on a normal system.
-    mkdir -p "${sys_db:=$KISS_ROOT/}" 2>/dev/null ||:
+    mkdir -p "$KISS_ROOT/" 2>/dev/null ||:
 
     # Create the required temporary directories and set the variables
     # which point to them.
