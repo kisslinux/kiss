@@ -12,6 +12,15 @@ cd "${cac_dir:=$KISS_ROOT${XDG_CACHE_HOME:-$HOME/.cache}/kiss}"
 
     url=https://github.com/kisslinux/repo/releases/download/1.10.0/
     curl -OL "$url/kiss-chroot.tar.xz"
+    curl -OL "$url/kiss-chroot.tar.xz.sha256"
+
+    log "Verifying checksums"
+
+    sha256sum -c < kiss-chroot.tar.xz.sha256 || {
+        rm -f kiss-chroot.tar.xz
+        log "Checksum verification failed."
+        log "Re-run 'kiss-chbuild' to try again."
+    }
 }
 
 [ -d kiss-chroot ] || {
