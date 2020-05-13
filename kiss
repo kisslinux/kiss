@@ -75,6 +75,16 @@ pop() {
     for i do [ "$i" = "$del" ] || printf %s " $i "; done
 }
 
+_tar() {
+    # Some tar implementations support '-args' and some
+    # simply support 'args'. This will try '-args' and
+    # fallback to 'args'.
+    tar_cmd=$1
+    shift
+
+    tar "-$tar_cmd" "$@" || tar "$tar_cmd" "$@"
+}
+
 run_hook() {
     # Provide a default post-build hook to remove files
     # and directories for things we don't support out of
@@ -327,10 +337,10 @@ pkg_extract() {
             *://*.tar|*://*.tar.??|*://*.tar.???|*://*.tar.????|*://*.t?z)
                 decompress "$src_dir/$1/${src##*/}" > .ktar
 
-                tar xf .ktar ||
+                _tar xf .ktar ||
                     die "$1" "Couldn't extract ${src##*/}"
 
-                tar tf .ktar | while IFS=/ read -r dir _; do
+                _tar tf .ktar | while IFS=/ read -r dir _; do
                     # Some tarballs contain './' as the top-level directory,
                     # we need to skip these occurances.
                     [ -d "${dir#.}" ] || continue
@@ -600,7 +610,7 @@ pkg_tar() (
     cd "$pkg_dir/$1"
 
     # Create a tarball from the contents of the built package.
-    tar cf - . | case ${KISS_COMPRESS:=gz} in
+    _tar cf - . | case ${KISS_COMPRESS:=gz} in
         bz2)  bzip2 -z ;;
         gz)   gzip -6  ;;
         lzma) lzma -z  ;;
@@ -1171,7 +1181,7 @@ pkg_install() {
     (
         cd "$tar_dir/$pkg_name"
 
-        decompress "$tar_file" | tar xf -
+        decompress "$tar_file" | _tar xf -
     )
 
     # Naively assume that the existence of a manifest file is all
