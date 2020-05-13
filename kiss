@@ -18,7 +18,7 @@ log() {
     # The l<word> variables contain escape sequence which are defined
     # when '$KISS_COLOR' is equal to '1'.
     printf '%b%s %b%s%b %s\n' \
-        "$lcol" "${3:-->}" "${lclr}${2:+$lcol2}" "$1" "$lclr" "$2"
+        "$lcol" "${3:-->}" "${lclr}${2:+$lcol2}" "$1" "$lclr" "$2" >&2
 }
 
 war() {
