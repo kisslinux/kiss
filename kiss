@@ -329,10 +329,10 @@ pkg_extract() {
             *://*.tar|*://*.tar.??|*://*.tar.???|*://*.tar.????|*://*.t?z)
                 decompress "$src_dir/$1/${src##*/}" > .ktar
 
-                "$tar" xf .ktar ||
+                tar xf .ktar ||
                     die "$1" "Couldn't extract ${src##*/}"
 
-                "$tar" tf .ktar | while IFS=/ read -r dir _; do
+                tar tf .ktar | while IFS=/ read -r dir _; do
                     # Some tarballs contain './' as the top-level directory,
                     # we need to skip these occurances.
                     [ -d "${dir#.}" ] || continue
@@ -602,7 +602,7 @@ pkg_tar() (
     cd "$pkg_dir/$1"
 
     # Create a tarball from the contents of the built package.
-    "$tar" cf - . | case ${KISS_COMPRESS:=gz} in
+    tar cf - . | case ${KISS_COMPRESS:=gz} in
         bz2)  bzip2 -z ;;
         gz)   gzip -6  ;;
         lzma) lzma -z  ;;
@@ -1173,7 +1173,7 @@ pkg_install() {
     (
         cd "$tar_dir/$pkg_name"
 
-        decompress "$tar_file" | "$tar" xf -
+        decompress "$tar_file" | tar xf -
     )
 
     # Naively assume that the existence of a manifest file is all
@@ -1627,11 +1627,6 @@ main() {
     # implementation. Very much worth it if you value performance over
     # POSIX correctness (grep quoted to avoid shellcheck false-positive).
     grep=$(command -v ggrep) || grep='grep'
-
-    # Prefer libarchive tar or GNU tar if installed as they are  much
-    # much faster than busybox's implementation. Very much worth it if
-    # you value performance.
-    tar=$(command -v bsdtar || command -v gtar) || tar=tar
 
     # Figure out which 'sudo' command to use based on the user's choice or
     # what is available on the system.
