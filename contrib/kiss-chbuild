@@ -31,5 +31,8 @@ cd "${cac_dir:=$KISS_ROOT${XDG_CACHE_HOME:-$HOME/.cache}/kiss}"
 log "Creating temporary chroot"
 cp -a kiss-chroot "chroot-$$"
 
+log "Installing any arguments"
+[ ! "$1" ] || KISS_ROOT=$PWD/chroot-$$ kiss i "$@"
+
 log "Entering chroot"
 su -c "kiss-chroot chroot-$$; rm -rf chroot-$$"
