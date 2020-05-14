@@ -353,10 +353,19 @@ pkg_extract() {
                     # if any files/directories fail (due to mv's lack of
                     # directory merge capability), simply do the exercise
                     # again and copy-merge the remaining files/directories.
+                    #
+                    # We can use '-exec {} +' with any arguments between
+                    # the '{}' and '+' as this is not POSIX. We must also
+                    # use '$0' and '$@' to reference all arguments.
+                    #
+                    # Using only '$@' causes a single file from each
+                    # invocation to be left out of the list. Weird, right?
                     {
-                        find "$$-$dir/." ! -name . -prune -exec mv -f   {} . + ||
-                        find "$$-$dir/." ! -name . -prune -exec cp -fRp {} . +
+                        find "$$-$dir/." ! -name . -prune \
+                            -exec sh -c 'mv -f "$0" "$@" .' {} + ||
 
+                        find "$$-$dir/." ! -name . -prune \
+                            -exec sh -c 'cp -fRp "$0" "$@" .' {} +
                     } 2>/dev/null
 
                     # Remove the directory now that all files have been
