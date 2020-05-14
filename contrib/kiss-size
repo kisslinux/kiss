@@ -1,6 +1,20 @@
 #!/bin/sh -ef
 # Show the size on disk for a package
 
+get_size() {
+    # Naive function to convert bytes to human readable
+    # sizes (MB, KB, etc). This is probably wrong in places
+    # though we can fix this over time. It's a start.
+    case ${#1} in
+        [0-3]) hum=$(($1))KB ;;
+        [4-6]) hum=$(($1 / 1024))MB ;;
+        [7-9]) hum=$(($1 / 1024 / 1024))GB ;;
+        *)     hum=$(($1))  ;;
+    esac
+
+    printf '%s\t%s\n' "$hum" "$2"
+}
+
 # Ignore shellcheck as we want the warning's behavior.
 # shellcheck disable=2015
 [ "$1" ] && kiss l "${1:-null}" >/dev/null || {
@@ -16,4 +30,14 @@ files=$(sed 's|.*/$||' "$KISS_ROOT/var/db/kiss/installed/$1/manifest")
 # This unquoted variable is safe as word splitting is intended
 # and globbing is globally disabled in this script.
 # shellcheck disable=2086
-du -shc -- $files 2>/dev/null
+du -sk -- $files 2>/dev/null |
+
+# Iterate over each line and convert the byte output to human
+# readable (MB, KB, GB, etc).
+while read -r size file || {
+    get_size "$tot" total >&2
+    break
+} do
+    get_size "$size" "$file"
+    tot=$((tot + size))
+done
