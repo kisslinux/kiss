@@ -549,7 +549,7 @@ pkg_fixdeps() {
             cd "$old_PWD"
 
             # Figure out which package owns the file.
-            own=$("$grep" -lFx "${dep##$KISS_ROOT}" "$@")
+            own=$(grep -lFx "${dep##$KISS_ROOT}" "$@")
             own=${own%/*} own=${own##*/}
 
             # Skip listing these packages as dependencies.
@@ -870,12 +870,12 @@ pkg_conflicts() {
     # Store the list of found conflicts in a file as we'll be using the
     # information multiple times. Storing things in the cache dir allows
     # us to be lazy as they'll be automatically removed on script end.
-    "$grep" -Fxf "$cac_dir/$pid-m" -- "$@" 2>/dev/null > "$cac_dir/$pid-c" ||:
+    grep -Fxf "$cac_dir/$pid-m" -- "$@" 2>/dev/null > "$cac_dir/$pid-c" ||:
 
     # Enable alternatives automatically if it is safe to do so.
     # This checks to see that the package that is about to be installed
     # doesn't overwrite anything it shouldn't in '/var/db/kiss/installed'.
-    "$grep" -q ":/var/db/kiss/installed/" "$cac_dir/$pid-c" || choice_auto=1
+    grep -q ":/var/db/kiss/installed/" "$cac_dir/$pid-c" || choice_auto=1
 
     # Use 'grep' to list matching lines between the to
     # be installed package's manifest and the above filtered
@@ -954,7 +954,7 @@ pkg_swap() {
         #
         # Print the full path to the manifest file which contains
         # the match to our search.
-        pkg_owns=$(set +f; "$grep" -lFx "$2" "$sys_db/"*/manifest) ||:
+        pkg_owns=$(set +f; grep -lFx "$2" "$sys_db/"*/manifest) ||:
 
         # Extract the package name from the path above.
         pkg_owns=${pkg_owns%/*}
@@ -1053,7 +1053,7 @@ pkg_etc() (
     find etc ! -type d | while read -r file; do
         { sum_new=$(sh256 "$file")
           sum_sys=$(cd "$KISS_ROOT/"; sh256 "$file")
-          sum_old=$("$grep" "$file$" "$mak_dir/c"); } 2>/dev/null ||:
+          sum_old=$(grep "$file$" "$mak_dir/c"); } 2>/dev/null ||:
 
         log "$pkg_name" "Doing 3-way handshake for $file"
         printf '%s\n' "Previous: ${sum_old:-null}"
@@ -1101,7 +1101,7 @@ pkg_remove() {
     [ "$2" = check ] && {
         log "$1" "Checking for reverse dependencies"
 
-        (cd "$sys_db"; set +f; "$grep" -lFx "$1" -- */depends) &&
+        (cd "$sys_db"; set +f; grep -lFx "$1" -- */depends) &&
             die "$1" "Can't remove package, others depend on it"
     }
 
@@ -1252,7 +1252,7 @@ pkg_install() {
     #
     # Files in /etc/ are skipped entirely as they'll be handled via a 3-way
     # checksum system due to the nature of their existence.
-    "$grep" -vFxf "$sys_db/$pkg_name/manifest" "$mak_dir/m" 2>/dev/null |
+    grep -vFxf "$sys_db/$pkg_name/manifest" "$mak_dir/m" 2>/dev/null |
 
     while read -r file; do
         file=$KISS_ROOT/$file
@@ -1639,11 +1639,6 @@ main() {
     # Catch errors and ensure that build files and directories are cleaned
     # up before we die. This occurs on 'Ctrl+C' as well as success and error.
     trap pkg_clean EXIT INT
-
-    # Prefer GNU grep if installed as it is much much faster than busybox's
-    # implementation. Very much worth it if you value performance over
-    # POSIX correctness (grep quoted to avoid shellcheck false-positive).
-    grep=$(command -v ggrep) || grep='grep'
 
     # Figure out which 'sudo' command to use based on the user's choice or
     # what is available on the system.
