@@ -452,12 +452,12 @@ pkg_strip() {
 
     log "$1" "Stripping binaries and libraries"
 
-    command -v strip >/dev/null 2>&1 || {
+    command -v strip >/dev/null || {
         war "strip not found, skipping binary stripping"
         return 0
     }
 
-    command -v readelf >/dev/null 2>&1 || {
+    command -v readelf >/dev/null || {
         war "readelf not found, skipping binary stripping"
         return 0
     }
@@ -485,7 +485,7 @@ pkg_fixdeps() {
     # build suite.
     log "$1" "Checking for missing dependencies"
 
-    command -v ldd >/dev/null 2>&1 || {
+    command -v ldd >/dev/null || {
         war "ldd not found, skipping dependency fixer"
         return 0
     }
@@ -689,8 +689,8 @@ pkg_build() {
 
     # Finally build and create tarballs for all passed packages and
     # dependencies.
-    for pkg do
-        log "$pkg" "Building package ($((in = in + 1))/$#)"
+    for pkg do in=$((in + 1))
+        log "$pkg" "Building package ($in/$#)"
 
         pkg_extract "$pkg"
         repo_dir=$(pkg_find "$pkg")
@@ -1039,10 +1039,10 @@ pkg_install_files() {
     done
 }
 
-pkg_etc() {
+pkg_etc() (
     [ -d "$tar_dir/$pkg_name/etc" ] || return 0
 
-    (cd "$tar_dir/$pkg_name"
+    cd "$tar_dir/$pkg_name"
 
     # Create all directories beforehand.
     find etc -type d | while read -r dir; do
@@ -1088,8 +1088,8 @@ pkg_etc() {
 
         cp -fPp "$file"  "$KISS_ROOT/${file}${new}"
         chown root:root "$KISS_ROOT/${file}${new}" 2>/dev/null
-    done) ||:
-}
+    done ||:
+)
 
 pkg_remove() {
     # Remove a package and all of its files. The '/etc' directory
