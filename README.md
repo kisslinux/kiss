@@ -17,7 +17,7 @@ Tiny and straightforward package manager for KISS written in POSIX `sh`.
 ## Usage
 
 ```sh
--> kiss [a|b|c|i|l|r|s|u|v] [pkg] [pkg] [pkg]
+-> kiss [a|b|c|i|l|r|s|u|v] [pkg]...
 -> alternatives: List and swap to alternatives
 -> build:        Build a package
 -> checksum:     Generate checksums
