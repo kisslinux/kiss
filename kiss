@@ -1236,7 +1236,7 @@ pkg_install() {
     cp -f "$sys_db/$pkg_name/etcsums"  "$mak_dir/c" 2>/dev/null ||:
 
     # Install the package's files by iterating over its manifest.
-    pkg_install_files -z "$tar_dir/$pkg_name" "Installing file"
+    pkg_install_files -z "$tar_dir/$pkg_name"
 
     # Handle /etc/ files in a special way (via a 3-way checksum) to determine
     # how these files should be installed. Do we overwrite the existing file?
@@ -1280,7 +1280,7 @@ pkg_install() {
     # Install the package's files a second time to fix any mess caused by the
     # above removal of the previous version of the package.
     log "$pkg_name" "Verifying installation"
-    pkg_install_files -e "$tar_dir/$pkg_name" "  Checking file"
+    pkg_install_files -e "$tar_dir/$pkg_name"
 
     # Reset 'trap' to its original value. Installation is done so
     # we no longer need to block 'Ctrl+C'.
