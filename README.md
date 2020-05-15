@@ -33,8 +33,8 @@ Tiny and straightforward package manager for KISS written in POSIX `sh`.
 
 | dependency      | why                          | mandatory?        |
 | --------------- | ---------------------------- | ----------------- |
-| POSIX utilities |                              | Yes               |
-| `git`           | repositories and git sources | Yes               |
+| POSIX utilities | Used throughout              | Yes               |
+| `git`           | Repositories and git sources | Yes               |
 | `gnupg1` or `gnupg2` | Repository signing      | No (optional)     |
 | `curl`          | Source downloads             | Yes               |
 | `sha256sum`, `shasum`, `sha256` or `openssl` | Checksum verification | Yes |
