@@ -5,27 +5,39 @@ log() {
     printf '\033[31;1m->\033[m %s.\n' "$@"
 }
 
+die() {
+    rm -f kiss-chroot.tar.xz kiss-chroot.tar.xz.sha256
+
+    log "$@"
+    log "Re-run 'kiss-chbuild' to try again."
+
+    exit 1
+}
+
 cd "${cac_dir:=$KISS_ROOT${XDG_CACHE_HOME:-$HOME/.cache}/kiss}"
+url=https://github.com/kisslinux/repo/releases/download/1.10.0/
 
 [ -f kiss-chroot.tar.xz ] || {
     log "Downloading chroot tarball"
-
-    url=https://github.com/kisslinux/repo/releases/download/1.10.0/
-    curl -OL "$url/kiss-chroot.tar.xz"
-    curl -OL "$url/kiss-chroot.tar.xz.sha256"
-
-    log "Verifying checksums"
-
-    sha256sum -c < kiss-chroot.tar.xz.sha256 || {
-        rm -f kiss-chroot.tar.xz
-        log "Checksum verification failed."
-        log "Re-run 'kiss-chbuild' to try again."
-    }
+    curl -OL "$url/kiss-chroot.tar.xz" ||
+        die "Failed to download kiss-chroot.tar.xz"
 }
+
+[ -f kiss-chroot.tar.xz.sha256 ] || {
+    log "Downloading checksums"
+    curl -OL "$url/kiss-chroot.tar.xz.sha256" ||
+        die "Failed to download kiss-chroot.tar.xz.sha256"
+}
+
+log "Verifying checksums"
+sha256sum -c < kiss-chroot.tar.xz.sha256 ||
+    die "Checksum verification failed."
 
 [ -d kiss-chroot ] || {
     log "Extracting chroot"
-    tar xf kiss-chroot.tar.xz
+
+    tar xf kiss-chroot.tar.xz ||
+        die "Failed to extract tarball"
 }
 
 log "Creating temporary chroot"
