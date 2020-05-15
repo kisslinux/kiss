@@ -31,7 +31,6 @@ Tiny and straightforward package manager for KISS written in POSIX `sh`.
 
 ## Dependencies / Portability
 
-| --------------- | ---------------------------- | ----------------- |
 | dependency      | why                          | mandatory?        |
 | --------------- | ---------------------------- | ----------------- |
 | POSIX utilities |                              | Yes               |
