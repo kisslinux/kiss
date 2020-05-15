@@ -3,6 +3,7 @@
 Tiny and straightforward package manager for KISS written in POSIX `sh`.
 
 - Less than 1000 lines of POSIX `sh` (excluding blank lines and comments).
+- Highly portable (will run in any POSIX compliant environment).
 - Runtime dependency detection.
 - Incremental package installation.
 - Fast dependency solver.
@@ -30,49 +31,26 @@ Tiny and straightforward package manager for KISS written in POSIX `sh`.
 
 ## Dependencies / Portability
 
-```sh
-# - Anything with a specification should follow it (POSIX, BSD, etc).
-# - Anything without a specification which has ONLY a single (widely used)
-#   implementation will be considered portable (git, curl, etc).
-#
-#   POSIX utilities
-#   - sh        (POSIX)
-#   - find      (POSIX) -type f, -type d, -exec {} [+;], -o, -print, !
-#   - ls        (POSIX) -l, -d
-#   - sed       (POSIX) -n, s/<search>/<replace>/g, /<delete>/d
-#   - grep      (POSIX) -l, -F, -x, -f, -q, -v
-#   - sort      (POSIX) -r, -u, -k
-#   - tee       (POSIX) -a
-#   - date      (POSIX)
-#   - mkdir     (POSIX) -p
-#   - rm        (POSIX) -f, -r
-#   - rmdir     (POSIX)
-#   - cp        (POSIX) -f, -P, -p, -L, -R
-#   - mv        (POSIX) -f
-#   - chown     (POSIX) -h
-#   - diff      (POSIX) -U
-#
-#   Misc
-#   - su*       (sudo, doas, su) (in order, optional)
-#   - git       (downloads from git) (must link to curl)
-#   - curl      (downloads over http) (also needed by git)
-#   - sha256    (multiple fallbacks: sha256sum, shasum, sha256, openssl, etc)
-#
-#   Compiler/libc utilities (depends cc & libc)
-#   - readelf   (optional) (Part of compiler toolchain) (GNU, LLVM or elfutils)
-#   - strip     (optional) (Part of compiler toolchain) (GNU, LLVM or elfutils)
-#   - ldd       (optional) (Part of libc)
-#
-#   Tarball compression
-#   - tar       (as portable as can be) (merely: cf, tf, xf)
-#   - bzip2     (widely used) -d, -z
-#   - xz        (widely used) -d, -z, -c, -T
-#   - gzip      (widely used) -d, -6
-#   - zstd      (optional)    -d, -z, -c
-#   - unzip     (optional)
-#   - lzma      (optional)
-#   - lzip      (optional)
-```
+| --------------- | ---------------------------- | ----------------- |
+| dependency      | why                          | mandatory?        |
+| --------------- | ---------------------------- | ----------------- |
+| POSIX utilities |                              | Yes               |
+| `git`           | repositories and git sources | Yes               |
+| `gnupg1` or `gnupg2` | Repository signing      | No (optional)     |
+| `curl`          | Source downloads             | Yes               |
+| `sha256sum`, `shasum`, `sha256` or `openssl` | Checksum verification | Yes |
+| `tar`           | Tarball creation/extraction  | Yes               |
+| `bzip2`         | Compression method.          | Yes (widely used) |
+| `xz`            | Compression method.          | Yes (widely used) |
+| `gzip`          | Compression method.          | Yes (widely used) |
+| `zstd`          | Compression method.          | No  (rarely used) |
+| `lzma`          | Compression method.          | No  (rarely used) |
+| `lzip`          | Compression method.          | No  (rarely used) |
+| `unzip`         | Source type.                 | No  (rarely used) |
+| `su`, `sudo` or `doas` | Privilege escalation. | No  (optional)    |
+| `ldd`           | Automatic dependency fixer.  | No  (optional)    |
+| `readelf` and `strip` | Binary stripping       | No  (optional)    |
+
 
 ## Package format
 
