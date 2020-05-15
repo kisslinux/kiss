@@ -12,7 +12,7 @@
 read -r ver rel 2>/dev/null < "$KISS_ROOT/var/db/kiss/installed/$1/version"
 
 # Reset the argument list.
-pkg=$1
+pkg=$1 pwd=$PWD
 set --
 
 # Construct the argument list using each file.
@@ -20,12 +20,16 @@ while read -r file; do
     [ -d "$KISS_ROOT/$file" ] || set -- "$@" ".$file"
 done < "$KISS_ROOT/var/db/kiss/installed/$pkg/manifest"
 
-# Turn the list of files back into a package.
-tar cf - -C / -- "$@" | case ${KISS_COMPRESS:-gz} in
-    bz2) bzip2 -z ;;
-    gz)  gzip -6  ;;
-    xz)  xz -zT 0 ;;
-    zst) zstd -z  ;;
-esac > "$pkg#$ver-$rel.tar.${KISS_COMPRESS:-gz}"
+cd "$KISS_ROOT/"
 
-printf 'tarball created in %s\n' "$PWD/$pkg#$ver-$rel.tar.${KISS_COMPRESS:-gz}"
+# Turn the list of files back into a package.
+tar cf - "$@" | case ${KISS_COMPRESS:-gz} in
+    bz2)  bzip2 -z ;;
+    gz)   gzip -6  ;;
+    lzma) lzma -z  ;;
+    lz)   lzip -z  ;;
+    xz)   xz -zT 0 ;;
+    zst)  zstd -z  ;;
+esac > "$pwd/$pkg#$ver-$rel.tar.${KISS_COMPRESS:-gz}"
+
+printf 'tarball created in %s\n' "$pwd/$pkg#$ver-$rel.tar.${KISS_COMPRESS:-gz}"

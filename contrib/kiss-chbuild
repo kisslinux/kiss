@@ -14,6 +14,24 @@ die() {
     exit 1
 }
 
+sh256() {
+    # There's no standard utility to generate sha256 checksums.
+    # This is a simple wrapper around sha256sum, sha256, shasum
+    # and openssl which will use whatever is available.
+    #
+    # All utilities must match 'sha256sum' output.
+    #
+    # Example: '<checksum>  <file>'
+    [ -e "$1" ] || return 0
+
+    hash=$(sha256sum "$1" ||
+           sha256 -r "$1" ||
+           openssl dgst -sha256 -r "$1" ||
+           shasum -a 256 "$1")
+
+    printf '%s  %s\n' "${hash%% *}" "$1"
+} 2>/dev/null
+
 cd "${cac_dir:=$KISS_ROOT${XDG_CACHE_HOME:-$HOME/.cache}/kiss}"
 url=https://github.com/kisslinux/repo/releases/download/1.10.0/
 
@@ -30,7 +48,7 @@ url=https://github.com/kisslinux/repo/releases/download/1.10.0/
 }
 
 log "Verifying checksums"
-sha256sum -c < kiss-chroot.tar.xz.sha256 ||
+sh256 kiss-chroot.tar.xz | diff - kiss-chroot.tar.xz.sha256 ||
     die "Checksum verification failed."
 
 [ -d kiss-chroot ] || {

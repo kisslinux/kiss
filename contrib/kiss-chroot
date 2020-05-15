@@ -24,6 +24,20 @@ clean() {
     }
 }
 
+mounted() {
+    # This is a pure shell mountpoint implementation. We're dealing
+    # with basic (and fixed/known) input so this doesn't need to
+    # handle more complex cases.
+    [ -e "$1" ]         || return 1
+    [ -e /proc/mounts ] || return 1
+
+    while read -r _ target _; do
+        [ "$target" = "$1" ] && return 0
+    done < /proc/mounts
+
+    return 1
+}
+
 [ -z "$1" ]        && die Need a path to the chroot
 [ -d "$1" ]        || die Given path does not exist
 [ "$(id -u)" = 0 ] || die Script needs to be run as root
@@ -31,11 +45,11 @@ clean() {
 trap 'clean "$1"' EXIT INT
 
 log Mounting /dev, /proc and /sys from host; {
-    mountpoint -q "$1/dev"  || mount -o bind /dev "$1/dev"
-    mountpoint -q "$1/proc" || mount -t proc proc "$1/proc"
-    mountpoint -q "$1/sys"  || mount -t sysfs sys "$1/sys"
+    mounted "$1/dev"  || mount -o bind /dev "$1/dev"
+    mounted "$1/proc" || mount -t proc proc "$1/proc"
+    mounted "$1/sys"  || mount -t sysfs sys "$1/sys"
 
-    mountpoint -q "$1/sys/firmware/efi/efivars" ||
+    mounted "$1/sys/firmware/efi/efivars" ||
         mount -t efivarfs efivarfs "$1/sys/firmware/efi/efivars" 2>/dev/null ||:
 }
 
