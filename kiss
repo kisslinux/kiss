@@ -1371,26 +1371,24 @@ pkg_updates() {
 
     log "Checking for new package versions"
 
-    set +f
+    set +f --
 
     for pkg in "$sys_db/"*; do
-        pkg_name=${pkg##*/}
-
         # Read version and release information from the installed packages
         # and repository.
         read -r db_ver db_rel < "$pkg/version"
-        read -r re_ver re_rel < "$(pkg_find "$pkg_name")/version"
+        read -r re_ver re_rel < "$(pkg_find "${pkg##*/}")/version"
 
         # Compare installed packages to repository packages.
         [ "$db_ver-$db_rel" != "$re_ver-$re_rel" ] && {
-            printf '%s\n' "$pkg_name $db_ver-$db_rel ==> $re_ver-$re_rel"
-            outdated="$outdated$pkg_name "
+            printf '%s\n' "${pkg##*/} $db_ver-$db_rel ==> $re_ver-$re_rel"
+            set -- "$@" "${pkg##*/}"
         }
     done
 
     set -f
 
-    contains "$outdated" kiss && {
+    contains "$*" kiss && {
         log "Detected package manager update"
         log "The package manager will be updated first"
 
@@ -1405,19 +1403,19 @@ pkg_updates() {
         exit 0
     }
 
-    [ "$outdated" ] || {
+    [ "$1" ] || {
         log "Everything is up to date"
         return
     }
 
-    log "Packages to update: ${outdated% }"
+    log "Packages to update: $*"
 
     # Build all packages requiring an update.
     # See [1] at top of script.
     # shellcheck disable=2046,2086
     {
         pkg_update=1
-        pkg_order $outdated
+        pkg_order "$@"
         pkg_build $order
     }
 
@@ -1459,10 +1457,9 @@ args() {
     #
     # This handles the globbing characters '*', '!', '[' and ']' as per:
     # https://pubs.opengroup.org/onlinepubs/009695399/utilities/xcu_chap02.html
-    [ "${action##[as]*}" ] &&
-        case "$*" in *\**|*\!*|*\[*|*\]*)
-            die "Arguments contain invalid characters: '!*[]' ($*)"
-        esac
+    [ "${action##[as]*}" ] && case "$*" in *\**|*\!*|*\[*|*\]*)
+        die "Arguments contain invalid characters: '!*[]' ($*)"
+    esac
 
     # Parse some arguments earlier to remove the need to duplicate code.
     case $action in
