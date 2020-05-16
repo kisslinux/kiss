@@ -145,7 +145,6 @@ pkg_lint() {
     [ "$release" ] || die "$1" "Release field not found in version file"
     [ -x build ]   || die "$1" "Build file not found or not executable"
     [ -f sources ] || war "$1" "Sources file not found"
-    [ -s version ] || die "$1" "Version file not found or empty"
 
     [ ! -f sources ] || [ "$2" ] || [ -f checksums ] ||
         die "$1" "Checksums are missing"
