@@ -638,19 +638,24 @@ pkg_build() {
 
     log "Resolving dependencies"
 
+    # Mark packages passed on the command-line separately from those
+    # detected as dependencies. We need to treat explicitly passed packages
+    # differently from those pulled in as dependencies.
+    #
+    # This also resolves all dependencies and stores the result in '$deps'.
+    # Any duplicates are also filtered out.
     for pkg do contains "$explicit" "$pkg" || {
         pkg_depends "$pkg" explicit
-
-        # Mark packages passed on the command-line
-        # separately from those detected as dependencies.
         explicit="$explicit $pkg "
     } done
 
+    # If this is an update, don't always build explicitly passsed packages
+    # and instead install pre-built binaries if they exist.
     [ "$pkg_update" ] || explicit_build=$explicit
 
-    # If an explicit package is a dependency of another explicit
-    # package, remove it from the explicit list as it needs to be
-    # installed as a dependency.
+    # If an explicit package is a dependency of another explicit package,
+    # remove it from the explicit list as it needs to be installed as a
+    # dependency.
     # shellcheck disable=2086
     for pkg do contains "$deps" "$pkg" &&
         explicit=$(pop "$pkg" from $explicit)
@@ -682,9 +687,7 @@ pkg_build() {
     } done
 
     for pkg do pkg_sources "$pkg"; done
-
     pkg_verify "$@"
-    log "$pkg" "Verified all checksums"
 
     # Finally build and create tarballs for all passed packages and
     # dependencies.
@@ -739,8 +742,7 @@ pkg_build() {
 
         # If the package contains '/etc', add a file called
         # 'etcsums' to the manifest. See comment directly above.
-        [ -d "$pkg_dir/$pkg/etc" ] &&
-            : > "$pkg_dir/$pkg/$pkg_db/$pkg/etcsums"
+        [ -d "$pkg_dir/$pkg/etc" ] && : > "$pkg_dir/$pkg/$pkg_db/$pkg/etcsums"
 
         pkg_strip    "$pkg"
         pkg_fixdeps  "$pkg"
@@ -748,12 +750,11 @@ pkg_build() {
         pkg_etcsums  "$pkg"
         pkg_tar      "$pkg"
 
-        # Install only dependencies of passed packages.
-        # Skip this check if this is a package update.
+        # Install only dependencies of passed packages. If this is an update,
+        # install the built package regardless.
         contains "$explicit" "$pkg" && [ -z "$pkg_update" ] && continue
 
         log "$pkg" "Needed as a dependency or has an update, installing"
-
         (KISS_FORCE=1 args i "$pkg")
     done
 
@@ -789,8 +790,8 @@ pkg_checksums() {
             continue
 
         # File is local to the package.
-        elif [ -f "$(pkg_find "$1")/$src" ]; then
-            src_path=$(pkg_find "$1")/${src%/*}
+        elif [ -f "$repo_dir/$src" ]; then
+            src_path=$repo_dir/${src%/*}
 
         # File is remote and was downloaded.
         elif [ -f "$src_dir/$1/${src##*/}" ]; then
@@ -831,16 +832,18 @@ pkg_verify() {
     done
 
     [ -z "$mismatch" ] || die "Checksum mismatch with: ${mismatch% }"
+
+    log "Verified all checksums"
 }
 
 pkg_conflicts() {
     # Check to see if a package conflicts with another.
     log "$1" "Checking for package conflicts"
 
-    # Filter the tarball's manifest and select only files
-    # and any files they resolve to on the filesystem
-    # (/bin/ls -> /usr/bin/ls).
+    # Filter the tarball's manifest and select only files. Resolve all
+    # symlinks in file paths as well.
     while read -r file; do
+        # Skip all directories.
         case $file in */) continue; esac
 
         # False positive.
@@ -852,19 +855,26 @@ pkg_conflicts() {
         # directory.
         cd -P "${file%/*}" 2>/dev/null || PWD=${file%/*}
 
+        # Print the file with all symlinks in its path
+        # resolved to their real locations.
         printf '%s\n' "${PWD#$KISS_ROOT}/${file##*/}"
 
         cd "$old_PWD"
     done < "$tar_dir/$1/$pkg_db/$1/manifest" > "$cac_dir/$pid-m"
 
-    [ -s "$cac_dir/$pid-m" ] || return 0
-
     p_name=$1
+    set +f
+    set -f "$sys_db"/*/manifest
 
-    # Generate a list of all installed package manifests
-    # and remove the current package from the list.
-    # shellcheck disable=2046,2086
-    set -- $(set +f; pop "$sys_db/$1/manifest" from "$sys_db"/*/manifest)
+    # Generate a list of all installed package manifests and remove the
+    # current package from the list. This is the simplest method of
+    # dropping an item from the argument list. The one downside is that
+    # it cannot live in a function due to scoping.
+    for manifest do shift
+        [ "$sys_db/$p_name/manifest" = "$manifest" ] && continue
+
+        set -- "$@" "$manifest"
+    done
 
     # Store the list of found conflicts in a file as we'll be using the
     # information multiple times. Storing things in the cache dir allows
