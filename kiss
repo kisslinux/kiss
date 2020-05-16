@@ -1349,10 +1349,22 @@ pkg_updates() {
                 # ownership of files and directories in the rare
                 # case that the repository is owned by a 3rd user.
                 (
+                    # Grab the owner of the directory via 'ls -ld'.
+                    # This is fine despite the usual gabble about
+                    # 'ls' and its usage in scripts.
+                    #
+                    # Grabbing permissions, ownership or symlink
+                    # targets from 'ls -l' output is totally fine
+                    # and doesn't suffer from the disconnect
+                    # between the real and display representation
+                    # of the information..
                     read -r _ _ user _ <<-EOF || user=root
 						$(ls -ld "$PWD")
 					EOF
 
+                    # If the owner's user ID doesn't exist, fallback
+                    # to using 'root'. This prevents the code from
+                    # changing the permissions to something wonky.
                     id -u "$user" >/dev/null 2>&1 ||
                         user=root
 
