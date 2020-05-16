@@ -66,15 +66,6 @@ esc() {
                         "$(printf %s "$2" | sed 's/[\/&]/\\&/g')"
 }
 
-pop() {
-    # Remove an item from a "string list". This allows us
-    # to remove a 'sed' call and reuse this code throughout.
-    del=$1
-    shift 2
-
-    for i do [ "$i" = "$del" ] || printf %s " $i "; done
-}
-
 _tar() {
     # Some tar implementations support '-args' and some
     # simply support 'args'. This will try '-args' and
@@ -656,10 +647,10 @@ pkg_build() {
     # If an explicit package is a dependency of another explicit package,
     # remove it from the explicit list as it needs to be installed as a
     # dependency.
-    # shellcheck disable=2086
-    for pkg do contains "$deps" "$pkg" &&
-        explicit=$(pop "$pkg" from $explicit)
+    for pkg do contains "$deps" "$pkg" ||
+        explicit2=" $explicit2 $pkg "
     done
+    explicit=$explicit2
 
     # See [1] at top of script.
     # shellcheck disable=2046,2086
@@ -681,9 +672,7 @@ pkg_build() {
         (KISS_FORCE=1 args i "$tar_file")
 
         # Remove the now installed package from the build list.
-        # See [1] at top of script.
-        # shellcheck disable=2046,2086
-        set -- $(pop "$pkg" from "$@")
+        shift
     } done
 
     for pkg do pkg_sources "$pkg"; done
