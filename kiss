@@ -1584,7 +1584,7 @@ args() {
             log 'list         List installed packages'
             log 'remove       Remove a package'
             log 'search       Search for a package'
-            log 'update       Check for updates'
+            log 'update       Update the system'
             log 'version      Package manager version
                 '
 
