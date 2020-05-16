@@ -58,14 +58,6 @@ as_root() {
     esac
 }
 
-esc() {
-    # Escape all required characters in both the search and
-    # replace portions of two strings for use in a 'sed' call
-    # as "plain-text".
-    printf 's/^%s$/%s/' "$(printf %s "$1" | sed 's/[]\/$*.^[]/\\&/g')" \
-                        "$(printf %s "$2" | sed 's/[\/&]/\\&/g')"
-}
-
 _tar() {
     # Some tar implementations support '-args' and some
     # simply support 'args'. This will try '-args' and
@@ -967,7 +959,10 @@ pkg_swap() {
         # its manifest file to reflect this.
         cp  -Pf "$KISS_ROOT/$2" "$pkg_owns>${alt#*>}"
 
-        sed "$(esc "$2" "${PWD#$KISS_ROOT}/$pkg_owns>${alt#*>}")" \
+        # The separator is the ASCII unit separator which should
+        # be safe to use as files should never contain this character
+        # (I hope to god)..
+        sed "s^$2$${PWD#$KISS_ROOT}/$pkg_owns>${alt#*>}" \
             "../installed/$pkg_owns/manifest" | sort -r > "$mak_dir/.$1"
 
         mv -f "$mak_dir/.$1" "../installed/$pkg_owns/manifest"
@@ -977,7 +972,10 @@ pkg_swap() {
     # the manifest file to reflect this. The reverse of above.
     mv -f "$alt" "$KISS_ROOT/$2"
 
-    sed "$(esc "${PWD#$KISS_ROOT}/$alt" "$2")" \
+    # The separator is the ASCII unit separator which should
+    # be safe to use as files should never contain this character
+    # (I hope to god)..
+    sed "s${PWD#$KISS_ROOT}/$alt$2" \
         "../installed/$1/manifest" | sort -r > "$mak_dir/.$1"
 
     mv -f "$mak_dir/.$1" "../installed/$1/manifest"
