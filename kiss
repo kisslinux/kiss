@@ -713,8 +713,9 @@ pkg_build() {
 
         # We never ever want this. Let's end the endless conflicts
         # and remove it. This will be the only exception for a
-        # specific removal of this kind.
-        rm -f "$pkg_dir/$pkg/usr/lib/charset.alias"
+        # specific removal of this kind. A 'find' is used instead
+        # of 'rm' so as to not hardcode the location to this file.
+        find "$pkg_dir/$pkg" -type f -name charset.alias -exec rm -f {} +
 
         log "$pkg" "Successfully built package"
         run_hook post-build "$pkg" "$pkg_dir/$pkg"
