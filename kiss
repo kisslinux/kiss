@@ -69,6 +69,11 @@ _tar() {
 }
 
 run_hook() {
+    # If a fourth parameter 'root' is specified, source
+    # the hook from a predefined location to avoid privilige
+    # escalation through user scripts.
+    [ "$4" ] && KISS_HOOK=$KISS_ROOT/etc/kiss-hook
+
     # Provide a default post-build hook to remove files
     # and directories for things we don't support out of
     # the box. One can simply define their own hook to
@@ -83,6 +88,8 @@ run_hook() {
 
         return 0
     }
+
+    [ -f "$KISS_HOOK" ] || return 0
 
     log "$2" "Running $1 hook"
 
@@ -1219,7 +1226,7 @@ pkg_install() {
         [ "$install_dep" ] && die "$1" "Package requires ${install_dep%, }"
     }
 
-    run_hook pre-install "$pkg_name" "$tar_dir/$pkg_name"
+    run_hook pre-install "$pkg_name" "$tar_dir/$pkg_name" root
     pkg_conflicts "$pkg_name"
 
     log "$pkg_name" "Installing package incrementally"
@@ -1290,7 +1297,7 @@ pkg_install() {
         "$sys_db/$pkg_name/post-install"
     fi 2>&1 | tee -a "$log_dir/post-install-$time-$pid" >/dev/null
 
-    run_hook post-install "$pkg_name" "$sys_db/$pkg_name"
+    run_hook post-install "$pkg_name" "$sys_db/$pkg_name" root
 
     log "$pkg_name" "Installed successfully"
 }
