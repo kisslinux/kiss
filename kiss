@@ -1479,6 +1479,14 @@ args() {
         die "Arguments contain invalid characters: '!*[]' ($*)"
     esac
 
+    # CRUX style usage using the current directory as the name of the package
+    # to be operated on. This needs to sit before the 'as_root()' calls as
+    # they reset the current working directory during their invocations.
+    [ "$1" ] || case $action in b|build|c|checksum|i|install|r|remove)
+        export KISS_PATH=${PWD%/*}:$KISS_PATH
+        set -- "${PWD##*/}"
+    esac
+
     # Parse some arguments earlier to remove the need to duplicate code.
     case $action in
         s|search)
@@ -1502,13 +1510,6 @@ args() {
                 return
             }
         ;;
-    esac
-
-    # Second early check to use $PWD in place of arguments.
-    [ "$1" ] || case $action in b|build|c|checksum|i|install|r|remove)
-        export KISS_PATH=${PWD%/*}:$KISS_PATH
-        args "$action" "${PWD##*/}"
-        return 0
     esac
 
     # Actions can be abbreviated to their first letter. This saves
