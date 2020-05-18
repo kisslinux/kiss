@@ -49,7 +49,10 @@ prompt() {
 as_root() {
     # Simple function to run a command as root using either 'sudo',
     # 'doas' or 'su'. Hurrah for choice.
-    [ "$uid" = 0 ] || log "Using '${su:-su}' (to become ${user:=root})"
+    [ "$uid" = 0 ] || {
+        log "Using '${su:-su}' (to become ${user:=root})"
+        export KISS_AS_ROOT=1
+    }
 
     case $su in
         *sudo) sudo -E -u "$user" -- "$@" ;;
@@ -69,11 +72,15 @@ _tar() {
 }
 
 run_hook() {
+    # If we have elevated permissions from non-root to
+    # root, don't run the non-root user's KISS_HOOK.
+    [ "$KISS_AS_ROOT" != 1 ] || KISS_HOOK=/etc/kiss-hook
+
     # Provide a default post-build hook to remove files
     # and directories for things we don't support out of
     # the box. One can simply define their own hook to
     # override this behavior.
-    [ "${KISS_HOOK:-}" ] || {
+    [ -f "${KISS_HOOK:-}" ] || {
         case $1 in post-build)
             rm -rf "$3/usr/share/gettext"
             rm -rf "$3/usr/share/polkit-1"
