@@ -120,10 +120,10 @@ sh256() {
     hash=$(sha256sum "$1" ||
            sha256 -r "$1" ||
            openssl dgst -sha256 -r "$1" ||
-           shasum -a 256 "$1")
+           shasum -a 256 "$1") 2>/dev/null
 
     printf '%s  %s\n' "${hash%% *}" "$1"
-} 2>/dev/null
+}
 
 pkg_lint() {
     log "$1" "Checking repository files"
