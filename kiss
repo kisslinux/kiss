@@ -49,15 +49,18 @@ prompt() {
 as_root() {
     # Simple function to run a command as root using either 'sudo',
     # 'doas' or 'su'. Hurrah for choice.
-    [ "$uid" = 0 ] || {
-        log "Using '${su:-su}' (to become ${user:=root})"
-        export KISS_AS_ROOT=1
-    }
+    [ "$uid" = 0 ] || log "Using '${su:-su}' (to become ${user:=root})"
+
+    # Add the following environment variables to the root environment
+    # so that the non-root user's cache can be used. This is the
+    # portable method of doing so and works across all tools.
+    set -- env HOME="$HOME" XDG_CACHE_HOME="$XDG_CACHE_HOME" \
+               KISS_PATH="$KISS_PATH" KISS_FORCE="$KISS_FORCE" "$@"
 
     case $su in
-        *sudo) sudo -E -u "$user" -- "$@" ;;
-        *doas) doas    -u "$user" -- "$@" ;;
-        *)     su -pc "$* <&3" "$user" 3<&0 </dev/tty ;;
+        *sudo) sudo -iu "$user" -- "$@" ;;
+        *doas) doas  -u "$user" -- "$@" ;;
+            *) su   -lc "$* <&3" "$user" 3<&0 </dev/tty ;;
     esac
 }
 
@@ -72,15 +75,11 @@ _tar() {
 }
 
 run_hook() {
-    # If we have elevated permissions from non-root to
-    # root, don't run the non-root user's KISS_HOOK.
-    [ "$KISS_AS_ROOT" != 1 ] || KISS_HOOK=/etc/kiss-hook
-
     # Provide a default post-build hook to remove files
     # and directories for things we don't support out of
     # the box. One can simply define their own hook to
     # override this behavior.
-    [ -f "${KISS_HOOK:-}" ] || {
+    [ "${KISS_HOOK:-}" ] || {
         case $1 in post-build)
             rm -rf "$3/usr/share/gettext"
             rm -rf "$3/usr/share/polkit-1"
