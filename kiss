@@ -1341,6 +1341,7 @@ pkg_updates() {
             if [ -w "$PWD" ] && [ "$uid" != 0 ]; then
                 git fetch
                 git merge
+                git submodule update --remote --init -f
 
             else
                 [ "$uid" = 0 ] || log "$PWD" "Need root to update"
@@ -1365,6 +1366,7 @@ pkg_updates() {
                     # properly quoted as the command passed to it must
                     # be a string... This sets quotes where needed.
                     git_cmd="git fetch && git merge"
+                    git_cmd="$git_cmd && git submodule update --remote --init -f"
                     case $su in *su) git_cmd="'$git_cmd'"; esac
 
                     # Spawn a subshell to run multiple commands as
