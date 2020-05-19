@@ -1097,7 +1097,7 @@ pkg_remove() {
     pkg_list "$1" >/dev/null || return
 
     # Make sure that nothing depends on this package.
-    [ "$2" = check ] && {
+    [ "$KISS_FORCE" ] || {
         log "$1" "Checking for reverse dependencies"
 
         (cd "$sys_db"; set +f; grep -lFx "$1" -- */depends) &&
@@ -1545,16 +1545,12 @@ args() {
 
         i|install)
             pkg_order "$@"
-
             for pkg in $order; do pkg_install "$pkg"; done
         ;;
 
         r|remove)
             pkg_order "$@"
-
-            for pkg in $redro; do
-                pkg_remove "$pkg" "${KISS_FORCE:-check}"
-            done
+            for pkg in $redro; do pkg_remove  "$pkg"; done
         ;;
 
         b|build)   pkg_build "${@:?No packages installed}" ;;
