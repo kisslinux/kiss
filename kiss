@@ -127,10 +127,6 @@ pkg_lint() {
 
     [ ! -f sources ] || [ "$2" ] || [ -f checksums ] ||
         die "$1" "Checksums are missing"
-
-    case $PWD in "$KISS_ROOT/var/db/kiss/installed"*)
-        war "$1" "no longer exists in the repositories"
-    esac
 }
 
 pkg_find() {
@@ -166,9 +162,6 @@ pkg_list() {
     # List installed packages. As the format is files and
     # directories, this just involves a simple for loop and
     # file read.
-
-    # Change directories to the database. This allows us to
-    # avoid having to 'basename' each path.
     cd "$sys_db" 2>/dev/null
 
     # Optional arguments can be passed to check for specific
@@ -1017,8 +1010,6 @@ pkg_install_files() {
 
             *)  test "$1" "$KISS_ROOT/$line" ||
 
-                # Treat symlinks differently as the 'install' command
-                # will resolve them (we don't want this).
                 if [ -h "$2/$line" ]; then
                     # Skip symlinks which already exist as directories.
                     # (Think baselayout being updated)
@@ -1111,12 +1102,15 @@ pkg_remove() {
     fi
 
     while read -r file; do
-        # The file is in '/etc' skip it. This prevents the package
-        # manager from removing user edited configuration files.
-        [ "${file##/etc/*}" ] || continue
+        # Skip removal of files in /etc/.
+        if [ -z "${file##/etc/*}" ]; then
+            continue
 
-        if [ -d "$KISS_ROOT/$file" ]; then
-            rmdir "$KISS_ROOT/$file" 2>/dev/null || continue
+        # Directories.
+        elif [ -d "$KISS_ROOT/$file" ]; then
+            rmdir "$KISS_ROOT/$file" 2>/dev/null ||:
+
+        # Everything else.
         else
             rm -f "$KISS_ROOT/$file"
         fi
