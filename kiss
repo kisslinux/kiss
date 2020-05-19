@@ -1543,14 +1543,13 @@ args() {
             done
         ;;
 
-        i|install)
+        i|install|r|remove)
             pkg_order "$@"
-            for pkg in $order; do pkg_install "$pkg"; done
-        ;;
 
-        r|remove)
-            pkg_order "$@"
-            for pkg in $redro; do pkg_remove  "$pkg"; done
+            case $action in
+                i*) for pkg in $order; do pkg_install "$pkg"; done ;;
+                r*) for pkg in $redro; do pkg_remove  "$pkg"; done
+            esac
         ;;
 
         b|build)   pkg_build "${@:?No packages installed}" ;;
