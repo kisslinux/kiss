@@ -1581,7 +1581,7 @@ args() {
             done
 
             for path do
-                printf '\033[31;1m->\033[m %-*s ' "$max" "${path#*/kiss-}"
+                printf '%b->%b %-*s ' "$lcol" "$lclr" "$max" "${path#*/kiss-}"
                 sed -n 's/^# *//;2p' "$(command -v "kiss-$path")"
             done | sort -uk1 >&2
         ;;
