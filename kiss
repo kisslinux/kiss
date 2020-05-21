@@ -109,8 +109,8 @@ decompress() {
 
 sh256() {
     # There's no standard utility to generate sha256 checksums.
-    # This is a simple wrapper around sha256sum, sha256, shasum
-    # and openssl which will use whatever is available.
+    # This is a simple wrapper around sha256sum, sha256, shasum,
+    # openssl, digest, ... which will use whatever is available.
     #
     # All utilities must match 'sha256sum' output.
     #
@@ -270,7 +270,7 @@ pkg_sources() {
             }
 
         # Local source.
-        elif [ -f "$(pkg_find "$1")/$src" ]; then
+        elif [ -f "$repo_dir/$src" ]; then
             log "$1" "Found local file '$src'"
 
         else
@@ -366,8 +366,8 @@ pkg_extract() {
 
             *)
                 # Local file.
-                if [ -f "$(pkg_find "$1")/$src" ]; then
-                    cp -f "$(pkg_find "$1")/$src" .
+                if [ -f "$repo_dir/$src" ]; then
+                    cp -f "$repo_dir/$src" .
 
                 # Remote file.
                 elif [ -f "$src_dir/$1/${src##*/}" ]; then
