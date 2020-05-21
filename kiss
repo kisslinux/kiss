@@ -813,7 +813,7 @@ pkg_conflicts() {
         printf '%s\n' "${PWD#$KISS_ROOT}/${file##*/}"
 
         cd "$old_PWD"
-    done < "$tar_dir/$1/$pkg_db/$1/manifest" > "$cac_dir/$pid-m"
+    done < "$tar_dir/$1/$pkg_db/$1/manifest" > "$mak_dir/$pid-m"
 
     p_name=$1
     set +f
@@ -832,12 +832,12 @@ pkg_conflicts() {
     # Store the list of found conflicts in a file as we'll be using the
     # information multiple times. Storing things in the cache dir allows
     # us to be lazy as they'll be automatically removed on script end.
-    grep -Fxf "$cac_dir/$pid-m" -- "$@" 2>/dev/null > "$cac_dir/$pid-c" ||:
+    grep -Fxf "$mak_dir/$pid-m" -- "$@" 2>/dev/null > "$mak_dir/$pid-c" ||:
 
     # Enable alternatives automatically if it is safe to do so.
     # This checks to see that the package that is about to be installed
     # doesn't overwrite anything it shouldn't in '/var/db/kiss/installed'.
-    grep -q ":/var/db/kiss/installed/" "$cac_dir/$pid-c" || choice_auto=1
+    grep -q ":/var/db/kiss/installed/" "$mak_dir/$pid-c" || choice_auto=1
 
     # Use 'grep' to list matching lines between the to
     # be installed package's manifest and the above filtered
@@ -887,13 +887,13 @@ pkg_conflicts() {
                 log "this must be fixed in $p_name. Contact the maintainer"
                 die "by finding their details via 'kiss-maintainer'" "" "!>"
             }
-        done < "$cac_dir/$pid-c"
+        done < "$mak_dir/$pid-c"
 
         # Rewrite the package's manifest to update its location
         # to its new spot (and name) in the choices directory.
         pkg_manifest "$p_name" "$tar_dir" 2>/dev/null
 
-    elif [ -s "$cac_dir/$pid-c" ]; then
+    elif [ -s "$mak_dir/$pid-c" ]; then
         log "Package '$p_name' conflicts with another package" "" "!>"
         log "Run 'KISS_CHOICE=1 kiss i $p_name' to add conflicts" "" "!>"
         die "as alternatives." "" "!>"
@@ -1327,13 +1327,11 @@ pkg_updates() {
     set +f --
 
     for pkg in "$sys_db/"*; do
-        # Read version and release information from the installed packages
-        # and repository.
         read -r db_ver db_rel < "$pkg/version"
         read -r re_ver re_rel < "$(pkg_find "${pkg##*/}")/version"
 
         # Compare installed packages to repository packages.
-        [ "$db_ver-$db_rel" != "$re_ver-$re_rel" ] && {
+        [ "$db_ver-$db_rel" = "$re_ver-$re_rel" ] || {
             printf '%s\n' "${pkg##*/} $db_ver-$db_rel ==> $re_ver-$re_rel"
             set -- "$@" "${pkg##*/}"
         }
@@ -1381,8 +1379,7 @@ pkg_clean() {
 
     # Create a list containing the current invocation's temporary files and
     # directories.
-    set +f -- "$mak_dir" "$pkg_dir" "$tar_dir" \
-              "$cac_dir/$pid-m" "$cac_dir/$pid-c"
+    set +f -- "$mak_dir" "$pkg_dir" "$tar_dir"
 
     # Go through the cache and add any entries which don't belong to a
     # currently running kiss instance.
