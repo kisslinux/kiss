@@ -448,11 +448,6 @@ pkg_fixdeps() {
     # dependencies pulled in by the package's build suite.
     log "$1" "Checking for missing dependencies"
 
-    command -v ldd >/dev/null || {
-        war "ldd not found, skipping dependency fixer"
-        return 0
-    }
-
     # Go to the built package directory to simplify path building.
     cd "$pkg_dir/$1/$pkg_db/$1"
 
