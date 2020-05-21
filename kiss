@@ -429,7 +429,17 @@ pkg_strip() {
 
     log "$1" "Stripping binaries and libraries"
 
-    find "$pkg_dir/$1" -type f -exec strip {} \; 2>/dev/null ||:
+    # Strip only files matching the below ELF types.
+    find "$pkg_dir/$1" -type f | while read -r file; do
+        case $(readelf -h "$file" 2>/dev/null) in
+            *" DYN "*)  strip_opt=unneeded ;;
+            *" EXEC "*) strip_opt=all ;;
+            *" REL "*)  strip_opt=debug ;;
+            *) continue
+        esac
+
+        strip "--strip-$strip_opt" "$file" 2>/dev/null
+    done 2>/dev/null ||:
 }
 
 pkg_fixdeps() {
