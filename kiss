@@ -429,17 +429,7 @@ pkg_strip() {
 
     log "$1" "Stripping binaries and libraries"
 
-    # Strip only files matching the below ELF types.
-    find "$pkg_dir/$1" -type f | while read -r file; do
-        case $(readelf -h "$file" 2>/dev/null) in
-            *" DYN "*)  strip_opt=unneeded ;;
-            *" EXEC "*) strip_opt=all ;;
-            *" REL "*)  strip_opt=debug ;;
-            *) continue
-        esac
-
-        strip "--strip-$strip_opt" "$file" 2>/dev/null
-    done 2>/dev/null ||:
+    find "$pkg_dir/$1" -type f -exec strip {} \; ||:
 }
 
 pkg_fixdeps() {
@@ -1582,8 +1572,8 @@ main() {
     KISS_ROOT=${KISS_ROOT%/}
 
     # Define some paths which we will then use throughout the script.
-    sys_db=$KISS_ROOT/$pkg_db
     pkg_db=var/db/kiss/installed
+    sys_db=$KISS_ROOT/$pkg_db
 
     # This allows for automatic setup of a KISS chroot and will
     # do nothing on a normal system.
