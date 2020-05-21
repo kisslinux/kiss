@@ -928,42 +928,39 @@ pkg_swap() {
         die "Alternative '$1 $2' doesn't exist"
 
     if [ -f "$2" ]; then
-        # Figure out which package owns the file we are going to
-        # swap for another package's.
-        #
-        # Print the full path to the manifest file which contains
-        # the match to our search.
+        # Figure out which package owns the file we are going to swap for
+        # another package's. Print the full path to the manifest file which
+        # contains the match to our search.
         pkg_owns=$(set +f; grep -lFx "$2" "$sys_db/"*/manifest) ||:
 
         # Extract the package name from the path above.
         pkg_owns=${pkg_owns%/*}
         pkg_owns=${pkg_owns##*/}
 
-        [ "$pkg_owns" ] ||
-            die "File '$2' exists on filesystem but isn't owned"
+        # Ensure that the file we're going to swap is actually owned by a
+        # package. If it is not, we have to die here.
+        [ "$pkg_owns" ] || die "File '$2' exists on filesystem but isn't owned"
 
         log "Swapping '$2' from '$pkg_owns' to '$1'"
 
-        # Convert the current owner to an alternative and rewrite
-        # its manifest file to reflect this.
+        # Convert the current owner to an alternative and rewrite its manifest
+        # file to reflect this.
         cp  -Pf "$KISS_ROOT/$2" "$pkg_owns>${alt#*>}"
 
-        # The separator is the ASCII unit separator which should
-        # be safe to use as files should never contain this character
-        # (I hope to god)..
+        # The separator is the ASCII unit separator which should be safe to
+        # use as files should never contain this character (I hope to god)..
         sed "s^$2$${PWD#$KISS_ROOT}/$pkg_owns>${alt#*>}" \
             "../installed/$pkg_owns/manifest" | sort -r > "$mak_dir/.$1"
 
         mv -f "$mak_dir/.$1" "../installed/$pkg_owns/manifest"
     fi
 
-    # Convert the desired alternative to a real file and rewrite
-    # the manifest file to reflect this. The reverse of above.
+    # Convert the desired alternative to a real file and rewrite the manifest
+    # file to reflect this. The reverse of above.
     mv -f "$alt" "$KISS_ROOT/$2"
 
-    # The separator is the ASCII unit separator which should
-    # be safe to use as files should never contain this character
-    # (I hope to god)..
+    # The separator is the ASCII unit separator which should be safe to use
+    # as files should never contain this character (I hope to god).
     sed "s${PWD#$KISS_ROOT}/$alt$2" \
         "../installed/$1/manifest" | sort -r > "$mak_dir/.$1"
 
