@@ -1022,6 +1022,34 @@ pkg_install_files() {
     done
 }
 
+pkg_remove_files() {
+    # Remove a file list from the system. This function runs during package
+    # installation and package removal. Combining the removals in these two
+    # functions allows us to stop duplicating code.
+    while read -r file; do
+        # Skip deleting some leftover files.
+        case $file in /etc/*) continue; esac
+
+        file=$KISS_ROOT/$file
+
+        # Remove files.
+        if [ -f "$file" ] && [ ! -h "$file" ]; then
+            rm -f "$file"
+
+        # Remove file symlinks.
+        elif [ -h "$file" ] && [ ! -d "$file" ]; then
+            rm -f "$file"
+
+        # Skip directory symlinks.
+        elif [ -h "$file" ] && [ -d "$file" ]; then :
+
+        # Remove directories if empty.
+        elif [ -d "$file" ]; then
+            rmdir "$file" 2>/dev/null ||:
+        fi
+    done ||:
+}
+
 pkg_etc() (
     [ -d "$tar_dir/$pkg_name/etc" ] || return 0
 
@@ -1097,20 +1125,7 @@ pkg_remove() {
         "$sys_db/$1/pre-remove" ||:
     fi
 
-    while read -r file; do
-        # Skip removal of files in /etc/.
-        if [ -z "${file##/etc/*}" ]; then
-            continue
-
-        # Directories.
-        elif [ -d "$KISS_ROOT/$file" ]; then
-            rmdir "$KISS_ROOT/$file" 2>/dev/null ||:
-
-        # Everything else.
-        else
-            rm -f "$KISS_ROOT/$file"
-        fi
-    done < "$sys_db/$1/manifest" 2>/dev/null
+    pkg_remove_files < "$sys_db/$1/manifest"
 
     # Reset 'trap' to its original value. Removal is done so
     # we no longer need to block 'Ctrl+C'.
@@ -1232,29 +1247,7 @@ pkg_install() {
     # Files in /etc/ are skipped entirely as they'll be handled via a 3-way
     # checksum system due to the nature of their existence.
     grep -vFxf "$sys_db/$pkg_name/manifest" "$mak_dir/m" 2>/dev/null |
-
-    while read -r file; do
-        file=$KISS_ROOT/$file
-
-        # Skip deleting some leftover files.
-        case $file in /etc/*) continue; esac
-
-        # Remove files.
-        if [ -f "$file" ] && [ ! -h "$file" ]; then
-            rm -f "$file"
-
-        # Remove file symlinks.
-        elif [ -h "$file" ] && [ ! -d "$file" ]; then
-            rm -f "$file"
-
-        # Skip directory symlinks.
-        elif [ -h "$file" ] && [ -d "$file" ]; then :
-
-        # Remove directories if empty.
-        elif [ -d "$file" ]; then
-            rmdir "$file" 2>/dev/null ||:
-        fi
-    done ||:
+    pkg_remove_files
 
     # Install the package's files a second time to fix any mess caused by the
     # above removal of the previous version of the package.
