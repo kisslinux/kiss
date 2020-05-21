@@ -1265,15 +1265,9 @@ pkg_updates() {
         cd "$repo"
         cd "$(git rev-parse --show-toplevel 2>/dev/null)" 2>/dev/null ||:
 
-        [ -d .git ] || {
-            log "$repo" " "
-            printf '%s\n' "Not a git repository, skipping."
-            continue
-        }
-
         [ "$(git remote 2>/dev/null)" ] || {
             log "$repo" " "
-            printf '%s\n' "No remote, skipping."
+            printf '%s\n' "No remote or not git repository, skipping."
             continue
         }
 
