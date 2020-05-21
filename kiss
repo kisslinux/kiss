@@ -429,19 +429,9 @@ pkg_strip() {
 
     log "$1" "Stripping binaries and libraries"
 
-    command -v strip >/dev/null || {
-        war "strip not found, skipping binary stripping"
-        return 0
-    }
-
-    command -v readelf >/dev/null || {
-        war "readelf not found, skipping binary stripping"
-        return 0
-    }
-
     # Strip only files matching the below ELF types.
     find "$pkg_dir/$1" -type f | while read -r file; do
-        case $(readelf -h "$file") in
+        case $(readelf -h "$file" 2>/dev/null) in
             *" DYN "*)  strip_opt=unneeded ;;
             *" EXEC "*) strip_opt=all ;;
             *" REL "*)  strip_opt=debug ;;
