@@ -429,7 +429,7 @@ pkg_strip() {
 
     log "$1" "Stripping binaries and libraries"
 
-    find "$pkg_dir/$1" -type f -exec strip {} \; ||:
+    find "$pkg_dir/$1" -type f -exec strip {} \; 2>/dev/null ||:
 }
 
 pkg_fixdeps() {
