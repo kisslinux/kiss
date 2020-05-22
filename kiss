@@ -1407,6 +1407,7 @@ args() {
                     KISS_PATH="$KISS_PATH" \
                     KISS_FORCE="$KISS_FORCE" \
                     KISS_ROOT="$KISS_ROOT" \
+                    KISS_CHOICE="$KISS_CHOICE" \
                     kiss "$action" "$@"
 
             return
