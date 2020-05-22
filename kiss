@@ -1435,9 +1435,7 @@ args() {
 
                 else
                     log "$pkg" "Need permissions to generate checksums"
-
                     file_owner "$repo_dir"
-                    pkg_checksums "$pkg" |
 
                     user=$user as_root tee "$repo_dir/checksums"
                 fi
