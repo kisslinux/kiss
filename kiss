@@ -718,25 +718,23 @@ pkg_checksums() {
     # Support packages without sources. Simply do nothing.
     [ -f "$repo_dir/sources" ] || return 0
 
-    while read -r src _ || [ "$src" ]; do
-        case $src in \#*) ;;
-            git+*) printf 'git  %s\n' "$src" ;;
+    while read -r src _ || [ "$src" ]; do case $src in \#*) ;;
+        git+*) printf 'git  %s\n' "$src" ;;
 
-            *)
-                # File is local to the package.
-                if [ -f "$repo_dir/$src" ]; then
-                    cd "$repo_dir/${src%/*}"
+        *)
+            # File is local to the package.
+            if [ -f "$repo_dir/$src" ]; then
+                cd "$repo_dir/${src%/*}"
 
-                # File is remote and was downloaded.
-                elif [ -f "$src_dir/$1/${src##*/}" ]; then
-                    cd "$src_dir/$1"
-                fi
+            # File is remote and was downloaded.
+            elif [ -f "$src_dir/$1/${src##*/}" ]; then
+                cd "$src_dir/$1"
+            fi
 
-                sh256 "${src##*/}" ||
-                    die "$1" "Failed to generate checksums"
-            ;;
-        esac
-    done < "$repo_dir/sources"
+            sh256 "${src##*/}" ||
+                die "$1" "Failed to generate checksums"
+        ;;
+    esac; done < "$repo_dir/sources"
 }
 
 pkg_verify() {
