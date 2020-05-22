@@ -438,7 +438,10 @@ pkg_strip() {
             *) continue
         esac
 
-        strip "--strip-$strip_opt" "$file" 2>/dev/null
+        strip "--strip-$strip_opt" \
+              --remove-section=.comment  \
+              --remove-section=.note  \
+              "$file" 2>/dev/null
     done 2>/dev/null ||:
 }
 
