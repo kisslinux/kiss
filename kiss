@@ -5,7 +5,21 @@
 # in KISS Linux (https://k1ss.org).
 #
 # [1] Warnings related to word splitting and globbing are disabled.
-# All word splitting in this script is *safe* and intentional.
+#     All word splitting in this script is *safe* and intentional.
+#
+# [2] Information is grabbed from 'ls -ld' output.
+#
+#     This is fine _despite_ the usual gaggle about 'ls' and its
+#     use in scripting. The POSIX specification states that the
+#     link target must be the exact contents of the link.
+#
+#     The specification:
+#
+#     > If the file is a symbolic link and the -L option is not
+#       specified, this information shall be about the link
+#       itself and the <pathname> field shall be of the form:
+#
+#     > "%s -> %s", <pathname of link>, <contents of link>
 #
 # Created by Dylan Araps.
 
@@ -60,14 +74,8 @@ as_root() {
 }
 
 file_owner() {
-    # Grab the owner of the file/directory via 'ls -ld'. This is
-    # fine despite the usual gabble about 'ls' and its usage in scripts.
-    #
-    # Grabbing permissions, ownership or symlink targets from 'ls -l'
-    # output is totally fine and doesn't suffer from the disconnect
-    # between the real and display representation of the information.
-    #
-    # Globbing is disabled and word splitting is intentional here.
+    # Grab the owner of the file/directory via 'ls -ld'
+    # See: [1] and [2] at top of script.
     # shellcheck disable=2046
     set -- $(ls -ld "$1"); user=${3:-root}
 
@@ -474,49 +482,24 @@ pkg_fixdeps() {
     while read -r file; do
         # Run 'ldd' on the file and parse each line. The code then checks to
         # see which packages own the linked libraries and it prints the result.
-        ldd "$file" 2>/dev/null | while read -r dep; do
-            # Skip lines containing 'ldd'.
-            [ "${dep##*ldd*}" ] || continue
-
-            # Extract the file path from 'ldd' output.
-            dep=${dep#* => } dep=${dep% *} old_PWD=$PWD
-
-            # False positive (we need to modify PWD).
-            # shellcheck disable=2030
-            cd -P "${dep%/*}" 2>/dev/null || PWD=${1%/*}
+        ldd "$file" 2>/dev/null | while read -r _ _ dep _; do
+            # Resolve path symlinks to find the real location to the library.
+            cd -P "${dep%/*}" 2>/dev/null || continue
 
             # 'ls' is used to obtain the target of the symlink.
-            #
-            # This is fine _despite_ the usual gaggle about 'ls' and its
-            # use in scripting. The POSIX specification states that the
-            # link target must be the exact contents of the link.
-            #
-            # The specification:
-            #
-            # > If the file is a symbolic link and the -L option is not
-            #   specified, this information shall be about the link
-            #   itself and the <pathname> field shall be of the form:
-            #
-            # > "%s -> %s", <pathname of link>, <contents of link>
+            # See: [2] at top of script.
             lso=$(ls -ld "$PWD/${dep##*/}" 2>/dev/null) &&
-            case $lso in *' -> '*)
-                lso=${lso##*" -> "} dep=$PWD/${lso##*/}
-            esac
-
-            # We need to go back to where we came from as the old PWD
-            # stores the name of the current package.
-            cd "$old_PWD"
+            case $lso in *' -> '*) lso=${lso##* -> } dep=$PWD/${lso##*/}; esac
 
             # Figure out which package owns the file.
-            own=$(grep -lFx "${dep##$KISS_ROOT}" "$@")
-            own=${own%/*} own=${own##*/}
+            dep=$(grep -lFx "${dep##$KISS_ROOT}" "$@")
+            dep=${dep%/*} dep=${dep##*/}
 
             # Skip listing these packages as dependencies.
-            case $own in musl|gcc|llvm|"${PWD##*/}"|"${PWD##*/}-bin"|"")
-                continue
+            case $dep in
+                musl|gcc|llvm|"${OLDPWD##*/}"|"${OLDPWD##*/}-bin"|"") ;;
+                *) printf '%s\n' "$dep"
             esac
-
-            printf '%s\n' "$own"
         done ||:
     done >> depends
 
@@ -962,6 +945,7 @@ pkg_install_files() {
     while read -r line; do
         # Grab the octal permissions so that directory creation
         # preserves permissions.
+        # See: [2] at top of script.
         rwx=$(ls -ld "$2/$line") oct='' b='' o=0
 
         # Convert the output of 'ls' (rwxrwx---) to octal. This is simply
