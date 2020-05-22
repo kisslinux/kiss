@@ -725,22 +725,18 @@ pkg_checksums() {
             *)
                 # File is local to the package.
                 if [ -f "$repo_dir/$src" ]; then
-                    src_path=$repo_dir/${src%/*}
+                    cd "$repo_dir/${src%/*}"
 
                 # File is remote and was downloaded.
                 elif [ -f "$src_dir/$1/${src##*/}" ]; then
-                    src_path=$src_dir/$1
-
-                else
-                    die "$1" "Couldn't find source '$src'"
+                    cd "$src_dir/$1"
                 fi
+
+                sh256 "${src##*/}" ||
+                    die "$1" "Failed to generate checksums"
             ;;
         esac
 
-        # An easy way to get 'sha256sum' to print with the 'basename'
-        # of files is to 'cd' to the file's directory beforehand.
-        (cd "$src_path" && sh256 "${src##*/}") ||
-            die "$1" "Failed to generate checksums"
     done < "$repo_dir/sources"
 }
 
