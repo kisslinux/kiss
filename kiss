@@ -1519,7 +1519,7 @@ args() {
             done
 
             for path do
-                printf '%b->%b %-*s ' "$lcol" "$lclr" "$max" "${path#*/kiss-}"
+                printf "%b->%b %-${max}s " "$lcol" "$lclr" "${path#*/kiss-}"
                 sed -n 's/^# *//;2p' "$(command -v "kiss-$path")"
             done | sort -uk1 >&2
         ;;
