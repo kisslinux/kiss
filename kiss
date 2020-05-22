@@ -736,7 +736,6 @@ pkg_checksums() {
             printf 'git  %s\n' "$src"
             continue
 
-        # Die here if source for some reason, doesn't exist.
         else
             die "$1" "Couldn't find source '$src'"
         fi
