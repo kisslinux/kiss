@@ -465,14 +465,10 @@ pkg_fixdeps() {
     # Generate a list of all installed manifests.
     set +f; set -f -- "$sys_db/"*/manifest
 
-    # Make a copy of the depends file if it exists to have a reference to
-    # 'diff' against.
-    if [ -f depends ]; then
-        cp -f depends "$mak_dir/d"
-        dep_file=$mak_dir/d
-    else
-        dep_file=/dev/null
-    fi
+    # Create the depends file if it doesn't exist to have something to
+    # compare against (even if empty). We will remove this blank file
+    # later if needed.
+    touch depends
 
     # Get a list of binaries and libraries, false files will be found,
     # however it's faster to get 'ldd' to check them anyway than to filter
@@ -501,16 +497,17 @@ pkg_fixdeps() {
                 *) printf '%s\n' "$dep"
             esac
         done ||:
-    done >> depends
-
-    # Remove duplicate entries from the new depends file. This removes
-    # duplicate lines looking *only* at the first column.
-    sort -uk1,1 -o depends depends 2>/dev/null ||:
+    done | sort -uk1,1 depends - > "$mak_dir/d"
 
     # Display a 'diff' of the new dependencies against the old ones.
-    diff -U 3 "$dep_file" depends ||:
+    diff -U 3 depends - < "$mak_dir/d" ||:
 
-    # Remove the package's depends file if it's empty.
+    # Swap out the old depends file for the new one which contains
+    # an amended dependency list.
+    mv -f "$mak_dir/d" depends
+
+    # Remove the package's depends file if it's empty. (The package has
+    # no dependencies, automatically detected or otherwise).
     [ -s depends ] || rm -f depends
 }
 
@@ -802,7 +799,7 @@ pkg_conflicts() {
     # Generate a list of all installed package manifests and remove the
     # current package from the list. This is the simplest method of
     # dropping an item from the argument list. The one downside is that
-    # it cannot live in a function due to scoping.
+    # it cannot live in a function due to scoping of arguments.
     for manifest do shift
         [ "$sys_db/$p_name/manifest" = "$manifest" ] && continue
 
@@ -819,11 +816,7 @@ pkg_conflicts() {
     # doesn't overwrite anything it shouldn't in '/var/db/kiss/installed'.
     grep -q ":/var/db/kiss/installed/" "$mak_dir/$pid-c" || choice_auto=1
 
-    # Use 'grep' to list matching lines between the to
-    # be installed package's manifest and the above filtered
-    # list.
     if [ "$KISS_CHOICE" != 0 ] && [ "$choice_auto" = 1 ]; then
-
         # This is a novel way of offering an "alternatives" system.
         # It is entirely dynamic and all "choices" are created and
         # destroyed on the fly.
