@@ -1475,14 +1475,25 @@ args() {
             # see [1] at top of script.
             set -- $(KISS_PATH=$PATH pkg_find kiss-\* all -x)
 
-            for path do
-                p=${path#*/kiss-} max=$((${#p} > max ? ${#p}+1 : max))
+            # To align descriptions figure out which extension has the longest
+            # name by doing a simple 'name > max ? name : max' on the basename
+            # of the path with 'kiss-' stripped as well.
+            #
+            # This also removes any duplicates found in '$PATH', picking the
+            # first match.
+            for path do p=${path#*/kiss-}
+                case " $seen " in
+                    *" $p "*) shift ;;
+                    *) seen=" $seen $p " max=$((${#p} > max ? ${#p}+1 : max))
+                esac
             done
 
+            # Print each extension, grab its description from the second line
+            # in the file and align the output based on the above max.
             for path do
                 printf "%b->%b %-${max}s " "$lcol" "$lclr" "${path#*/kiss-}"
                 sed -n 's/^# *//;2p' "$path"
-            done | sort -uk1 >&2
+            done >&2
         ;;
 
         *)
