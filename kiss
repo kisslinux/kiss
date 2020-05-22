@@ -781,13 +781,9 @@ pkg_conflicts() {
 
     # Filter the tarball's manifest and select only files. Resolve all
     # symlinks in file paths as well.
-    while read -r file; do
+    while read -r file; do file=$KISS_ROOT/${file#/}
         # Skip all directories.
         case $file in */) continue; esac
-
-        # False positive.
-        # shellcheck disable=2031
-        old_PWD=$PWD file=$KISS_ROOT/${file#/}
 
         # Attempt to resolve symlinks by using 'cd'.
         # If this fails, fallback to the file's parent
@@ -797,8 +793,6 @@ pkg_conflicts() {
         # Print the file with all symlinks in its path
         # resolved to their real locations.
         printf '%s\n' "${PWD#$KISS_ROOT}/${file##*/}"
-
-        cd "$old_PWD"
     done < "$tar_dir/$1/$pkg_db/$1/manifest" > "$mak_dir/$pid-m"
 
     p_name=$1
@@ -874,6 +868,8 @@ pkg_conflicts() {
                 die "by finding their details via 'kiss-maintainer'" "" "!>"
             }
         done < "$mak_dir/$pid-c"
+
+        log "$p_name" "Converted all conflicts to choices (kiss a)"
 
         # Rewrite the package's manifest to update its location
         # to its new spot (and name) in the choices directory.
