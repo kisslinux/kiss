@@ -1471,16 +1471,17 @@ args() {
 
             log "Installed extensions (kiss-* in \$PATH)"
 
-            set --
+            # shellcheck disable=2046
+            # see [1] at top of script.
+            set -- $(KISS_PATH=$PATH pkg_find kiss-\* all -x)
 
-            for path in $(KISS_PATH=$PATH pkg_find kiss-\* all -x); do
-                [ -x "$path" ] && set -- "${path#*/kiss-}" "$@"
-                max=$((${#1} > max ? ${#1} : max))
+            for path do
+                p=${path#*/kiss-} max=$((${#p} > max ? ${#p}+1 : max))
             done
 
             for path do
                 printf "%b->%b %-${max}s " "$lcol" "$lclr" "${path#*/kiss-}"
-                sed -n 's/^# *//;2p' "$(command -v "kiss-$path")"
+                sed -n 's/^# *//;2p' "$path"
             done | sort -uk1 >&2
         ;;
 
