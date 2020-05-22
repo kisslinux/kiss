@@ -731,8 +731,7 @@ pkg_checksums() {
                 cd "$src_dir/$1"
             fi
 
-            sh256 "${src##*/}" ||
-                die "$1" "Failed to generate checksums"
+            sh256 "${src##*/}" || die "$1" "Failed to generate checksums"
         ;;
     esac; done < "$repo_dir/sources"
 }
