@@ -719,26 +719,23 @@ pkg_checksums() {
     [ -f "$repo_dir/sources" ] || return 0
 
     while read -r src _ || [ "$src" ]; do
-        # Comment.
-        if [ -z "${src##\#*}" ]; then
-            continue
+        case $src in \#*) ;;
+            git+*) printf 'git  %s\n' "$src" ;;
 
-        # File is local to the package.
-        elif [ -f "$repo_dir/$src" ]; then
-            src_path=$repo_dir/${src%/*}
+            *)
+                # File is local to the package.
+                if [ -f "$repo_dir/$src" ]; then
+                    src_path=$repo_dir/${src%/*}
 
-        # File is remote and was downloaded.
-        elif [ -f "$src_dir/$1/${src##*/}" ]; then
-            src_path=$src_dir/$1
+                # File is remote and was downloaded.
+                elif [ -f "$src_dir/$1/${src##*/}" ]; then
+                    src_path=$src_dir/$1
 
-        # File is a git repository.
-        elif [ -z "${src##git+*}" ]; then
-            printf 'git  %s\n' "$src"
-            continue
-
-        else
-            die "$1" "Couldn't find source '$src'"
-        fi
+                else
+                    die "$1" "Couldn't find source '$src'"
+                fi
+            ;;
+        esac
 
         # An easy way to get 'sha256sum' to print with the 'basename'
         # of files is to 'cd' to the file's directory beforehand.
