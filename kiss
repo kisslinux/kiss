@@ -317,16 +317,20 @@ pkg_extract() {
             ;;
 
             # Git repository, comment or blank line.
-            git+*|\#*|'') continue ;;
+            git+*|\#*|'') ;;
 
             # Tarballs of any kind. This is a shell equivalent of
             # GNU tar's '--strip-components 1'.
             *://*.tar|*://*.tar.??|*://*.tar.???|*://*.tar.????|*://*.t?z)
+                # Decompress the archive to a temporary .tar archive.
                 decompress "$src_dir/$1/${src##*/}" > .ktar
 
-                tar xf .ktar ||
-                    die "$1" "Couldn't extract ${src##*/}"
+                # Extract the tar archive to the current directory.
+                tar xf .ktar || die "$1" "Couldn't extract ${src##*/}"
 
+                # Iterate over all directories in the first level of the
+                # tarball's manifest. This is our equivalent of GNU tar's
+                # '--strip-components 1'.
                 tar tf .ktar | while IFS=/ read -r dir _; do
                     # Some tarballs contain './' as the top-level directory,
                     # we need to skip these occurances.
