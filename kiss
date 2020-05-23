@@ -957,7 +957,7 @@ pkg_install_files() {
                     # (Think baselayout being updated)
                     [ -d "$KISS_ROOT/$line" ] && continue
 
-                    cp -fPp "$2/$line" "$KISS_ROOT/$line"
+                    cp  -fPp "$2/$line"    "$KISS_ROOT/$line"
                     chown -h "$USER:$USER" "$KISS_ROOT/$line"
                 else
                     cp -f "$2/$line" "$KISS_ROOT/$line"
@@ -1128,7 +1128,6 @@ pkg_install() {
     # if needed.
     (
         cd "$tar_dir/$pkg_name"
-
         decompress "$tar_file" | tar xf -
     )
 
@@ -1558,8 +1557,7 @@ main() {
     KISS_ROOT=${KISS_ROOT%/}
 
     # Define some paths which we will then use throughout the script.
-    pkg_db=var/db/kiss/installed
-    sys_db=$KISS_ROOT/$pkg_db
+    sys_db=$KISS_ROOT/${pkg_db:=var/db/kiss/installed}
 
     # This allows for automatic setup of a KISS chroot and will
     # do nothing on a normal system.
