@@ -194,6 +194,8 @@ pkg_list() {
 }
 
 pkg_cache() {
+    # Find the tarball of a package using a glob. Use the first found match
+    # of '<pkg_name>#<pkg_version><pkg_release>.tar.*'.
     read -r version release 2>/dev/null < "$(pkg_find "$1")/version"
 
     set +f; set -f -- "$bin_dir/$1#$version-$release.tar."*
@@ -235,9 +237,9 @@ pkg_sources() {
             # Run in a subshell to keep the variables, path and
             # argument list local to each loop iteration.
             (
-                repo_src=${src##git+}
+                url=${src##git+}
 
-                log "$1" "Cloning ${repo_src%[@#]*}"
+                log "$1" "Cloning ${url%[@#]*}"
 
                 # Git has no option to clone a repository to a
                 # specific location so we must do it ourselves
@@ -247,20 +249,18 @@ pkg_sources() {
                 # Clear the argument list as we'll be overwriting
                 # it below based on what kind of checkout we're
                 # dealing with.
-                set -- "$repo_src"
+                set -- "$url"
 
                 # If a branch was given, shallow clone it directly.
                 # This speeds things up as we don't have to grab
                 # a lot of unneeded commits.
-                [ "${src##*@*}" ] ||
-                    set -- -b "${src##*@}" "${repo_src%@*}"
+                [ "${src##*@*}" ] || set -- -b "${src##*@}" "${url%@*}"
 
                 # Maintain compatibility with older versions of
                 # kiss by shallow cloning all branches. This has
                 # the added benefit of allowing checkouts of
                 # specific commits in specific branches.
-                [ "${src##*#*}" ] ||
-                    set -- --no-single-branch "${repo_src%#*}"
+                [ "${src##*#*}" ] || set -- --no-single-branch "${url%#*}"
 
                 # Always do a shallow clone as we will unshallow it if
                 # needed later (when a commit is desired).
