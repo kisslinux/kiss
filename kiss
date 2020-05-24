@@ -446,11 +446,8 @@ pkg_strip() {
     # is the location of the ELF type inside of the ELF headers.
     #
     # Static libraries (.a) are in reality AR archives which contain ELF
-    # objects. Our handling of static libraries is simply the assumption that
-    # the same byte area contains '020040'.
-    #
-    # Tools like 'readelf' will seamlessly read '.a' files as if they were
-    # of ELF format (effectively hiding this fact).
+    # objects. Tools like 'readelf' will seamlessly read '.a' files as if they
+    # were of ELF format (effectively hiding this fact).
     #
     # Example ELF output:
     # 0000000 177   E   L   F 002 001 001  \0  \0  \0  \0  \0  \0  \0  \0  \0
@@ -464,7 +461,7 @@ pkg_strip() {
     find "$pkg_dir/$1" -type f | while read -r file; do
         case $(od -cN 18 "$file") in
             # REL (object files (.o), static libraries (.a)).
-            *\!*\<**a*r*c*h*\>*|*E*L*F*0000020\ 001\ *)
+            *177*E*L*F*0000020\ 001\ *|*\!*\<*a*r*c*h*\>*)
                 strip -g -R .comment -R .note "$file"
             ;;
 
@@ -472,7 +469,7 @@ pkg_strip() {
             # Shared libraries keep global symbols in a separate ELF section
             # called '.dynsym'. '--strip-all/-s' does not touch the dynamic
             # symbol entries which makes this safe to do.
-            *E*L*F*0000020\ 00[23]\ *)
+            *177*E*L*F*0000020\ 00[23]\ *)
                 strip -s -R .comment -R .note "$file"
             ;;
         esac
