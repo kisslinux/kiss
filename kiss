@@ -444,13 +444,10 @@ pkg_strip() {
     # Strip only files matching the below ELF types.
     find "$pkg_dir/$1" -type f | while read -r file; do
         case $(readelf -h "$file" 2>/dev/null) in
-            *" DYN "*)  strip_opt=unneeded ;;
-            *" EXEC "*) strip_opt=all ;;
-            *" REL "*)  strip_opt=debug ;;
-            *) continue
-        esac
-
-        strip "--strip-$strip_opt" "$file" 2>/dev/null
+            *" DYN "*)  strip --strip-nneeded "$file" ;;
+            *" EXEC "*) strip --strip-all     "$file" ;;
+            *" REL "*)  strip --strip-debug   "$file" ;;
+        esac 2>/dev/null
     done 2>/dev/null ||:
 }
 
