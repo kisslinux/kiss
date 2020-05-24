@@ -451,16 +451,30 @@ pkg_strip() {
     #
     # Tools like 'readelf' will seamlessly read '.a' files as if they were
     # of ELF format (effectively hiding this fact).
+    #
+    # Example ELF output:
+    # 0000000 177   E   L   F 002 001 001  \0  \0  \0  \0  \0  \0  \0  \0  \0
+    # 0000020 003  \0
+    # 0000022
+    #
+    # Example AR output (.a):
+    # 0000000   !   <   a   r   c   h   >  \n   /
+    # 0000020
+    # 0000022
     find "$pkg_dir/$1" -type f | while read -r file; do
-        case $(od -j 16 -N 2 "$file") in
+        case $(od -cN 18 "$file") in
             # REL (object files (.o), static libraries (.a)).
-            *\ 000001*|*\ 020040*) strip -g -R .comment -R .note "$file" ;;
+            *\!*\<**a*r*c*h*\>*|*E*L*F*0000020\ 001\ *)
+                strip -g -R .comment -R .note "$file"
+            ;;
 
             # EXEC (binaries), DYN (shared libraries).
             # Shared libraries keep global symbols in a separate ELF section
             # called '.dynsym'. '--strip-all/-s' does not touch the dynamic
             # symbol entries which makes this safe to do.
-            *\ 000002*|*\ 000003*) strip -s -R .comment -R .note "$file" ;;
+            *E*L*F*0000020\ 00[23]\ *)
+                strip -s -R .comment -R .note "$file"
+            ;;
         esac
     done 2>/dev/null ||:
 }
