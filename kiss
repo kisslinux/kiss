@@ -441,13 +441,30 @@ pkg_strip() {
 
     log "$1" "Stripping binaries and libraries"
 
-    # Strip only files matching the below ELF types.
+    # Strip only files matching the below ELF types. This uses 'od' to print
+    # the 2 bytes starting from an offset of 16 bytes (bytes 17 and 18). This
+    # is the location of the ELF type inside of the ELF headers.
+    #
+    # Static libraries (.a) are in reality AR archives which contain ELF
+    # objects. Our handling of static libraries is simply the assumption that
+    # the same byte area contains '020040'.
+    #
+    # Tools like 'readelf' will seamlessly read '.a' files as if they were
+    # of ELF format (effectively hiding this fact).
+    #
+    # 000001,020040: REL  (static libraries (.a))
+    # 000002:        EXEC (binaries)
+    # 000003:        DYN  (shared libraries (.so), sometimes binaries)
     find "$pkg_dir/$1" -type f | while read -r file; do
-        case $(readelf -h "$file" 2>/dev/null) in
-            *" DYN "*)  strip --strip-nneeded "$file" ;;
-            *" EXEC "*) strip --strip-all     "$file" ;;
-            *" REL "*)  strip --strip-debug   "$file" ;;
-        esac 2>/dev/null
+        case $(od -j 16 -N 2 "$file") in
+            *' 000001'*|*' 020040'*) strip_flag=debug    ;;
+            *' 000002'*)             strip_flag=all      ;;
+            *' 000003'*)             strip_flag=unneeded ;;
+            *)                       continue
+        esac
+
+        strip "--strip-$strip_flag" -R .comment -R .note "$file" &&
+        printf 'stripped %10s %s\n' "($strip_flag)" "${file##*/}"
     done 2>/dev/null ||:
 }
 
