@@ -463,8 +463,7 @@ pkg_strip() {
             *)                       continue
         esac
 
-        strip "--strip-$strip_flag" -R .comment -R .note "$file" &&
-        printf 'stripped %10s %s\n' "($strip_flag)" "${file##*/}"
+        strip "--strip-$strip_flag" -R .comment -R .note "$file"
     done 2>/dev/null ||:
 }
 
