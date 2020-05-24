@@ -1381,7 +1381,7 @@ args() {
     # since the first argument is always an "action" and the arguments that
     # follow are all package names.
     action=$1
-    shift "$(($# ? 1 : 0))"
+    shift "$(($# != 1))"
 
     # Unless this is a search, sanitize the user's input. The call to
     # 'pkg_find()' supports basic globbing, ensure input doesn't expand
