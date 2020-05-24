@@ -453,7 +453,7 @@ pkg_strip() {
     # of ELF format (effectively hiding this fact).
     find "$pkg_dir/$1" -type f | while read -r file; do
         case $(od -j 16 -N 2 "$file") in
-            # REL  (static libraries (.a)).
+            # REL (object files (.o), static libraries (.a)).
             *\ 000001*|*\ 020040*) strip -g -R .comment -R .note "$file" ;;
 
             # EXEC (binaries), DYN (shared libraries).
