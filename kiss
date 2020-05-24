@@ -451,19 +451,17 @@ pkg_strip() {
     #
     # Tools like 'readelf' will seamlessly read '.a' files as if they were
     # of ELF format (effectively hiding this fact).
-    #
-    # 000001,020040: REL  (static libraries (.a))
-    # 000002:        EXEC (binaries)
-    # 000003:        DYN  (shared libraries (.so), sometimes binaries)
     find "$pkg_dir/$1" -type f | while read -r file; do
         case $(od -j 16 -N 2 "$file") in
-            *' 000001'*|*' 020040'*) strip_flag=debug    ;;
-            *' 000002'*)             strip_flag=all      ;;
-            *' 000003'*)             strip_flag=unneeded ;;
-            *)                       continue
-        esac
+            # REL  (static libraries (.a)).
+            *\ 000001*|*\ 020040*) strip -g -R .comment -R .note "$file" ;;
 
-        strip "--strip-$strip_flag" -R .comment -R .note "$file"
+            # EXEC (binaries), DYN (shared libraries).
+            # Shared libraries keep global symbols in a separate ELF section
+            # called '.dynsym'. '--strip-all/-s' does not touch the dynamic
+            # symbol entries which makes this safe to do.
+            *\ 000002*|*\ 000003*) strip -s -R .comment -R .note "$file" ;;
+        esac
     done 2>/dev/null ||:
 }
 
