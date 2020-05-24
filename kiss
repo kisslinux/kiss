@@ -442,14 +442,14 @@ pkg_strip() {
     log "$1" "Stripping binaries and libraries"
 
     # Strip only files matching the below ELF types. This uses 'od' to print
-    # the 2 bytes starting from an offset of 16 bytes (bytes 17 and 18). This
-    # is the location of the ELF type inside of the ELF headers.
+    # the first 18 bytes of the file. This is the location of the ELF header
+    # (up to the ELF type) and contains the type information we need.
     #
     # Static libraries (.a) are in reality AR archives which contain ELF
-    # objects. Tools like 'readelf' will seamlessly read '.a' files as if they
-    # were of ELF format (effectively hiding this fact).
+    # objects. We simply read from the same 18 bytes and assume that the AR
+    # header equates to an archive containing objects (.o).
     #
-    # Example ELF output:
+    # Example ELF output ('003' is ELF type):
     # 0000000 177   E   L   F 002 001 001  \0  \0  \0  \0  \0  \0  \0  \0  \0
     # 0000020 003  \0
     # 0000022
