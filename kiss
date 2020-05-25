@@ -1393,6 +1393,9 @@ args() {
                     KISS_FORCE="$KISS_FORCE" \
                     KISS_ROOT="$KISS_ROOT" \
                     KISS_CHOICE="$KISS_CHOICE" \
+                    KISS_COLOR="$KISS_COLOR" \
+                    KISS_TMPDIR="$KISS_TMPDIR" \
+                    KISS_PID="$KISS_PID" \
                     kiss "$action" "$@"
 
             return
