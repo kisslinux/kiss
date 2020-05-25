@@ -1435,9 +1435,11 @@ args() {
                     continue
                 }
 
+                # False positive ('>> file' with no command).
+                # shellcheck disable=2188
                 pkg_checksums "$pkg" |
 
-                if touch "$repo_dir/checksums" 2>/dev/null; then
+                if 2>/dev/null >> "$repo_dir/checksums"; then
                     tee "$repo_dir/checksums"
 
                 else
