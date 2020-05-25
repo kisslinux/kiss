@@ -914,7 +914,7 @@ pkg_swap() {
 
         # Convert the current owner to an alternative and rewrite its manifest
         # file to reflect this.
-        cp  -Pf "$KISS_ROOT/$2" "$pkg_owns>${alt#*>}"
+        cp -Pf "$KISS_ROOT/$2" "$pkg_owns>${alt#*>}"
 
         # The separator is the ASCII unit separator which should be safe to
         # use as files should never contain this character (I hope to god)..
