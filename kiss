@@ -992,11 +992,8 @@ pkg_remove_files() {
         elif [ -h "$file" ] && [ ! -d "$file" ]; then
             rm -f "$file"
 
-        # Skip directory symlinks.
-        elif [ -h "$file" ] && [ -d "$file" ]; then :
-
         # Remove directories if empty.
-        elif [ -d "$file" ]; then
+        elif [ -d "$file" ] && [ ! -h "$file" ]; then
             rmdir "$file" 2>/dev/null ||:
         fi
     done ||:
