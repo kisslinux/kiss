@@ -491,7 +491,7 @@ pkg_fixdeps() {
     # Create the depends file if it doesn't exist to have something to
     # compare against (even if empty). We will remove this blank file
     # later if needed.
-    touch depends
+    : >> depends
 
     # Get a list of binaries and libraries, false files will be found,
     # however it's faster to get 'ldd' to check them anyway than to filter
@@ -511,7 +511,7 @@ pkg_fixdeps() {
             case $lso in *' -> '*) lso=${lso##* -> } dep=$PWD/${lso##*/}; esac
 
             # Figure out which package owns the file.
-            dep=$(grep -lFx "${dep##$KISS_ROOT}" "$@")
+            dep=$(grep -lFx "${dep##"$KISS_ROOT"}" "$@")
             dep=${dep%/*} dep=${dep##*/}
 
             # Skip listing these packages as dependencies.
@@ -800,7 +800,7 @@ pkg_conflicts() {
 
         # Print the file with all symlinks in its path
         # resolved to their real locations.
-        printf '%s\n' "${PWD#$KISS_ROOT}/${file##*/}"
+        printf '%s\n' "${PWD#"$KISS_ROOT"}/${file##*/}"
     done < "$tar_dir/$1/$pkg_db/$1/manifest" > "$mak_dir/$pid-m"
 
     p_name=$1
@@ -918,7 +918,7 @@ pkg_swap() {
 
         # The separator is the ASCII unit separator which should be safe to
         # use as files should never contain this character (I hope to god)..
-        sed "s^$2$${PWD#$KISS_ROOT}/$pkg_owns>${alt#*>}" \
+        sed "s^$2$${PWD#"$KISS_ROOT"}/$pkg_owns>${alt#*>}" \
             "../installed/$pkg_owns/manifest" | sort -r > "$mak_dir/.$1"
 
         mv -f "$mak_dir/.$1" "../installed/$pkg_owns/manifest"
@@ -930,7 +930,7 @@ pkg_swap() {
 
     # The separator is the ASCII unit separator which should be safe to use
     # as files should never contain this character (I hope to god).
-    sed "s${PWD#$KISS_ROOT}/$alt$2" \
+    sed "s${PWD#"$KISS_ROOT"}/$alt$2" \
         "../installed/$1/manifest" | sort -r > "$mak_dir/.$1"
 
     mv -f "$mak_dir/.$1" "../installed/$1/manifest"
@@ -1389,7 +1389,7 @@ args() {
     #
     # This handles the globbing characters '*', '!', '[' and ']' as per:
     # https://pubs.opengroup.org/onlinepubs/009695399/utilities/xcu_chap02.html
-    [ "${action##[as]*}" ] && case "$*" in *\**|*\!*|*\[*|*\]*)
+    [ "${action##[as]*}" ] && case $* in *\**|*\!*|*\[*|*\]*)
         die "Arguments contain invalid characters: '!*[]' ($*)"
     esac
 
