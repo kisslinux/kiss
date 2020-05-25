@@ -7,19 +7,9 @@
 # [1] Warnings related to word splitting and globbing are disabled.
 #     All word splitting in this script is *safe* and intentional.
 #
-# [2] Information is grabbed from 'ls -ld' output.
-#
-#     This is fine _despite_ the usual gaggle about 'ls' and its
-#     use in scripting. The POSIX specification states that the
-#     link target must be the exact contents of the link.
-#
-#     The specification:
-#
-#     > If the file is a symbolic link and the -L option is not
-#       specified, this information shall be about the link
-#       itself and the <pathname> field shall be of the form:
-#
-#     > "%s -> %s", <pathname of link>, <contents of link>
+# [2] Information is grabbed from 'ls -ld' output. The extraction of
+#     ownership and permissions from this output is fine for use as
+#     it isn't subject to ls' usual file display shenanigans.
 #
 # Created by Dylan Araps.
 
@@ -505,13 +495,8 @@ pkg_fixdeps() {
             # Resolve path symlinks to find the real location to the library.
             cd -P "${dep%/*}" 2>/dev/null || continue
 
-            # 'ls' is used to obtain the target of the symlink.
-            # See: [2] at top of script.
-            lso=$(ls -ld "$PWD/${dep##*/}" 2>/dev/null) &&
-            case $lso in *' -> '*) lso=${lso##* -> } dep=$PWD/${lso##*/}; esac
-
             # Figure out which package owns the file.
-            dep=$(grep -lFx "${dep##"$KISS_ROOT"}" "$@")
+            dep=$(grep -lFx "${PWD#"$KISS_ROOT"}/${dep##*/}" "$@")
             dep=${dep%/*} dep=${dep##*/}
 
             # Skip listing these packages as dependencies.
