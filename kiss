@@ -88,9 +88,7 @@ run_hook() {
         return 0
     }
 
-    log "$2" "Running $1 hook"
-
-    TYPE=$1 PKG=$2 DEST=$3 . "$KISS_HOOK"
+    TYPE=${1:-null} PKG=${2:-null} DEST=${3:-null} . "$KISS_HOOK"
 }
 
 decompress() {
@@ -577,6 +575,7 @@ pkg_tar() (
     esac > "$bin_dir/$1#$version-$release.tar.${KISS_COMPRESS:=gz}"
 
     log "$1" "Successfully created tarball"
+    run_hook post-package "$1"
 )
 
 pkg_build() {
