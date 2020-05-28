@@ -1056,7 +1056,7 @@ pkg_remove() {
     pkg_list "$1" >/dev/null || return
 
     # Make sure that nothing depends on this package.
-    [ "$KISS_FORCE" ] || {
+    [ "$KISS_FORCE" = 1 ] || {
         log "$1" "Checking for reverse dependencies"
 
         (cd "$sys_db"; set +f; grep -lFx "$1" -- */depends) &&
