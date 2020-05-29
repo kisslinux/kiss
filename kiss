@@ -470,6 +470,8 @@ pkg_fixdeps() {
     # dependencies pulled in by the package's build suite.
     log "$1" "Checking for missing dependencies"
 
+    pkg_name=$1
+
     # Go to the built package directory to simplify path building.
     cd "$pkg_dir/$1/$pkg_db/$1"
 
@@ -499,7 +501,7 @@ pkg_fixdeps() {
 
             # Skip listing these packages as dependencies.
             case $dep in
-                musl|gcc|llvm|"${OLDPWD##*/}"|"${OLDPWD##*/}-bin"|"") ;;
+                musl|gcc|llvm|"$pkg_name"|"$pkg_name-bin"|"") ;;
                 *) printf '%s\n' "$dep"
             esac
         done ||:
