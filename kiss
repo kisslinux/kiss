@@ -500,7 +500,7 @@ pkg_fixdeps() {
 
             # Skip listing these packages as dependencies.
             case $dep in
-                musl|gcc|llvm|"$pkg_name"|"$pkg_name-bin"|"") ;;
+                musl|gcc|llvm|"${pkg_name%%-bin}"|"${pkg_name%%-esr}"|"") ;;
                 *) printf '%s\n' "$dep"
             esac
         done ||:
