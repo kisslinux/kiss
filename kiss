@@ -498,9 +498,13 @@ pkg_fixdeps() {
             dep=$(grep -lFx "${PWD#"$KISS_ROOT"}/${dep##*/}" "$@")
             dep=${dep%/*} dep=${dep##*/}
 
-            # Skip listing these packages as dependencies.
             case $dep in
-                musl|gcc|llvm|"${pkg_name%%-bin}"|"${pkg_name%%-esr}"|"") ;;
+                # Skip listing these packages as dependencies.
+                # The pkg_name portions are to workaround incorrect detections
+                # from -bin or -esr packages.
+                ""|musl|gcc|llvm|"${pkg_name%%-bin}"|\
+                "${pkg_name%%-esr}"|"${pkg_name%%-esr-bin}") ;;
+
                 *) printf '%s\n' "$dep"
             esac
         done ||:
