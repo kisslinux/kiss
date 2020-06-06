@@ -208,53 +208,12 @@ pkg_sources() {
     mkdir -p "$src_dir/$1" && cd "$src_dir/$1"
 
     while read -r src dest || [ "$src" ]; do
-        # Comment.
-        if [ -z "${src##\#*}" ]; then :
+        # Remote git repository or comment.
+        if [ -z "${src##\#*}" ] || [ -z "${src##git+*}" ]; then :
 
         # Remote source (cached).
         elif [ -f "${src##*/}" ]; then
             log "$1" "Found cached source '${src##*/}'"
-
-        # Remote git repository.
-        elif [ -z "${src##git+*}" ]; then
-            # This is a checksums check, skip it.
-            [ "$2" ] && continue
-
-            mkdir -p "$mak_dir/$1/$dest"
-
-            # Run in a subshell to keep the variables, path and
-            # argument list local to each loop iteration.
-            (
-                url=${src##git+}
-
-                log "$1" "Cloning ${url%[@#]*}"
-
-                # Git has no option to clone a repository to a
-                # specific location so we must do it ourselves
-                # beforehand.
-                cd "$mak_dir/$1/$dest" 2>/dev/null || die
-
-                # Clear the argument list as we'll be overwriting
-                # it below based on what kind of checkout we're
-                # dealing with.
-                set -- "$url"
-
-                # If a branch was given, shallow clone it directly.
-                # This speeds things up as we don't have to grab
-                # a lot of unneeded commits.
-                [ "${src##*@*}" ] || set -- -b "${src##*@}" "${url%@*}"
-
-                # Maintain compatibility with older versions of
-                # kiss by shallow cloning all branches. This has
-                # the added benefit of allowing checkouts of
-                # specific commits in specific branches.
-                [ "${src##*#*}" ] || set -- --no-single-branch "${url%#*}"
-
-                # Always do a shallow clone as we will unshallow it if
-                # needed later (when a commit is desired).
-                git clone --depth=1 "$@" .
-
-            ) || die "$1" "Failed to clone $src"
 
         # Remote source.
         elif [ -z "${src##*://*}" ]; then
@@ -288,24 +247,32 @@ pkg_extract() {
     while read -r src dest || [ "$src" ]; do
         mkdir -p "$mak_dir/$1/$dest" && cd "$mak_dir/$1/$dest"
 
-        case $src in
-            # Git repository with supplied commit hash.
-            git+*\#*)
-                log "Checking out ${src##*#}"
+        case $src in \#*|'') ;;
+            # Git repository.
+            git+*)
+                url=${src##git+}
+                log "$1" "Cloning ${url%[@#]*}"
 
-                # A commit was requested, unshallow the repository.
-                # This will convert it to a regular repository with
-                # full history.
-                git fetch --unshallow
+                case $url in
+                    # If a branch was given, shallow clone it directly.
+                    # This speeds things up as we don't have to grab
+                    # a lot of unneeded commits.
+                    *'@'*) git clone --depth=1 -b "${src##*@}" "${url%@*}" . ;;
 
-                # Try to checkout the repository. If we fail here,
-                # the requested commit doesn't exist.
-                git -c advice.detachedHead=false checkout "${src##*#}" ||
-                    die "Commit hash ${src##*#} doesn't exist"
+                    # If a commit was given, clone all branches as the
+                    # given commit may not be in master.
+                    *'#'*)
+                        git clone "${url%#*}" .
+
+                        git checkout "${url##*#}" ||
+                            die "Commit hash ${url##*#} not found"
+                    ;;
+
+                    # Simply shallow clone everything else.
+                    *) git clone --depth=1 "$url" .
+
+                esac || die "$1" "Failed to clone $src"
             ;;
-
-            # Git repository, comment or blank line.
-            git+*|\#*|'') ;;
 
             # Tarballs of any kind. This is a shell equivalent of
             # GNU tar's '--strip-components 1'.
