@@ -645,6 +645,7 @@ pkg_build() {
     for pkg do in=$((in + 1))
         log "$pkg" "Building package ($in/$#)"
 
+        run_hook pre-extract "$pkg" "$pkg_dir/$pkg"
         pkg_extract "$pkg"
         repo_dir=$(pkg_find "$pkg")
 
