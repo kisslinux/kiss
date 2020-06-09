@@ -875,10 +875,16 @@ pkg_swap() {
         # file to reflect this.
         cp -Pf "$KISS_ROOT/$2" "$pkg_owns>${alt#*>}"
 
-        # The separator is the ASCII unit separator which should be safe to
-        # use as files should never contain this character (I hope to god)..
-        sed "s^$2$${PWD#"$KISS_ROOT"}/$pkg_owns>${alt#*>}" \
-            "../installed/$pkg_owns/manifest" | sort -r > "$mak_dir/.$1"
+        # Replace the matching line in the manifest with the desired replacement.
+        # This used to be a 'sed' call which turned out to be a little
+        # error-prone in some cases. This new method is a tad slower but ensures
+        # we never wipe the file due to a command error.
+        while read -r line; do
+            case $line in
+                "$2") printf '%s\n' "${PWD#"$KISS_ROOT"}/$pkg_owns>${alt#*>}" ;;
+                   *) printf '%s\n' "$line" ;;
+            esac
+        done < "../installed/$pkg_owns/manifest" | sort -r > "$mak_dir/.$1"
 
         mv -f "$mak_dir/.$1" "../installed/$pkg_owns/manifest"
     fi
@@ -887,10 +893,16 @@ pkg_swap() {
     # file to reflect this. The reverse of above.
     mv -f "$alt" "$KISS_ROOT/$2"
 
-    # The separator is the ASCII unit separator which should be safe to use
-    # as files should never contain this character (I hope to god).
-    sed "s${PWD#"$KISS_ROOT"}/$alt$2" \
-        "../installed/$1/manifest" | sort -r > "$mak_dir/.$1"
+    # Replace the matching line in the manifest with the desired replacement.
+    # This used to be a 'sed' call which turned out to be a little error-prone
+    # in some cases. This new method is a tad slower but ensures we never wipe
+    # the file due to a command error.
+    while read -r line; do
+        case $line in
+            "${PWD#"$KISS_ROOT"}/$alt") printf '%s\n' "$2" ;;
+                                     *) printf '%s\n' "$line" ;;
+        esac
+    done < "../installed/$1/manifest" | sort -r > "$mak_dir/.$1"
 
     mv -f "$mak_dir/.$1" "../installed/$1/manifest"
 }
