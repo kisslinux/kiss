@@ -943,19 +943,17 @@ pkg_install_files() {
                 [ -d "$KISS_ROOT/$line" ] || mkdir -m "$oct" "$KISS_ROOT/$line"
             ;;
 
-            *)  test "$1" "$KISS_ROOT/$line" ||
+            *)
+                # Skip directories as they're likely symlinks in this case.
+                # Pure directories in manifests have a suffix of '/'.
+                [ -d "$KISS_ROOT/$line" ] || test "$1" "$KISS_ROOT/$line" || {
+                    cp -fP  "$2/$line" "$KISS_ROOT/$line"
 
-                if [ -h "$2/$line" ]; then
-                    # Skip symlinks which already exist as directories.
-                    # (Think baselayout being updated)
-                    [ -d "$KISS_ROOT/$line" ] && continue
-
-                    cp  -fPp "$2/$line"    "$KISS_ROOT/$line"
-                    chown -h "$USER:$USER" "$KISS_ROOT/$line"
-                else
-                    cp -f "$2/$line" "$KISS_ROOT/$line"
-                    chmod "$b$oct"   "$KISS_ROOT/$line"
-                fi
+                    # Skip changing permissions of symlinks. This prevents
+                    # errors when the symlink exists prior to the target.
+                    [ -h "$KISS_ROOT/$line" ] ||
+                        chmod "$b$oct" "$KISS_ROOT/$line"
+                }
         esac
     done ||:
 }
