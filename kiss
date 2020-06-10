@@ -1362,7 +1362,7 @@ args() {
     # CRUX style usage using the current directory as the name of the package
     # to be operated on. This needs to sit before the 'as_root()' calls as
     # they reset the current working directory during their invocations.
-    [ "$1" ] || case $action in b|build|c|checksum|i|install|r|remove)
+    [ "$1" ] || case $action in b|build|c|checksum|d|download|i|install|r|remove)
         export KISS_PATH=${PWD%/*}:$KISS_PATH
         set -- "${PWD##*/}"
     esac
@@ -1446,16 +1446,18 @@ args() {
             esac
         ;;
 
-        b|build)   pkg_build "${@:?No packages installed}" ;;
-        l|list)    pkg_list "$@" ;;
-        u|update)  pkg_updates ;;
-        s|search)  for pkg do pkg_find "$pkg" all; done ;;
-        v|version) printf '2.1.9\n' ;;
+        b|build)    pkg_build "${@:?No packages installed}" ;;
+        d|download) for pkg do pkg_sources "$pkg"; done ;;
+        l|list)     pkg_list "$@" ;;
+        u|update)   pkg_updates ;;
+        s|search)   for pkg do pkg_find "$pkg" all; done ;;
+        v|version)  printf '2.1.9\n' ;;
 
         h|help|-h|--help|'')
-            log 'kiss [a|b|c|i|l|r|s|u|v] [pkg]...'
+            log 'kiss [a|b|c|d|i|l|r|s|u|v] [pkg]...'
             log 'alternatives List and swap to alternatives'
             log 'build        Build a package'
+            log 'download     Pre-download all sources'
             log 'checksum     Generate checksums'
             log 'install      Install a package'
             log 'list         List installed packages'
