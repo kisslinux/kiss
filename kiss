@@ -956,14 +956,12 @@ pkg_remove_files() {
     # Remove a file list from the system. This function runs during package
     # installation and package removal. Combining the removals in these two
     # functions allows us to stop duplicating code.
-    while read -r file; do
-        # Skip deleting some leftover files.
-        case $file in /etc/*) continue; esac
-
-        file=$KISS_ROOT/$file
+    while read -r file; do file=$KISS_ROOT/$file
+        # Skip files in /etc/.
+        if [ -z "${file##"$KISS_ROOT/etc/"*}" ]; then :
 
         # Remove files.
-        if [ -f "$file" ] && [ ! -h "$file" ]; then
+        elif [ -f "$file" ] && [ ! -h "$file" ]; then
             rm -f "$file"
 
         # Remove file symlinks.
