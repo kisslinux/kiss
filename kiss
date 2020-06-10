@@ -947,7 +947,7 @@ pkg_install_files() {
                 # Skip directories as they're likely symlinks in this case.
                 # Pure directories in manifests have a suffix of '/'.
                 [ -d "$KISS_ROOT/$line" ] || test "$1" "$KISS_ROOT/$line" || {
-                    cp -fP  "$2/$line" "$KISS_ROOT/$line"
+                    cp -fP "$2/$line" "$KISS_ROOT/$line"
 
                     # Skip changing permissions of symlinks. This prevents
                     # errors when the symlink exists prior to the target.
