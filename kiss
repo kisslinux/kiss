@@ -1097,32 +1097,27 @@ pkg_install() {
     fi
 
     mkdir -p "$tar_dir/$pkg_name"
-    log "$pkg_name" "Extracting $tar_file"
+    cd       "$tar_dir/$pkg_name"
 
     # The tarball is extracted to a temporary directory where its contents are
     # then "installed" to the filesystem. Running this step as soon as possible
     # allows us to also check the validity of the tarball and bail out early
     # if needed.
-    (
-        cd "$tar_dir/$pkg_name"
-        decompress "$tar_file" | tar xf -
-    )
+    decompress "$tar_file" | tar xf -
 
     # Naively assume that the existence of a manifest file is all that
     # determines a valid KISS package from an invalid one. This should be a
     # fine assumption to make in 99.99% of cases.
-    [ -f "$tar_dir/$pkg_name/$pkg_db/$pkg_name/manifest" ] ||
-        die "'${tar_file##*/}' is not a valid KISS package"
+    [ -f "./$pkg_db/$pkg_name/manifest" ] || die "Not a valid KISS package"
 
     # Ensure that the tarball's manifest is correct by checking that each file
     # and directory inside of it actually exists.
     [ "$KISS_FORCE" = 1 ] || {
         log "$pkg_name" "Checking that manifest is valid"
         while read -r line; do
-            [ -h "$tar_dir/$pkg_name/$line" ] ||
-            [ -e "$tar_dir/$pkg_name/$line" ] ||
+            [ -h "./$line" ] || [ -e "./$line" ] ||
                 die "File $line missing from tarball but mentioned in manifest"
-        done < "$tar_dir/$pkg_name/$pkg_db/$pkg_name/manifest"
+        done < "$pkg_db/$pkg_name/manifest"
 
         log "$pkg_name" "Resolving dependencies"; (
             pkg_depends "$pkg_name" explicit filter
@@ -1134,7 +1129,7 @@ pkg_install() {
     run_hook pre-install "$pkg_name" "$tar_dir/$pkg_name"
     pkg_conflicts "$pkg_name"
 
-    log "$pkg_name" "Installing package incrementally"
+    log "$pkg_name" "Installing package"
 
     # Block being able to abort the script with Ctrl+C during installation.
     # Removes all risk of the user aborting a package installation leaving
