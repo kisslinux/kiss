@@ -705,14 +705,10 @@ pkg_checksums() {
         git+*) printf 'git  %s\n' "$src" ;;
 
         *)
-            # File is local to the package.
-            if [ -f "$repo_dir/$src" ]; then
-                cd "$repo_dir/${src%/*}"
-
-            # File is remote and was downloaded.
-            elif [ -f "$src_dir/$1/${src##*/}" ]; then
-                cd "$src_dir/$1"
-            fi
+            # Check for cached remote sources first and fallback to
+            # local repository files. We prefer local files to remote.
+            [ ! -f "$src_dir/$1/${src##*/}" ] || cd "$src_dir/$1"
+            [ ! -f "$repo_dir/$src" ]         || cd "$repo_dir/${src%/*}"
 
             sh256 "${src##*/}" || die "$1" "Failed to generate checksums"
         ;;
