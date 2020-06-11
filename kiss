@@ -593,8 +593,8 @@ pkg_build() {
 
     # Finally build and create tarballs for all passed packages and
     # dependencies.
-    for pkg do in=$((in + 1))
-        log "$pkg" "Building package ($in/$#)"
+    for pkg do
+        log "$pkg" "Building package ($((in+=1))/$#)"
 
         run_hook pre-extract "$pkg" "$pkg_dir/$pkg"
         pkg_extract "$pkg"
@@ -1221,8 +1221,7 @@ pkg_updates() {
 
                     # We're in a repository which is owned by a 3rd
                     # user. Not root or the current user.
-                    [ "$user" = root ] ||
-                        log "Dropping permissions to $user for pull"
+                    [ "$user" = root ] || log "Dropping to $user for pull"
 
                     # 'sudo' and 'doas' properly parse command-line
                     # arguments and split them in the common way. 'su'
@@ -1435,8 +1434,7 @@ args() {
             log 'update       Update the system'
             log 'version      Package manager version
                 '
-
-            log "Installed extensions (kiss-* in \$PATH)"
+            log 'Installed extensions (kiss-* in PATH)'
 
             # shellcheck disable=2046
             # see [1] at top of script.
