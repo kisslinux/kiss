@@ -859,12 +859,10 @@ pkg_swap() {
         # This used to be a 'sed' call which turned out to be a little
         # error-prone in some cases. This new method is a tad slower but ensures
         # we never wipe the file due to a command error.
-        while read -r line; do
-            case $line in
-                "$2") printf '%s\n' "${PWD#"$KISS_ROOT"}/$pkg_owns>${alt#*>}" ;;
-                   *) printf '%s\n' "$line" ;;
-            esac
-        done < "../installed/$pkg_owns/manifest" | sort -r > "$mak_dir/.$1"
+        while read -r line; do case $line in
+            "$2") printf '%s\n' "${PWD#"$KISS_ROOT"}/$pkg_owns>${alt#*>}" ;;
+               *) printf '%s\n' "$line" ;;
+        esac; done < "../installed/$pkg_owns/manifest" | sort -r > "$mak_dir/.$1"
 
         mv -f "$mak_dir/.$1" "../installed/$pkg_owns/manifest"
     fi
@@ -877,12 +875,10 @@ pkg_swap() {
     # This used to be a 'sed' call which turned out to be a little error-prone
     # in some cases. This new method is a tad slower but ensures we never wipe
     # the file due to a command error.
-    while read -r line; do
-        case $line in
-            "${PWD#"$KISS_ROOT"}/$alt") printf '%s\n' "$2" ;;
-                                     *) printf '%s\n' "$line" ;;
-        esac
-    done < "../installed/$1/manifest" | sort -r > "$mak_dir/.$1"
+    while read -r line; do case $line in
+        "${PWD#"$KISS_ROOT"}/$alt") printf '%s\n' "$2" ;;
+                                 *) printf '%s\n' "$line" ;;
+    esac; done < "../installed/$1/manifest" | sort -r > "$mak_dir/.$1"
 
     mv -f "$mak_dir/.$1" "../installed/$1/manifest"
 }
