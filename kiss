@@ -247,32 +247,18 @@ pkg_extract() {
         case $src in \#*|'') ;;
             # Git repository.
             git+*)
-                url=${src##git+}
-                log "$1" "Cloning ${url%[@#]*}"
+                # Split the source into URL + OBJECT (branch or commit).
+                url=${src##git+} com=${url##*[@#]} com=${com#${url%[#@]*}}
 
-                # Intelligently clone git repositories, pulling down as little
-                # as possible. All clones are done using '--depth 1'. Commit
-                # clones aren't supported by every remote (GitHub/GitLab support
-                # them) so a fallback is available.
-                case $url in
-                    # Branch clones.
-                    *'@'*) git clone --depth=1 -b "${src##*@}" "${url%@*}" . ;;
-
-                    # Commit clones.
-                    *'#'*)
-                        git init
-                        git remote add origin "${url%#*}"
-
-                        git fetch --depth=1 origin "${url##*#}" || git fetch
-
-                        git checkout "${url##*#}" ||
-                            die "Commit hash ${url##*#} not found"
-                    ;;
-
-                    # Regular clones.
-                    *) git clone --depth=1 "$url" .
-
-                esac || die "$1" "Failed to clone $src"
+                # This magic will shallow clone branches, commits or the
+                # regular repository. It correctly handles cases where a
+                # shallow clone is not possible.
+                log "$1" "Cloning ${url%[#@]*}"; {
+                    git init
+                    git remote add origin "${url%[#@]*}"
+                    git fetch --depth=1 origin "$com" || git fetch
+                    git checkout "${com:-FETCH_HEAD}"
+                } || die "$1" "Failed to clone $src"
             ;;
 
             # Tarballs of any kind. This is a shell equivalent of
