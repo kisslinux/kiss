@@ -250,22 +250,26 @@ pkg_extract() {
                 url=${src##git+}
                 log "$1" "Cloning ${url%[@#]*}"
 
+                # Intelligently clone git repositories, pulling down as little
+                # as possible. All clones are done using '--depth 1'. Commit
+                # clones aren't supported by every remote (GitHub/GitLab support
+                # them) so a fallback is available.
                 case $url in
-                    # If a branch was given, shallow clone it directly.
-                    # This speeds things up as we don't have to grab
-                    # a lot of unneeded commits.
+                    # Branch clones.
                     *'@'*) git clone --depth=1 -b "${src##*@}" "${url%@*}" . ;;
 
-                    # If a commit was given, clone all branches as the
-                    # given commit may not be in master.
+                    # Commit clones.
                     *'#'*)
-                        git clone "${url%#*}" .
+                        git init
+                        git remote add origin "${url%#*}"
+
+                        git fetch --depth=1 origin "${url##*#}" || git fetch
 
                         git checkout "${url##*#}" ||
                             die "Commit hash ${url##*#} not found"
                     ;;
 
-                    # Simply shallow clone everything else.
+                    # Regular clones.
                     *) git clone --depth=1 "$url" .
 
                 esac || die "$1" "Failed to clone $src"
