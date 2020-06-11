@@ -656,23 +656,19 @@ pkg_build() {
         (KISS_FORCE=1 args i "$pkg")
     done
 
-    # End here as this was a system update and all packages have been installed.
-    [ "$pkg_update" ] && return
-
-    log "Successfully built package(s)"
-
-    # Turn the explicit packages into a 'list'.
-    # See [1] at top of script.
+    # Turn the explicit packages into a 'list'. See [1] at top of script.
     # shellcheck disable=2046,2086
     set -- $explicit
 
-    # Only ask for confirmation if more than one package needs to be installed.
-    [ "$#" -gt 1 ] && prompt "Install built packages? [$*]" && {
-        args i "$@"
+    if [ "$pkg_update" ]; then
         return
-    }
 
-    log "Run 'kiss i $*' to install the package(s)"
+    elif [ "$#" -gt 1 ] && prompt "Install built packages? [$*]"; then
+        args i "$@"
+
+    else
+        log "Run 'kiss i $*' to install the package(s)"
+    fi
 }
 
 pkg_checksums() {
