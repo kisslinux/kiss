@@ -757,7 +757,9 @@ pkg_conflicts() {
     # doesn't overwrite anything it shouldn't in '/var/db/kiss/installed'.
     grep -q ":/var/db/kiss/installed/" "$mak_dir/$pid-c" || choice_auto=1
 
-    if [ "$KISS_CHOICE" != 0 ] && [ "$choice_auto" = 1 ]; then
+    if [ "$KISS_CHOICE" != 0  ] &&
+       [ "$choice_auto" = 1   ] &&
+       [ -s "$mak_dir/$pid-c" ]; then
         # This is a novel way of offering an "alternatives" system.
         # It is entirely dynamic and all "choices" are created and
         # destroyed on the fly.
