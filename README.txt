@@ -1,0 +1,11 @@
+|/
+|\ISS                                                           https://k1ss.org
+________________________________________________________________________________
+
+
+Package Manager
+________________________________________________________________________________
+
+KISS' tiny package manager.
+
+Documentation: https://k1ss.org/package-manager
