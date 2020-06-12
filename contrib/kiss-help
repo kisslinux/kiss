@@ -1,0 +1,13 @@
+#!/bin/sh
+# Read KISS documentation
+
+cd "$KISS_ROOT/usr/share/doc/kiss" 2>/dev/null || {
+    printf 'Documentation is missing from /usr/share/doc/kiss\n'
+    exit 1
+}
+
+[ -f "${1:-.}/index.txt" ] && file=./${1:-.}/index.txt
+[ -f "${1:-.}.txt" ]       && file=./${1:-.}.txt
+
+"${PAGER:-less}" "$file"
+
