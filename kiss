@@ -151,6 +151,7 @@ pkg_find() {
     done
 
     unset IFS
+    match=$1
 
     # A package may also not be found due to a repository not being readable
     # by the current user. Either way, we need to die here.
@@ -345,7 +346,28 @@ pkg_depends() {
         [ "$3" ] && [ -z "$2" ] && (pkg_list "$1" >/dev/null) && return
 
         # Recurse through the dependencies of the child packages.
-        while read -r dep _ || [ "$dep" ]; do
+        while read -r dep _ || [ "$dep" ]; do old_pwd=$PWD
+            # Check to see if the package is really a symlink to another.
+            # If so, treat this package as if it were the symlink.
+            # Warning is intended behavior.
+            # shellcheck disable=2069
+            pkg_find "$dep" 2>&1 >/dev/null
+            cd -P "${match:-/dev/null}" && dep=${PWD##*/}
+
+            # Check to see if any installed packages are symlinked to
+            # this one. This is the reverse of the above operation and
+            # requires searching for matches.
+            set +f
+            for ins in "$KISS_ROOT/var/db/kiss/installed/"*; do
+                pkg_find "${ins##*/}" >/dev/null
+                cd -P "${match:-/dev/null}"
+
+                case ${PWD##*/} in "$dep") dep=${ins##*/}; break; esac
+            done
+            set -f
+
+            cd "$old_pwd" >/dev/null
+
             [ "${dep##\#*}" ] && pkg_depends "$dep" '' "$3"
         done 2>/dev/null < "$(pkg_find "$1")/depends" ||:
 
