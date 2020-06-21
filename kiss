@@ -1505,7 +1505,7 @@ main() {
 
     # Make sure that the KISS_ROOT doesn't end with a '/'. This might break
     # some operations if left unchecked.
-    KISS_ROOT=${KISS_ROOT%/}
+    KISS_ROOT=${KISS_ROOT%/} KISS_ROOT=${KISS_ROOT%/} KISS_ROOT=${KISS_ROOT%/}
 
     # Define some paths which we will then use throughout the script.
     sys_db=$KISS_ROOT/${pkg_db:=var/db/kiss/installed}
