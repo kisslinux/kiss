@@ -1189,7 +1189,7 @@ pkg_updates() {
             # Display a tick if signing is enabled for this
             # repository.
             case $(git config merge.verifySignatures) in
-                true) log "$PWD" "[signed ✓] " ;;
+                true) log "$PWD" "[signed] " ;;
                 *)    log "$PWD" " " ;;
             esac
 
