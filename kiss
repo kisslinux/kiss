@@ -1410,7 +1410,7 @@ args() {
         l|list)     pkg_list "$@" ;;
         u|update)   pkg_updates ;;
         s|search)   for pkg do pkg_find "$pkg" all; done ;;
-        v|version)  printf '3.0.3\n' ;;
+        v|version)  printf '3.0.4\n' ;;
 
         -h|--help|'')
             log 'kiss [a|b|c|d|i|l|r|s|u|v] [pkg]...'
