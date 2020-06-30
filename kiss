@@ -1097,11 +1097,15 @@ pkg_install() {
                 die "File $line missing from tarball but mentioned in manifest"
         done < "$pkg_db/$pkg_name/manifest"
 
-        log "$pkg_name" "Resolving dependencies"; (
-            pkg_depends "$pkg_name" explicit filter
+        log "$pkg_name" "Checking that all dependencies are installed"
+        [ -f "$tar_dir/$pkg_name/$pkg_db/$pkg_name/depends" ] &&
+            while read -r dep dep_type || [ "$dep" ]; do
+                [ "${dep##\#*}" ] || continue
+                [ "$dep_type" ]   || pkg_list "$dep" >/dev/null ||
+                    install_dep="$install_dep'$dep', "
+            done < "$tar_dir/$pkg_name/$pkg_db/$pkg_name/depends"
 
-            case $deps in *[!\ ]*) printf '%s\n' "${deps# }"; false; esac
-        ) || die "$1" "Package is missing dependencies"
+        [ "$install_dep" ] && die "$1" "Package requires ${install_dep%, }"
     }
 
     run_hook pre-install "$pkg_name" "$tar_dir/$pkg_name"
