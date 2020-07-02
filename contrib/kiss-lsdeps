@@ -1,0 +1,35 @@
+#!/bin/sh -e
+# List packages that are dependencies of only the given packages
+
+[ "$1" ] && kiss s "$@" >/dev/null || {
+    printf 'usage: [kiss-deptree [pkg]...]\n'
+    exit 1
+}
+
+cd "$KISS_ROOT/var/db/kiss/installed"
+
+# Find all of the dependencies of given packages
+for pkg in $@; do
+    cat "./$1/depends" 2>/dev/null
+done | sort -u | while read -r _pkg _ 2>/dev/null; do
+    required=
+    # Check all dependants
+    for revdep in $(grep "^$_pkg" -- */depends); do
+        case "$@" in
+            # Depended on by a package that is going to be removed
+            # No problems putting it up as a removal candidate
+            "${revdep%%/depends:*} "*|\
+            *" ${revdep%%/depends:*} "*|\
+            *" ${revdep%%/depends:*}")
+            ;;
+            # Depended on by a package that is not being removed
+            # Not a candidate for removal
+            *)
+                required=yes
+                break
+            ;;
+        esac
+    done
+
+    [ "$required" = "yes" ] || printf '%s\n' "$_pkg"
+done | sort -u
