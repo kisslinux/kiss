@@ -288,7 +288,7 @@ pkg_extract() {
                     # directory merge capability), simply do the exercise
                     # again and copy-merge the remaining files/directories.
                     #
-                    # We can use '-exec {} +' with any arguments between
+                    # We can't use '-exec {} +' with any arguments between
                     # the '{}' and '+' as this is not POSIX. We must also
                     # use '$0' and '$@' to reference all arguments.
                     #
