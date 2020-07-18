@@ -1152,10 +1152,10 @@ pkg_install() {
     trap pkg_clean EXIT INT
 
     if [ -x "$sys_db/$pkg_name/post-install" ]; then
-        {
+        log "$pkg_name" "Running post-install hook"; {
             log "$pkg_name" "post-install log"
             "$sys_db/$pkg_name/post-install"
-        } 2>&1 | tee -a "$log_dir/post-install-$time-$pid"
+        } 2>&1 | tee -a "$log_dir/post-install-$time-$pid" >/dev/null
     fi
 
     run_hook post-install "$pkg_name" "$sys_db/$pkg_name"
