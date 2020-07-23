@@ -376,7 +376,7 @@ pkg_order() {
 pkg_strip() {
     # Strip package binaries and libraries. This saves space on the system as
     # well as on the tarballs we ship for installation.
-    [ -f "$mak_dir/$pkg/nostrip" ] && return
+    [ -f "$mak_dir/$pkg/nostrip" ]  || [ "$KISS_STRIP" = 0 ] && return
 
     log "$1" "Stripping binaries and libraries"
 
