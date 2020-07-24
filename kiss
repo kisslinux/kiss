@@ -1073,7 +1073,10 @@ pkg_install() {
         pkg_name=$1
 
     else
-        die "package has not been built, run 'kiss b pkg'"
+        case $1 in
+            *.tar.*) die "Tarball '$1' does not exist" ;;
+            *)       die "Package '$1' has not yet been built"
+        esac
     fi
 
     mkdir -p "$tar_dir/$pkg_name"
