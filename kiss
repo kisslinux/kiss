@@ -1300,19 +1300,7 @@ pkg_updates() {
 
 pkg_clean() {
     # Clean up on exit or error. This removes everything related to the build.
-    [ "$KISS_DEBUG" = 1 ] || {
-        # Create a list containing the current invocation's temporary files and
-        # directories.
-        set +f -- "$mak_dir" "$pkg_dir" "$tar_dir"
-
-        # Go through the cache and add any entries which don't belong to a
-        # currently running kiss instance.
-        for dir in "$cac_dir/"[bep]*-[0-9]*; do
-            [ -e "/proc/${dir##*-}" ] || set -- "$@" "$dir"
-        done
-
-        rm -rf -- "$@"
-    }
+    [ "$KISS_DEBUG" = 1 ] || rm -rf "$mak_dir" "$pkg_dir" "$tar_dir"
 }
 
 args() {
