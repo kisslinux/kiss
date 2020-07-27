@@ -81,8 +81,7 @@ run_hook() {
     [ "${KISS_HOOK:-}" ] || {
         case $1 in post-build)
             rm -rf "$3/usr/share/gettext" "$3/usr/share/polkit-1" \
-                   "$3/usr/share/locale"  "$3/usr/share/info" \
-                   "$3/usr/lib/charset.alias"
+                   "$3/usr/share/locale"  "$3/usr/share/info"
         esac
 
         return 0
@@ -635,6 +634,15 @@ pkg_build() {
 
         log "$pkg" "Successfully built package"
         run_hook post-build "$pkg" "$pkg_dir/$pkg"
+
+        # Remove all .la files from the packages. They're unneeded and cause
+        # issues when a package stops providing one. This recently caused an
+        # issue with harfbuzz (See: 05096e5a4dc6db5d202342f538d067d87ae7135e).
+        find "$pkg_dir/$pkg/usr/lib" -name \*.la -exec rm -f {} + 2>/dev/null ||:
+
+        # Remove this unneeded file from all packages as it is an endless
+        # source of conflicts. This is used with info pages we we do not support.
+        rm -f "$pkg_dir/$pkg/usr/lib/charset.alias"
 
         # Create the manifest file early and make it empty. This ensures that
         # the manifest is added to the manifest.
