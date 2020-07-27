@@ -6,7 +6,7 @@
 file=$(readlink -f "$KISS_ROOT/${1##$KISS_ROOT}")
 
 [ -f "$file" ] || {
-    printf 'usage: kiss-owns [/path/to/file]\n'
+    printf 'usage: kiss-owns [/path/to/file]\n' >&2
     exit 1
 }
 
@@ -20,4 +20,4 @@ pkg_owns=$(grep -lFx "${file##$KISS_ROOT}" \
 pkg_owns=${pkg_owns%/*}
 pkg_owns=${pkg_owns##*/}
 
-printf '%s\n' "[$pkg_owns] owns '$1'"
+printf '%s\n' "$pkg_owns"
