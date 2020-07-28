@@ -448,6 +448,13 @@ pkg_fixdeps() {
             # Resolve path symlinks to find the real location to the library.
             cd -P "${dep%/*}" 2>/dev/null || continue
 
+            # Skip files owned by libc and POSIX.
+            case ${dep##*/} in
+                "" | ld-* | libpthread.so* | lib[cm].so* | libdl.so* |\
+                librt.so* | libtrace.so* | libxnet.so*)
+                    continue
+            esac
+
             # Figure out which package owns the file.
             dep=$(grep -lFx "${PWD#"$KISS_ROOT"}/${dep##*/}" "$@")
             dep=${dep%/*} dep=${dep##*/}
@@ -456,7 +463,7 @@ pkg_fixdeps() {
                 # Skip listing these packages as dependencies.
                 # The pkg_name portions are to workaround incorrect detections
                 # from -bin or -esr packages.
-                ""|musl|gcc|llvm|"${pkg_name%%-bin}"|\
+                ""|gcc|llvm|"${pkg_name%%-bin}"|\
                 "${pkg_name%%-esr}"|"${pkg_name%%-esr-bin}") ;;
 
                 *) printf '%s\n' "$dep"
