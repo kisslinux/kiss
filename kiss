@@ -627,7 +627,7 @@ pkg_build() {
         # Call the build script, log the output to the terminal and to a file.
         # There's no PIPEFAIL in POSIX shelll so we must resort to tricks like
         # killing the script ourselves.
-        { ./build "$pkg_dir/$pkg" "$build_version" 2>&1 || {
+        { ./.build "$pkg_dir/$pkg" "$build_version" 2>&1 || {
             log "$pkg" "Build failed"
             log "$pkg" "Log stored to $log_dir/$pkg-$time-$pid"
             run_hook build-fail "$pkg" "$pkg_dir/$pkg"
