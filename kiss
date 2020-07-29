@@ -1360,7 +1360,7 @@ args() {
                     KISS_COLOR="$KISS_COLOR" \
                     KISS_TMPDIR="$KISS_TMPDIR" \
                     KISS_PID="$KISS_PID" \
-                    kiss "$action" "$@"
+                    "$0" "$action" "$@"
 
             return
         }
