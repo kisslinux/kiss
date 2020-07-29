@@ -617,13 +617,17 @@ pkg_build() {
         # Log the version so we can pass it to the package build file.
         read -r build_version _ < "$repo_dir/version"
 
+        # Copy the build file to the build directory to users to modify it
+        # temporarily at runtime.
+        cp -f "$repo_dir/build" "$mak_dir/$pkg/.build"
+
         log "$pkg" "Starting build"
         run_hook pre-build "$pkg" "$pkg_dir/$pkg"
 
         # Call the build script, log the output to the terminal and to a file.
         # There's no PIPEFAIL in POSIX shelll so we must resort to tricks like
         # killing the script ourselves.
-        { "$repo_dir/build" "$pkg_dir/$pkg" "$build_version" 2>&1 || {
+        { ./build "$pkg_dir/$pkg" "$build_version" 2>&1 || {
             log "$pkg" "Build failed"
             log "$pkg" "Log stored to $log_dir/$pkg-$time-$pid"
             run_hook build-fail "$pkg" "$pkg_dir/$pkg"
