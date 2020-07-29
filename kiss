@@ -1493,7 +1493,7 @@ main() {
 
     # Allow the user to disable colors in output via an environment variable.
     # Check this once so as to not slow down printing.
-    [ "$KISS_COLOR" = 0 ] || lcol='\033[1;33m' lcol2='\033[1;36m' lclr='\033[m'
+    [ "$KISS_COLOR" = 0 ] || lcol='\033[1;33m' lcol2='\033[1;34m' lclr='\033[m'
 
     # Store the original working directory to ensure that relative paths
     # passed by the user on the command-line properly resolve to locations
