@@ -1050,6 +1050,8 @@ pkg_remove() {
         "$sys_db/$1/pre-remove" ||:
     fi
 
+    log "$1" "Removing package"
+
     pkg_remove_files < "$sys_db/$1/manifest"
 
     # Reset 'trap' to its original value. Removal is done so
