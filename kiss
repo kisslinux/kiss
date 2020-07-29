@@ -953,7 +953,11 @@ pkg_remove_files() {
     # installation and package removal. Combining the removals in these two
     # functions allows us to stop duplicating code.
     while read -r file; do
-        case $file in /etc/*) continue; esac
+        case $file in /etc/*)
+            printf 'Skipping removal of %s\n' "$file"
+            continue;
+        esac
+
         file=$KISS_ROOT/$file
 
         # Remove files.
