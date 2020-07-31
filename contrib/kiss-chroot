@@ -45,16 +45,16 @@ mounted() {
 trap 'clean "$1"' EXIT INT
 
 log Mounting /dev, /proc and /sys from host; {
-    mounted "$1/dev"  || mount -o bind /dev "$1/dev"
-    mounted "$1/proc" || mount -t proc proc "$1/proc"
-    mounted "$1/sys"  || mount -t sysfs sys "$1/sys"
+    mounted "$1/dev"  || mount -o bind /dev "$1/dev"  ||:
+    mounted "$1/proc" || mount -t proc proc "$1/proc" ||:
+    mounted "$1/sys"  || mount -t sysfs sys "$1/sys"  ||:
 
     mounted "$1/sys/firmware/efi/efivars" ||
         mount -t efivarfs efivarfs "$1/sys/firmware/efi/efivars" 2>/dev/null ||:
 }
 
 log Copying /etc/resolv.conf from host; {
-    cp -f /etc/resolv.conf "$1/etc"
+    cp -f /etc/resolv.conf "$1/etc" ||:
 }
 
 log Entering chroot; {
