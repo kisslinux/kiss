@@ -1497,10 +1497,6 @@ main() {
     # Globally disable globbing and enable exit-on-error.
     set -ef
 
-    # Die here if the user has no set KISS_PATH. This is a rare occurance as
-    # the environment variable should always be defined.
-    [ "$KISS_PATH" ] || die "\$KISS_PATH needs to be set"
-
     # Allow the user to disable colors in output via an environment variable.
     # Check this once so as to not slow down printing.
     [ "$KISS_COLOR" = 0 ] || lcol='\033[1;33m' lcol2='\033[1;34m' lclr='\033[m'
