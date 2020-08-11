@@ -1215,59 +1215,72 @@ pkg_updates() {
     for repo do
         # Go to the root of the repository (if it exists).
         cd "$repo"
-        cd "$(git rev-parse --show-toplevel 2>/dev/null)" 2>/dev/null ||:
 
-        [ "$(git remote 2>/dev/null)" ] || {
-            log "$repo" " "
-            printf '%s\n' "No remote or not git repository, skipping."
-            continue
-        }
+        case $(git remote 2>/dev/null) in
+            "")
+                log "$repo" " "
+                printf 'Skipping git pull, not a repository\n'
+            ;;
 
-        contains "$repos" "$PWD" || {
-            repos="$repos $PWD "
+            *)
+                cd "$(git rev-parse --show-toplevel 2>/dev/null)" 2>/dev/null ||:
 
-            # Display a tick if signing is enabled for this
-            # repository.
-            case $(git config merge.verifySignatures) in
-                true) log "$PWD" "[signed] " ;;
-                *)    log "$PWD" " " ;;
-            esac
+                contains "$repos" "$PWD" || {
+                    repos="$repos $PWD "
 
-            if [ -w "$PWD" ] && [ "$uid" != 0 ]; then
-                git pull
-                git submodule update --remote --init -f
+                    # Display a tick if signing is enabled for this repository.
+                    case $(git config merge.verifySignatures) in
+                        true) log "$PWD" "[signed] " ;;
+                        *)    log "$PWD" " " ;;
+                    esac
 
-            else
-                [ "$uid" = 0 ] || log "$PWD" "Need root to update"
+                    if [ -w "$PWD" ] && [ "$uid" != 0 ]; then
+                        git pull
+                        git submodule update --remote --init -f
 
-                # Find out the owner of the repository and spawn
-                # git as this user below.
-                #
-                # This prevents 'git' from changing the original
-                # ownership of files and directories in the rare
-                # case that the repository is owned by a 3rd user.
-                (
-                    file_owner "$PWD"
+                    else
+                        [ "$uid" = 0 ] || log "$PWD" "Need root to update"
 
-                    # We're in a repository which is owned by a 3rd
-                    # user. Not root or the current user.
-                    [ "$user" = root ] || log "Dropping to $user for pull"
+                        # Find out the owner of the repository and spawn
+                        # git as this user below.
+                        #
+                        # This prevents 'git' from changing the original
+                        # ownership of files and directories in the rare
+                        # case that the repository is owned by a 3rd user.
+                        (
+                            file_owner "$PWD"
 
-                    # 'sudo' and 'doas' properly parse command-line
-                    # arguments and split them in the common way. 'su'
-                    # on the other hand requires that each argument be
-                    # properly quoted as the command passed to it must
-                    # be a string... This sets quotes where needed.
-                    git_cmd="git pull && git submodule update --remote --init -f"
-                    case $su in *su) git_cmd="'$git_cmd'"; esac
+                            # We're in a repository which is owned by a 3rd
+                            # user. Not root or the current user.
+                            [ "$user" = root ] ||
+                                log "Dropping to $user for pull"
 
-                    # Spawn a subshell to run multiple commands as
-                    # root at once. This makes things easier on users
-                    # who aren't using persist/timestamps for auth
-                    # caching.
-                    user=$user as_root sh -c "$git_cmd"
-                )
-            fi
+                            # Nesting is deep and line is long.
+                            git_cmd="
+                        git pull && git submodule update --remote --init -f
+                            "
+
+                            # 'sudo' and 'doas' properly parse command-line
+                            # arguments and split them in the common way. 'su'
+                            # on the other hand requires that each argument be
+                            # properly quoted as the command passed to it must
+                            # be a string... This sets quotes where needed.
+                            case $su in *su) git_cmd="'$git_cmd'"; esac
+
+                            # Spawn a subshell to run multiple commands as
+                            # root at once. This makes things easier on users
+                            # who aren't using persist/timestamps for auth
+                            # caching.
+                            user=$user as_root sh -c "$git_cmd"
+                        )
+                    fi
+                }
+            ;;
+        esac
+
+        [ ! -x update ] || {
+            log "$PWD" "Running update hook"
+            ./update
         }
     done
 
