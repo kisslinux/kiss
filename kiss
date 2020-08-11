@@ -258,7 +258,6 @@ pkg_extract() {
                     git remote add origin "${url%[#@]*}"
                     git fetch --depth=1 origin "$com" || git fetch
                     git checkout "${com:-FETCH_HEAD}"
-                    git submodule update --init --recursive
                 } || die "$1" "Failed to clone $src"
             ;;
 
