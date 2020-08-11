@@ -1223,7 +1223,12 @@ pkg_updates() {
             ;;
 
             *)
-                cd "$(git rev-parse --show-toplevel 2>/dev/null)" 2>/dev/null ||:
+                # Go to the repository's root directory.
+                cd "$(git rev-parse --show-toplevel)"
+
+                # Go to the real root directory if this is a submodule.
+                git_root=$(git rev-parse --show-superproject-working-tree)
+                cd "${git_root:-"$PWD"}"
 
                 contains "$repos" "$PWD" || {
                     repos="$repos $PWD "
