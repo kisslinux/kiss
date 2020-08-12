@@ -118,7 +118,7 @@ sh256() {
            shasum -a 256 "$1" ||
            digest -a sha256 "$1") 2>/dev/null
 
-    printf '%s  %s\n' "${hash%% *}" "$1"
+    printf '%s\n' "${hash%% *}"
 }
 
 pkg_lint() {
@@ -514,7 +514,7 @@ pkg_etcsums() (
 
     # This can't be a simple 'find -exec' as 'sh256' is a shell function
     # and not a real command of any kind. This is the shell equivalent.
-    find etc -type f | while read -r line; do
+    find etc ! -type d | sort | while read -r line; do
         sh256 "$line"
     done > "$pkg_dir/$1/$pkg_db/$1/etcsums"
 )
@@ -698,18 +698,14 @@ pkg_checksums() {
     # Support packages without sources. Simply do nothing.
     [ -f "$repo_dir/sources" ] || return 0
 
-    while read -r src _ || [ "$src" ]; do case $src in \#*) ;;
-        git+*) printf 'git  %s\n' "$src" ;;
-
-        *)
-            # Check for cached remote sources first and fallback to
-            # local repository files. We prefer local files to remote.
-            [ ! -f "$src_dir/$1/${src##*/}" ] || cd "$src_dir/$1"
-            [ ! -f "$repo_dir/$src" ]         || cd "$repo_dir/${src%/*}"
-
-            sh256 "${src##*/}" || die "$1" "Failed to generate checksums"
-        ;;
-    esac; done < "$repo_dir/sources"
+    while read -r src _ || [ "$src" ]; do
+        case $src in
+            \#*|"") ;;
+            git+*) printf '%s\n' "$src" ;;
+            *://*) sh256 "$src_dir/$1/${src##*/}" ;;
+            *)     sh256 "$repo_dir/$src" ;;
+        esac
+    done < "$repo_dir/sources" || die "$1" "Failed to generate checksums"
 }
 
 pkg_verify() {
@@ -718,7 +714,11 @@ pkg_verify() {
     for pkg do repo_dir=$(pkg_find "$pkg")
         [ -f "$repo_dir/sources" ] || continue
 
-        pkg_checksums "$pkg" | diff - "$repo_dir/checksums" || {
+        pkg_checksums "$pkg" |
+
+        # Check that the first column (separated by whitespace) match in both
+        # checksum files. If any part of either file differs, mismatch. Abort.
+        awk 'NR==FNR{a[$1];next}!(($1)in a){exit 1}' - "$repo_dir/checksums" || {
             log "$pkg" "Checksum mismatch"
 
             # Instead of dying above, log it to the terminal. Also define a
@@ -977,18 +977,18 @@ pkg_remove_files() {
 pkg_etc() (
     [ -d "$tar_dir/$pkg_name/etc" ] || return 0
 
+    # Create all directories beforehand.
+    cd "$KISS_ROOT/"
+    find etc -type d -exec mkdir -p {} +
     cd "$tar_dir/$pkg_name"
 
-    # Create all directories beforehand.
-    find etc -type d | while read -r dir; do
-        mkdir -p "$KISS_ROOT/$dir"
-    done
-
     # Handle files in /etc/ based on a 3-way checksum check.
-    find etc ! -type d | while read -r file; do
+    find etc ! -type d | sort | while read -r file; do
+        i=$((i + 1))
+
         { sum_new=$(sh256 "$file")
           sum_sys=$(cd "$KISS_ROOT/"; sh256 "$file")
-          sum_old=$(grep "$file$" "$mak_dir/c"); } 2>/dev/null ||:
+          sum_old=$(awk "NR == $i" "$mak_dir/c"); } 2>/dev/null ||:
 
         log "$pkg_name" "Doing 3-way handshake for $file"
         printf '%s\n' "Previous: ${sum_old:-null}"
