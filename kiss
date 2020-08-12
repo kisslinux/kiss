@@ -221,9 +221,13 @@ pkg_sources() {
                 die "$1" "Failed to download $src"
             }
 
-        # Local source.
-        elif [ -f "$repo_dir/$src" ]; then
-            log "$1" "Found local file '$src'"
+        # Local source (relative).
+        elif [ -e "$repo_dir/$src" ]; then
+            log "$1" "Found local relative source '$src'"
+
+        # Local source (absolute).
+        elif [ -e "/$src" ]; then
+            log "$1" "Found local absolute source '$src'"
 
         else
             die "$1" "No local file '$src'"
@@ -319,9 +323,21 @@ pkg_extract() {
             ;;
 
             *)
-                # Local file.
-                if [ -f "$repo_dir/$src" ]; then
+                # Local directory (relative).
+                if [ -d "$repo_dir/$src" ]; then
+                    cp -Rf "$repo_dir/$src/." .
+
+                # Local directory (absolute).
+                elif [ -d "/$src" ]; then
+                    cp -Rf "/$src/." .
+
+                # Local file (relative).
+                elif [ -f "$repo_dir/$src" ]; then
                     cp -f "$repo_dir/$src" .
+
+                # Local file (absolute).
+                elif [ -f "/$src" ]; then
+                    cp -f "/$src" .
 
                 # Remote file.
                 elif [ -f "$src_dir/$1/${src##*/}" ]; then
@@ -699,12 +715,30 @@ pkg_checksums() {
     [ -f "$repo_dir/sources" ] || return 0
 
     while read -r src _ || [ "$src" ]; do
-        case $src in
-            \#*|"") ;;
-            git+*) printf '%s\n' "$src" ;;
-            *://*) sh256 "$src_dir/$1/${src##*/}" ;;
-            *)     sh256 "$repo_dir/$src" ;;
-        esac
+        # Skip comments and blank lines.
+        if [ -z "${src##\#*}" ]; then
+            :
+
+        # Git source.
+        elif [ -z "${src##git+*}" ]; then
+            printf '%s\n' "$src" # This should probably be ':'.
+
+        # Remote source.
+        elif [ -z "${src##*://*}" ]; then
+            sh256 "$src_dir/$1/${src##*/}"
+
+        # Skip directories.
+        elif [ -d "$repo_dir/$src" ] || [ -d "/$src" ]; then
+            :
+
+        # Local file (relative).
+        elif [ -f "$repo_dir/$src" ]; then
+            sh256 "$repo_dir/$src"
+
+        # Local file (absolute).
+        elif [ -f "/$src" ]; then
+            sh256 "/$src"
+        fi
     done < "$repo_dir/sources" || die "$1" "Failed to generate checksums"
 }
 
