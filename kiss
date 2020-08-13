@@ -715,13 +715,9 @@ pkg_checksums() {
     [ -f "$repo_dir/sources" ] || return 0
 
     while read -r src _ || [ "$src" ]; do
-        # Skip comments and blank lines.
-        if [ -z "${src##\#*}" ]; then
+        # Skip comments, blank lines and git sources.
+        if [ -z "${src##\#*}" ] || [ -z "${src##git+*}" ]; then
             :
-
-        # Git source.
-        elif [ -z "${src##git+*}" ]; then
-            printf '%s\n' "$src" # This should probably be ':'.
 
         # Remote source.
         elif [ -z "${src##*://*}" ]; then
@@ -745,14 +741,14 @@ pkg_checksums() {
 pkg_verify() {
     # Verify all package checksums. This is achieved by generating a new set
     # of checksums and then comparing those with the old set.
+    verify_cmd='NR==FNR{a[$1];next}/^git\+.*/{next}!(($1)in a){exit 1}'
+
     for pkg do repo_dir=$(pkg_find "$pkg")
         [ -f "$repo_dir/sources" ] || continue
 
-        pkg_checksums "$pkg" |
-
         # Check that the first column (separated by whitespace) match in both
         # checksum files. If any part of either file differs, mismatch. Abort.
-        awk 'NR==FNR{a[$1];next}!(($1)in a){exit 1}' - "$repo_dir/checksums" || {
+        pkg_checksums "$pkg" | awk "$verify_cmd" - "$repo_dir/checksums" || {
             log "$pkg" "Checksum mismatch"
 
             # Instead of dying above, log it to the terminal. Also define a
