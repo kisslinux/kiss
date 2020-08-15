@@ -206,7 +206,8 @@ pkg_sources() {
 
     while read -r src dest || [ "$src" ]; do
         # Remote git repository or comment.
-        if [ -z "${src##\#*}" ] || [ -z "${src##git+*}" ]; then :
+        if [ -z "${src##\#*}" ] || [ -z "${src##git+*}" ]; then
+            :
 
         # Remote source (cached).
         elif [ -f "${src##*/}" ]; then
@@ -393,7 +394,7 @@ pkg_order() {
 pkg_strip() {
     # Strip package binaries and libraries. This saves space on the system as
     # well as on the tarballs we ship for installation.
-    [ -f "$mak_dir/$pkg/nostrip" ]  || [ "$KISS_STRIP" = 0 ] && return
+    [ -f "$mak_dir/$pkg/nostrip" ] || [ "$KISS_STRIP" = 0 ] && return
 
     log "$1" "Stripping binaries and libraries"
 
@@ -466,7 +467,7 @@ pkg_fixdeps() {
             # Skip files owned by libc and POSIX.
             case ${dep##*/} in
                 "" | ld-* | libpthread.so* | lib[cm].so* | libdl.so* |\
-                librt.so* | libtrace.so* | libxnet.so*)
+                librt.so* | libtrace.so*   | libxnet.so*)
                     continue
             esac
 
@@ -513,8 +514,8 @@ pkg_manifest() (
     #       contents.
     # sed:  Remove the first character in each line (./dir -> /dir) and
     #       remove all lines which only contain '.'.
-    find . -type d -exec printf '%s/\n' {} + -o -print |
-        sort -r | sed '/^\.\/$/d;ss.ss' > "${2:-$pkg_dir}/$1/$pkg_db/$1/manifest"
+    find . -type d -exec printf '%s/\n' {} + -o -print | sort -r |
+        sed '/^\.\/$/d;ss.ss' > "${2:-$pkg_dir}/$1/$pkg_db/$1/manifest"
 )
 
 pkg_etcsums() (
