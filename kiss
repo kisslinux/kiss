@@ -1004,10 +1004,12 @@ pkg_remove_files() {
 pkg_etc() (
     [ -d "$tar_dir/$pkg_name/etc" ] || return 0
 
-    # Create all directories beforehand.
-    cd "$KISS_ROOT/"
-    find etc -type d -exec mkdir -p {} +
     cd "$tar_dir/$pkg_name"
+
+    # Create all directories beforehand.
+    find etc -type d | while read -r dir; do
+        mkdir -p "$KISS_ROOT/$dir"
+    done
 
     # Handle files in /etc/ based on a 3-way checksum check.
     find etc ! -type d | sort | while read -r file; do
