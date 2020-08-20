@@ -7,7 +7,7 @@ for pkg in *; do
     case $pkg in
         # Exemptions for orphans which aren't really
         # orphans. Exclude them from the list.
-        baseinit|baselayout|gcc|pkgconf|e2fsprogs|musl|\
+        baseinit|baselayout|gcc|e2fsprogs|musl|\
         make|busybox|bzip2|grub|kiss|git)
             continue
     esac
