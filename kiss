@@ -1012,7 +1012,7 @@ pkg_etc() (
     done
 
     # Handle files in /etc/ based on a 3-way checksum check.
-    find etc ! -type d | sort | while read -r file; do
+    find etc -type f | sort | while read -r file; do
         i=$((i + 1))
 
         { sum_new=$(sh256 "$file")
