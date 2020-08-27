@@ -819,11 +819,11 @@ pkg_conflicts() {
         # The package's manifest is then updated to reflect this
         # new location.
         #
-        # The 'kiss choices' command parses this directory and
+        # The 'kiss alternatives' command parses this directory and
         # offers you the CHOICE of *swapping* entries in this
         # directory for those on the filesystem.
         #
-        # The choices command does the same thing we do here,
+        # The alternatives command does the same thing we do here,
         # it rewrites manifests and moves files around to make
         # this work.
         #
