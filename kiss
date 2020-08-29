@@ -1565,7 +1565,7 @@ main() {
 
     # Figure out which 'sudo' command to use based on the user's choice or what
     # is available on the system.
-    su=${KISS_SU:-$(command -v sudo || command -v doas)} || su=su
+    su=${KISS_SU:-$(command -v sudo || command -v doas || command -v sls)} || su=su
 
     # Store the date and time of script invocation to be used as the name of
     # the log files the package manager creates uring builds.
