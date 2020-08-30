@@ -1,12 +1,14 @@
 #!/bin/sh -ef
 # Find the maintainer of a package
 
+# CRUX style usage using the current directory as the name of the package to be
+# operated on.
 [ "$1" ] || {
-    printf 'usage: kiss-maintainer [pkg]\n'
-    exit 1
+    export KISS_PATH=${PWD%/*}:$KISS_PATH
+    set -- "${PWD##*/}"
 }
 
-kiss s "$1" | while read -r repo; do cd "$repo"
+kiss s "$@" | sort -u | while read -r repo; do cd "$repo"
     m=$(git log -1 version 2>/dev/null) ||:
     m=${m##*Author: }
     m=${m%%>*}

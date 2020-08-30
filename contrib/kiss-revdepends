@@ -1,11 +1,10 @@
 #!/bin/sh -e
 # Display packages which depend on package
 
-# Ignore shellcheck as we want the warning's behavior.
-# shellcheck disable=2015
+# CRUX style usage using the current directory as the name of the package to be
+# operated on.
 [ "$1" ] || {
-    printf 'usage: kiss-revdepends [pkg]\n'
-    exit 1
+    set -- "${PWD##*/}"
 }
 
 # 'cd' to the database directory as a simple way of

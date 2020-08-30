@@ -15,9 +15,15 @@ get_size() {
     printf '%s\t%s\n' "$hum" "$2"
 }
 
+# CRUX style usage using the current directory as the name of the package to be
+# operated on.
+[ "$1" ] || {
+    set -- "${PWD##*/}"
+}
+
 # Ignore shellcheck as we want the warning's behavior.
 # shellcheck disable=2015
-[ "$1" ] && kiss l "${1:-null}" >/dev/null || {
+kiss l "${1:-null}" >/dev/null || {
     printf 'usage: kiss-size [pkg]\n'
     exit 1
 }
