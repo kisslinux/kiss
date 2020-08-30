@@ -57,8 +57,9 @@ as_root() {
 
     case ${su##*/} in
         doas|sudo) "$su" -u "$user" -- env "$@" ;;
+              sls) "$su" -u "$user" -c -- env "$@" ;;
                su) "$su" -c "env $* <&3" "$user" 3<&0 </dev/tty ;;
-                *) die "Invalid KISS_SU value: $su (valid: doas, sudo, su)"
+                *) die "Invalid KISS_SU value: $su (valid: doas, sudo, sls, su)"
     esac
 }
 
@@ -1564,7 +1565,7 @@ main() {
 
     # Figure out which 'sudo' command to use based on the user's choice or what
     # is available on the system.
-    su=${KISS_SU:-$(command -v sudo || command -v doas)} || su=su
+    su=${KISS_SU:-$(command -v sudo || command -v doas || command -v sls)} || su=su
 
     # Store the date and time of script invocation to be used as the name of
     # the log files the package manager creates uring builds.
