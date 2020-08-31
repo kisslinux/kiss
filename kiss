@@ -739,7 +739,7 @@ pkg_checksums() {
 pkg_verify() {
     # Verify all package checksums. This is achieved by generating a new set
     # of checksums and then comparing those with the old set.
-    verify_cmd="NR==FNR{a[\$1];next}/^git\+.*/{next}!((\$1)in a){exit 1}"
+    verify_cmd="NR==FNR{a[\$1];next}/^git  .*/{next}!((\$1)in a){exit 1}"
 
     for pkg do repo_dir=$(pkg_find "$pkg")
         [ -f "$repo_dir/sources" ] || continue
@@ -1484,7 +1484,7 @@ args() {
         l|list)     pkg_list "$@" ;;
         u|update)   pkg_updates ;;
         s|search)   for pkg do pkg_find "$pkg" all; done ;;
-        v|version)  printf '5.0.4\n' ;;
+        v|version)  printf '5.0.5\n' ;;
 
         -h|--help|'')
             log 'kiss [a|b|c|d|i|l|r|s|u|v] [pkg]...'
