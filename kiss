@@ -56,8 +56,7 @@ as_root() {
     [ "$uid" = 0 ] || log "Using '${su:-su}' (to become ${user:=root})"
 
     case ${su##*/} in
-        doas|sudo) "$su" -u "$user" -- env "$@" ;;
-              sls) "$su" -u "$user" -c -- env "$@" ;;
+    doas|sudo|sls) "$su" -u "$user" -- env "$@" ;;
                su) "$su" -c "env $* <&3" "$user" 3<&0 </dev/tty ;;
                 *) die "Invalid KISS_SU value: $su (valid: doas, sudo, sls, su)"
     esac
