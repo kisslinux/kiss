@@ -40,7 +40,7 @@ kiss s "${PWD##*/}" >/dev/null
 
     # Finally, make the link to the file in whatever repository
     # it was found in.
-    ln -sf "$1/$file" "$file"
+    ln -sf "$1/$file" "$oPWD/$file"
 }
 
 printf 'linked %s to %s\n' "$file" "$1"
