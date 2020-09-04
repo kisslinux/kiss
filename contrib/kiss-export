@@ -13,7 +13,7 @@ kiss list "${1:-null}" >/dev/null || {
     exit 1
 }
 
-# Grab the package's version..
+# Grab the package's version.
 read -r ver rel 2>/dev/null < "$KISS_ROOT/var/db/kiss/installed/$1/version"
 
 # Reset the argument list.
