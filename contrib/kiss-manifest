@@ -1,15 +1,14 @@
 #!/bin/sh -ef
 # Display all files owned by a package
 
-# CRUX style usage using the current directory as the name of the package to be
-# operated on.
+# Use the current directory as the package name if no package is given.
 [ "$1" ] || {
     set -- "${PWD##*/}"
 }
 
 # Ignore shellcheck as we want the warning's behavior.
 # shellcheck disable=2015
-kiss l "${1:-null}" >/dev/null || {
+kiss list "${1:-null}" >/dev/null || {
     printf 'usage: kiss-manifest [pkg]\n'
     exit 1
 }

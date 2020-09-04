@@ -22,7 +22,7 @@ get_size() {
 
 # Ignore shellcheck as we want the warning's behavior.
 # shellcheck disable=2015
-kiss l "${1:-null}" >/dev/null || {
+kiss list "${1:-null}" >/dev/null || {
     printf 'usage: kiss-size [pkg]\n'
     exit 1
 }

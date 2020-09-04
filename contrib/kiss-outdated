@@ -4,7 +4,7 @@
 # Intended behavior.
 # shellcheck disable=2106
 
-kiss s "${@:-*}" | (while read -r pkg_loc _; do {
+kiss search "${@:-*}" | (while read -r pkg_loc _; do {
     read -r ver _ 2>/dev/null < "$pkg_loc/version" || continue
 
     pkg=${pkg_loc##*/}
