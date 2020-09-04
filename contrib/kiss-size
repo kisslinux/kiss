@@ -15,8 +15,7 @@ get_size() {
     printf '%s\t%s\n' "$hum" "$2"
 }
 
-# CRUX style usage using the current directory as the name of the package to be
-# operated on.
+# Use the current directory as the package name if no package is given.
 [ "$1" ] || {
     set -- "${PWD##*/}"
 }
