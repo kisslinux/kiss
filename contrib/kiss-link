@@ -16,7 +16,7 @@ oPWD=$PWD
 # Check if the package exists in a repository and error out here
 # if it does not. The error message from the package manager will
 # be displayed.
-kiss s "${PWD##*/}" >/dev/null
+kiss search "${PWD##*/}" >/dev/null
 
 # Disable this warning as globbing is disabled and word splitting
 # is intentional. This grabs the location of the package's files.
@@ -25,7 +25,7 @@ kiss s "${PWD##*/}" >/dev/null
     # Generate a list of repositories in which the package
     # exists. Then 'cd' to the first found directory to do a
     # comparison.
-    set -- $(kiss s "${PWD##*/}"); cd "$1"
+    set -- $(kiss search "${PWD##*/}"); cd "$1"
 
     # Error if the package exists nowhere but the current
     # directory and this script would create a broken symlink.

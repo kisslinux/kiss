@@ -1,20 +1,19 @@
 #!/bin/sh -ef
 # Turn an installed package into a KISS tarball
 
-# CRUX style usage using the current directory as the name of the package to be
-# operated on.
+# Use the current directory as the package name if no package is given.
 [ "$1" ] || {
     set -- "${PWD##*/}"
 }
 
 # Ignore shellcheck as we want the warning's behavior.
 # shellcheck disable=2015
-kiss l "${1:-null}" >/dev/null || {
+kiss list "${1:-null}" >/dev/null || {
     printf 'usage: kiss-export [pkg]\n'
     exit 1
 }
 
-# Grab the package's version..
+# Grab the package's version.
 read -r ver rel 2>/dev/null < "$KISS_ROOT/var/db/kiss/installed/$1/version"
 
 # Reset the argument list.

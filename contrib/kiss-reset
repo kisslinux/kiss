@@ -17,5 +17,5 @@ done
 [ "$1" ] && {
     printf 'WARNING: This will remove \033[1m%s\033[m package(s).\n' "$#"
     printf 'Continue? [Enter/Ctrl+C]\n'
-    read -r _ && KISS_FORCE=1 kiss r "$@"
+    read -r _ && KISS_FORCE=1 kiss remove "$@"
 }
