@@ -794,6 +794,9 @@ pkg_conflicts() {
         set -- "$@" "$manifest"
     done
 
+    # Return here if there is nothing to check conflicts against.
+    [ "$#" != 0 ] || return 0
+
     # Store the list of found conflicts in a file as we'll be using the
     # information multiple times. Storing things in the cache dir allows
     # us to be lazy as they'll be automatically removed on script end.
