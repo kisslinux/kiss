@@ -1498,7 +1498,7 @@ args() {
         s|search)   for pkg do pkg_find "$pkg" all; done ;;
         v|version)  printf '5.0.6\n' ;;
 
-        -h|--help|'')
+        '')
             log 'kiss [a|b|c|d|i|l|r|s|u|v] [pkg]...'
             log 'alternatives List and swap to alternatives'
             log 'build        Build a package'
@@ -1509,8 +1509,12 @@ args() {
             log 'remove       Remove a package'
             log 'search       Search for a package'
             log 'update       Update the system'
-            log 'version      Package manager version
-                '
+            log 'version      Package manager version'
+
+            printf '\nRun "kiss help-ext" to see all actions\n'
+        ;;
+
+        help-ext)
             log 'Installed extensions (kiss-* in PATH)'
 
             # shellcheck disable=2046
