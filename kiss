@@ -130,9 +130,6 @@ pkg_lint() {
     [ "$release" ] || die "$1" "Release field not found in version file"
     [ -x build ]   || die "$1" "Build file not found or not executable"
     [ -f sources ] || war "$1" "Sources file not found"
-
-    [ ! -f sources ] || [ "$2" ] || [ -f checksums ] ||
-        die "$1" "Checksums are missing"
 }
 
 pkg_find() {
@@ -743,9 +740,16 @@ pkg_verify() {
     for pkg do repo_dir=$(pkg_find "$pkg")
         [ -f "$repo_dir/sources" ] || continue
 
+        verify_sum=$(pkg_checksums "$pkg")
+
+        [ "$verify_sum" ] || continue
+        [ -f "$repo_dir/checksums" ] || die "$pkg" "checksums file missing"
+
         # Check that the first column (separated by whitespace) match in both
         # checksum files. If any part of either file differs, mismatch. Abort.
-        pkg_checksums "$pkg" | awk "$verify_cmd" - "$repo_dir/checksums" || {
+        printf '%s\n' "$verify_sum" |
+
+        awk "$verify_cmd" - "$repo_dir/checksums" || {
             log "$pkg" "Checksum mismatch"
 
             # Instead of dying above, log it to the terminal. Also define a
@@ -1443,20 +1447,26 @@ args() {
         ;;
 
         c|checksum)
-            for pkg do pkg_lint    "$pkg" c; done
+            for pkg do pkg_lint    "$pkg"; done
             for pkg do pkg_sources "$pkg" c; done
             for pkg do
                 repo_dir=$(pkg_find "$pkg")
 
-                # Support packages without sources. Simply do nothing.
                 [ -f "$repo_dir/sources" ] || {
                     log "$pkg" "No sources file, skipping checksums"
                     continue
                 }
 
+                sums=$(pkg_checksums "$pkg")
+
+                [ "$sums" ] || {
+                    log "$pkg" "No sources needing checksums"
+                    continue
+                }
+
                 # False positive ('>> file' with no command).
                 # shellcheck disable=2188
-                pkg_checksums "$pkg" |
+                printf '%s\n' "$sums" |
 
                 if 2>/dev/null >> "$repo_dir/checksums"; then
                     tee "$repo_dir/checksums"
