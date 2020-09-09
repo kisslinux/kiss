@@ -1,33 +1,23 @@
 #!/bin/sh -ef
 # Turn an installed package into a KISS tarball
 
-# Use the current directory as the package name if no package is given.
-[ "$1" ] || {
-    set -- "${PWD##*/}"
-}
+db=$KISS_ROOT/var/db/kiss/installed
 
-# Ignore shellcheck as we want the warning's behavior.
-# shellcheck disable=2015
-kiss list "${1:-null}" >/dev/null || {
+kiss list "${pkg:=${1:-"${PWD##*/}"}}" >/dev/null || {
     printf 'usage: kiss-export [pkg]\n'
     exit 1
 }
 
-# Grab the package's version.
-read -r ver rel 2>/dev/null < "$KISS_ROOT/var/db/kiss/installed/$1/version"
+read -r ver rel 2>/dev/null < "$db/$1/version"
 
-# Reset the argument list.
-pkg=$1 pwd=$PWD
 set --
 
-# Construct the argument list using each file.
 while read -r file; do
     [ -d "$KISS_ROOT/$file" ] || set -- "$@" ".$file"
-done < "$KISS_ROOT/var/db/kiss/installed/$pkg/manifest"
+done < "$db/$pkg/manifest"
 
 cd "$KISS_ROOT/"
 
-# Turn the list of files back into a package.
 tar cf - "$@" | case ${KISS_COMPRESS:-gz} in
     bz2)  bzip2 -z ;;
     gz)   gzip -6  ;;
@@ -35,6 +25,6 @@ tar cf - "$@" | case ${KISS_COMPRESS:-gz} in
     lz)   lzip -z  ;;
     xz)   xz -zT 0 ;;
     zst)  zstd -z  ;;
-esac > "$pwd/$pkg#$ver-$rel.tar.${KISS_COMPRESS:-gz}"
+esac > "$OLDPWD/$pkg#$ver-$rel.tar.${KISS_COMPRESS:-gz}"
 
-printf 'tarball created in %s\n' "$pwd/$pkg#$ver-$rel.tar.${KISS_COMPRESS:-gz}"
+printf 'created %s\n' "$OLDPWD/$pkg#$ver-$rel.tar.${KISS_COMPRESS:-gz}"
