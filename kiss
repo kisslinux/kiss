@@ -56,9 +56,17 @@ as_root() {
     [ "$uid" = 0 ] || log "Using '${su:-su}' (to become ${user:=root})"
 
     case ${su##*/} in
-    doas|sudo|sls) "$su" -u "$user" -- env "$@" ;;
-               su) "$su" -c "env $* <&3" "$user" 3<&0 </dev/tty ;;
-                *) die "Invalid KISS_SU value: $su (valid: doas, sudo, sls, su)"
+        doas|sudo|sls)
+            "$su" -u "$user" -- env "$@"
+        ;;
+
+        su)
+            "$su" -c "env $* <&3" "$user" 3<&0 </dev/tty
+        ;;
+
+        *)
+            die "Invalid KISS_SU value: $su (valid: doas, sudo, sls, su)"
+        ;;
     esac
 }
 
@@ -78,16 +86,18 @@ run_hook() {
     # Provide a default post-build hook to remove files and directories
     # for things we don't support out of the box. One can simply define
     # their own hook to override this behavior.
-    [ "${KISS_HOOK:-}" ] || {
-        case $1 in post-build)
-            rm -rf "$3/usr/share/gettext" "$3/usr/share/polkit-1" \
-                   "$3/usr/share/locale"  "$3/usr/share/info"
-        esac
+    case ${KISS_HOOK:--}$1 in
+        -post-build)
+            rm -rf "$3/usr/share/gettext" \
+                   "$3/usr/share/polkit-1" \
+                   "$3/usr/share/locale" \
+                   "$3/usr/share/info"
+        ;;
 
-        return 0
-    }
-
-    TYPE=${1:-null} PKG=${2:-null} DEST=${3:-null} . "$KISS_HOOK"
+        [!-]*)
+            TYPE=${1:-null} PKG=${2:-null} DEST=${3:-null} . "$KISS_HOOK"
+        ;;
+    esac
 }
 
 decompress() {
@@ -112,11 +122,13 @@ sh256() {
     # Example: '<checksum>  <file>'
     [ -e "$1" ] || return 0
 
-    hash=$(sha256sum "$1" ||
-           sha256 -r "$1" ||
-           openssl dgst -sha256 -r "$1" ||
-           shasum -a 256 "$1" ||
-           digest -a sha256 "$1") 2>/dev/null
+    hash=$(
+        sha256sum               "$1" ||
+        sha256 -r               "$1" ||
+        openssl dgst -sha256 -r "$1" ||
+        shasum -a 256           "$1" ||
+        digest -a sha256        "$1"
+    ) 2>/dev/null
 
     printf '%s\n' "${hash%% *}"
 }
