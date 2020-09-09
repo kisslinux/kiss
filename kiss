@@ -53,7 +53,7 @@ prompt() {
 as_root() {
     # Simple function to run a command as root using either 'sudo',
     # 'doas' or 'su'. Hurrah for choice.
-    [ "$uid" = 0 ] || log "Using '${su:-su}' (to become ${user:=root})"
+    [ "$uid" = 0 ] || log "Using '${su:=su}' (to become ${user:=root})"
 
     case ${su##*/} in
         doas|sudo|sls)
@@ -180,7 +180,10 @@ pkg_list() {
 
     # Loop over each package and print its name and version.
     for pkg do
-        [ -d "$pkg" ] || { log "$pkg" "not installed"; return 1; }
+        [ -d "$pkg" ] || {
+            log "$pkg" "not installed"
+            return 1
+        }
 
         read -r version 2>/dev/null < "$pkg/version" || version=null
         printf '%s\n' "$pkg $version"
@@ -582,10 +585,12 @@ pkg_build() {
     #
     # This also resolves all dependencies and stores the result in '$deps'.
     # Any duplicates are also filtered out.
-    for pkg do contains "$explicit" "$pkg" || {
-        pkg_depends "$pkg" explicit filter
-        explicit="$explicit $pkg "
-    } done
+    for pkg do
+        contains "$explicit" "$pkg" || {
+            pkg_depends "$pkg" explicit filter
+            explicit="$explicit $pkg "
+        }
+    done
 
     # If this is an update, don't always build explicitly passsed packages
     # and instead install pre-built binaries if they exist.
@@ -594,8 +599,8 @@ pkg_build() {
     # If an explicit package is a dependency of another explicit package,
     # remove it from the explicit list as it needs to be installed as a
     # dependency.
-    for pkg do contains "$deps" "$pkg" ||
-        explicit2=" $explicit2 $pkg "
+    for pkg do
+        contains "$deps" "$pkg" || explicit2=" $explicit2 $pkg "
     done
     explicit=$explicit2
 
@@ -614,13 +619,15 @@ pkg_build() {
 
     # Install any pre-built dependencies if they exist in the binary
     # directory and are up to date.
-    for pkg do ! contains "$explicit_build" "$pkg" && pkg_cache "$pkg" && {
-        log "$pkg" "Found pre-built binary, installing"
-        (KISS_FORCE=1 args i "$tar_file")
+    for pkg do
+        ! contains "$explicit_build" "$pkg" && pkg_cache "$pkg" && {
+            log "$pkg" "Found pre-built binary, installing"
+            (KISS_FORCE=1 args i "$tar_file")
 
-        # Remove the now installed package from the build list.
-        shift
-    } done
+            # Remove the now installed package from the build list.
+            shift
+        }
+    done
 
     for pkg do pkg_sources "$pkg"; done
     pkg_verify "$@"
@@ -749,7 +756,9 @@ pkg_verify() {
     # of checksums and then comparing those with the old set.
     verify_cmd="NR==FNR{a[\$1];next}/^git  .*/{next}!((\$1)in a){exit 1}"
 
-    for pkg do repo_dir=$(pkg_find "$pkg")
+    for pkg do
+        repo_dir=$(pkg_find "$pkg")
+
         [ -f "$repo_dir/sources" ] || continue
 
         verify_sum=$(pkg_checksums "$pkg")
@@ -782,7 +791,9 @@ pkg_conflicts() {
 
     # Filter the tarball's manifest and select only files. Resolve all
     # symlinks in file paths as well.
-    while read -r file; do file=$KISS_ROOT/${file#/}
+    while read -r file; do
+        file=$KISS_ROOT/${file#/}
+
         # Skip all directories.
         case $file in */) continue; esac
 
@@ -804,7 +815,9 @@ pkg_conflicts() {
     # current package from the list. This is the simplest method of
     # dropping an item from the argument list. The one downside is that
     # it cannot live in a function due to scoping of arguments.
-    for manifest do shift
+    for manifest do
+        shift
+
         [ "$sys_db/$p_name/manifest" = "$manifest" ] && continue
 
         set -- "$@" "$manifest"
@@ -918,10 +931,12 @@ pkg_swap() {
         # This used to be a 'sed' call which turned out to be a little
         # error-prone in some cases. This new method is a tad slower but ensures
         # we never wipe the file due to a command error.
-        while read -r line; do case $line in
-            "$2") printf '%s\n' "${PWD#"$KISS_ROOT"}/$pkg_owns>${alt#*>}" ;;
-               *) printf '%s\n' "$line" ;;
-        esac; done < "../installed/$pkg_owns/manifest" | sort -r > "$mak_dir/.$1"
+        while read -r line; do
+            case $line in
+                "$2") printf '%s\n' "${PWD#"$KISS_ROOT"}/$pkg_owns>${alt#*>}" ;;
+                   *) printf '%s\n' "$line" ;;
+            esac
+        done < "../installed/$pkg_owns/manifest" | sort -r > "$mak_dir/.$1"
 
         mv -f "$mak_dir/.$1" "../installed/$pkg_owns/manifest"
     fi
@@ -934,10 +949,12 @@ pkg_swap() {
     # This used to be a 'sed' call which turned out to be a little error-prone
     # in some cases. This new method is a tad slower but ensures we never wipe
     # the file due to a command error.
-    while read -r line; do case $line in
-        "${PWD#"$KISS_ROOT"}/$alt") printf '%s\n' "$2" ;;
-                                 *) printf '%s\n' "$line" ;;
-    esac; done < "../installed/$1/manifest" | sort -r > "$mak_dir/.$1"
+    while read -r line; do
+        case $line in
+            "${PWD#"$KISS_ROOT"}/$alt") printf '%s\n' "$2" ;;
+                                     *) printf '%s\n' "$line" ;;
+        esac
+    done < "../installed/$1/manifest" | sort -r > "$mak_dir/.$1"
 
     mv -f "$mak_dir/.$1" "../installed/$1/manifest"
 }
@@ -956,7 +973,9 @@ pkg_install_files() {
 
         # Convert the output of 'ls' (rwxrwx---) to octal. This is simply
         # a 1-9 loop with the second digit being the value of the field.
-        for c in 14 22 31 44 52 61 74 82 91; do rwx=${rwx#?}
+        for c in 14 22 31 44 52 61 74 82 91; do
+            rwx=${rwx#?}
+
             case $rwx in
                 [rwx]*): "$((o+=${c#?}))" ;;
                  [st]*): "$((o+=1))" "$((b+=4 / (${c%?}/3)))" ;;
@@ -1600,11 +1619,11 @@ main() {
 
     # Figure out which 'sudo' command to use based on the user's choice or what
     # is available on the system.
-    su=${KISS_SU:-$(command -v sudo || command -v doas || command -v sls)} || su=su
+    su=${KISS_SU:-"$(command -v sudo || command -v doas || command -v sls)"} ||:
 
     # Store the date and time of script invocation to be used as the name of
     # the log files the package manager creates uring builds.
-    time=$(date '+%Y-%m-%d-%H:%M')
+    time=$(date +%Y-%m-%d-%H:%M)
 
     # Make note of the user's current ID to do root checks later on.
     # This is used enough to warrant a place here.
