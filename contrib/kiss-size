@@ -16,9 +16,7 @@ get_size() {
 }
 
 # Use the current directory as the package name if no package is given.
-[ "$1" ] || {
-    set -- "${PWD##*/}"
-}
+[ "$1" ] || set -- "${PWD##*/}"
 
 # Ignore shellcheck as we want the warning's behavior.
 # shellcheck disable=2015
