@@ -11,4 +11,3 @@ cd "$KISS_ROOT/usr/share/doc/kiss" 2>/dev/null || {
 [ -f "${1:-:}" ]           && file=./${1:-.}
 
 "${PAGER:-less}" "${file:-404.txt}"
-
