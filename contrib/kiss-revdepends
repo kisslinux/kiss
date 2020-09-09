@@ -1,14 +1,8 @@
 #!/bin/sh -e
 # Display packages which depend on package
 
-# Use the current directory as the package name if no package is given.
-[ "$1" ] || {
-    set -- "${PWD##*/}"
-}
+[ "$1" ] || set -- "${PWD##*/}"
 
-# 'cd' to the database directory as a simple way of
-# stripping the path and performing a 'basename'.
 cd "$KISS_ROOT/var/db/kiss/installed"
 
-# Use a simple 'grep' to display packages depending on '$1'.
 grep "^$1" -- */depends
