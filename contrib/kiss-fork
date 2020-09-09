@@ -1,27 +1,30 @@
 #!/bin/sh -ef
 # Copy a package's repository files into the current directory
 
-# Ignore shellcheck as we want the warning's behavior.
-# shellcheck disable=2015
-[ "$1" ] && kiss search "${1:-null}" >/dev/null || {
+pkg=${1:-"${PWD##*/}"}
+num=$(printf %d "${2:-0}")
+
+dir=$(kiss search "$pkg" 2>/dev/null) || {
     printf 'usage: [kiss-fork [pkg]] [index]\n'
     exit 1
 }
 
-num=$2
+# Globbing is disabled and word splitting is intentional. 
+# shellcheck disable=2086
+set -- $dir
 
-# Disable this warning as globbing is disabled and word splitting
-# is intentional. This grabs the location of the package's files.
-# shellcheck disable=2046
-(
-    set -- $(kiss search "$1")
+[ "$num" -ge "$#" ] && {
+    printf 'index exceeds maximum\n'
+    exit 1 
+}
 
-    shift "${num:-0}"
+shift "$num"
 
-    [ -d "$1" ] && {
-        printf 'found package in %s\n' "$1"
-        cp -r "$1" .
-    }
-)
+[ "$1" ] || [ -d "$1" ] || {
+    printf 'failed to locate package\n'
+    exit 1
+}
 
-printf 'forked package to %s\n' "$PWD/$1"
+printf 'found  package in %s\n' "$1"
+cp -rf "$1" .
+printf 'forked package to %s\n' "$PWD/$pkg"
