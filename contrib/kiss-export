@@ -2,8 +2,9 @@
 # Turn an installed package into a KISS tarball
 
 db=$KISS_ROOT/var/db/kiss/installed
+pkg=${1:-"${PWD##*/}"}
 
-kiss list "${pkg:=${1:-"${PWD##*/}"}}" >/dev/null || {
+kiss list "$pkg" >/dev/null || {
     printf 'usage: kiss-export [pkg]\n'
     exit 1
 }
