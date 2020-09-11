@@ -21,7 +21,6 @@ die() {
 }
 
 contains() {
-    # Check if a "string list" contains a word.
     case " $1 " in *" $2 "*) return 0; esac; return 1
 }
 
@@ -64,6 +63,8 @@ run_hook() {
     # Provide a default post-build hook to remove files and directories
     # for things we don't support out of the box. One can simply define
     # their own hook to override this behavior.
+    set -- "${1:-null}" "${2:-null}" "${3:-null}"
+
     case ${KISS_HOOK:--}$1 in
         -post-build)
             rm -rf "$3/usr/share/gettext" \
@@ -73,31 +74,26 @@ run_hook() {
         ;;
 
         [!-]*)
-            TYPE=${1:-null} PKG=${2:-null} DEST=${3:-null} . "$KISS_HOOK"
+            TYPE=$1 PKG=$2 DEST=$3 . "$KISS_HOOK"
         ;;
     esac
 }
 
 decompress() {
-    case $1 in
-        *.bz2)      bzip2 -d  ;;
-        *.lzma)     lzma -dc  ;;
-        *.lz)       lzip -dc  ;;
-        *.tar)      cat       ;;
-        *.tgz|*.gz) gzip -d   ;;
-        *.xz|*.txz) xz -dcT 0 ;;
-        *.zst)      zstd -dc  ;;
+    case ${1##*.} in
+        bz2)      bzip2 -dc ;;
+        lzma)     lzma  -dc ;;
+        lz)       lzip  -dc ;;
+        tar)      cat       ;;
+        tgz | gz) gzip  -dc ;;
+        txz | xz) xz    -dc ;;
+        zst)      zstd  -dc ;;
     esac < "$1"
 }
 
 sh256() {
     # There's no standard utility to generate sha256 checksums.
-    # This is a simple wrapper around sha256sum, sha256, shasum,
-    # openssl, digest, ... which will use whatever is available.
-    #
-    # All utilities must match 'sha256sum' output.
-    #
-    # Example: '<checksum>  <file>'
+    # This unifies various tools using the first available.
     [ -e "$1" ] || return 0
 
     hash=$(
