@@ -1,26 +1,12 @@
 #!/bin/sh
 # shellcheck source=/dev/null
 #
-# This is a simple package manager written in POSIX 'sh' for use
+# This is a simple package manager written in POSIX shell for use
 # in KISS Linux (https://k1ss.org).
-#
-# [1] Warnings related to word splitting and globbing are disabled.
-#     All word splitting in this script is *safe* and intentional.
-#
-# [2] Information is grabbed from 'ls -ld' output. The extraction of
-#     ownership and permissions from this output is fine for use as
-#     it isn't subject to ls' usual file display shenanigans.
 #
 # Created by Dylan Araps.
 
 log() {
-    # Print a message prettily.
-    #
-    # All messages are printed to stderr to allow the user to hide build
-    # output which is the only thing printed to stdout.
-    #
-    # The l<word> variables contain escape sequence which are defined
-    # when '$KISS_COLOR' is equal to '1'.
     printf '%b%s %b%s%b %s\n' \
         "$lcol" "${3:-->}" "${lclr}${2:+$lcol2}" "$1" "$lclr" "$2" >&2
 }
@@ -40,19 +26,14 @@ contains() {
 }
 
 prompt() {
-    # Ask the user for some input.
     [ "$1" ] && log "$1"
+
     log "Continue?: Press Enter to continue or Ctrl+C to abort here"
 
-    # POSIX 'read' has none of the "nice" options like '-n', '-p'
-    # etc etc. This is the most basic usage of 'read'.
-    # '_' is used as 'dash' errors when no variable is given to 'read'.
     [ "$KISS_PROMPT" = 0 ] || read -r _
 }
 
 as_root() {
-    # Simple function to run a command as root using either 'sudo',
-    # 'doas' or 'su'. Hurrah for choice.
     [ "$uid" = 0 ] || log "Using '${su:=su}' (to become ${user:=root})"
 
     case ${su##*/} in
@@ -71,14 +52,11 @@ as_root() {
 }
 
 file_owner() {
-    # Grab the owner of the file/directory via 'ls -ld'
-    # See: [1] and [2] at top of script.
     # shellcheck disable=2046
-    set -- $(ls -ld "$1"); user=${3:-root}
+    set -- $(ls -ld "$1")
 
-    # If the owner's user ID doesn't exist, fallback to using 'root'.
-    # This prevents the code from changing the permissions to something
-    # wonky.
+    user=${3:-root}
+
     id -u "$user" >/dev/null 2>&1 || user=root
 }
 
@@ -1534,7 +1512,7 @@ args() {
         l|list)     pkg_list "$@" ;;
         u|update)   pkg_updates ;;
         s|search)   for pkg do pkg_find "$pkg" all; done ;;
-        v|version)  printf '5.0.6\n' ;;
+        v|version)  printf '5.1.0\n' ;;
 
         '')
             log 'kiss [a|b|c|d|i|l|r|s|u|v] [pkg]...'
