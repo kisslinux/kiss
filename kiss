@@ -156,15 +156,14 @@ pkg_find() {
 }
 
 pkg_list() {
-    # List installed packages. As the format is files and directories, this
-    # just involves a simple for loop and file read.
     cd "$sys_db" 2>/dev/null
 
-    # Optional arguments can be passed to check for specific packages. If no
-    # arguments are passed, list all.
-    [ "$1" ] || { set +f; set -f -- *; }
+    # If no arguments are passed, list all.
+    [ "$1" ] || {
+        set +f
+        set -f -- *
+    }
 
-    # Loop over each package and print its name and version.
     for pkg do
         [ -d "$pkg" ] || {
             log "$pkg" "not installed"
@@ -172,6 +171,7 @@ pkg_list() {
         }
 
         read -r version 2>/dev/null < "$pkg/version" || version=null
+
         printf '%s\n' "$pkg $version"
     done
 }
@@ -183,7 +183,9 @@ pkg_cache() {
 
     read -r version release 2>/dev/null < "$repo_dir/version"
 
-    set +f; set -f -- "$bin_dir/$1#$version-$release.tar."*
+    set +f
+    set -f -- "$bin_dir/$1#$version-$release.tar."*
+
     tar_file=$1
 
     [ -f "$tar_file" ]
