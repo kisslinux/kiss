@@ -110,37 +110,49 @@ sh256() {
 pkg_lint() {
     log "$1" "Checking repository files"
 
-    cd "$(pkg_find "$1")"
-    read -r _ release 2>/dev/null < version || die "Version file not found"
+    pkg_find "$1"
+    cd "$repo_dir"
 
-    [ "$release" ] || die "$1" "Release field not found in version file"
-    [ -x build ]   || die "$1" "Build file not found or not executable"
-    [ -f sources ] || war "$1" "Sources file not found"
+    read -r _ release 2>/dev/null < version ||
+        die "Version file not found"
+
+    [ "$release" ] ||
+        die "$1" "Release field not found in version file"
+
+    [ -x build ] ||
+        die "$1" "Build file not found or not executable"
+
+    [ -f sources ] ||
+        war "$1" "Sources file not found"
 }
 
 pkg_find() {
     # Figure out which repository a package belongs to by searching for
     # directories matching the package name in $KISS_PATH/*.
-    query=$1 all=$2 what=$3 IFS=:; set --
+    query=$1 all=$2 what=$3 IFS=:
 
-    # Both counts of word-splitting are intentional here. Firstly to split
-    # the repositories and secondly to allow for the query to be a glob.
+    set --
+
     # shellcheck disable=2086
-    for path in $KISS_PATH "${what:-$sys_db}"; do set +f
+    for path in $KISS_PATH "${what:-"$sys_db"}"; do
+        set +f
+
         for path2 in "$path/"$query; do
-            test "${what:--d}" "$path2" && set -f -- "$@" "$path2"
+            test "${what:--d}" "$path2" || continue
+
+            set -f -- "$@" "$path2"
         done
     done
 
     unset IFS
 
-    # A package may also not be found due to a repository not being readable
-    # by the current user. Either way, we need to die here.
-    [ "$1" ] || die "Package '$query' not in any repository"
+    [ "$1" ] ||
+        die "Package '$query' not in any repository"
 
-    # Show all search results if called from 'kiss search', else print only
-    # the first match.
-    [ "$all" ] && printf '%s\n' "$@" || printf '%s\n' "$1"
+    [ -z "$all" ] ||
+        printf '%s\n' "$@"
+
+    repo_dir=$1
 }
 
 pkg_list() {
@@ -167,7 +179,9 @@ pkg_list() {
 pkg_cache() {
     # Find the tarball of a package using a glob. Use the first found match
     # of '<pkg_name>#<pkg_version><pkg_release>.tar.*'.
-    read -r version release 2>/dev/null < "$(pkg_find "$1")/version"
+    pkg_find "$1"
+
+    read -r version release 2>/dev/null < "$repo_dir/version"
 
     set +f; set -f -- "$bin_dir/$1#$version-$release.tar."*
     tar_file=$1
@@ -178,7 +192,7 @@ pkg_cache() {
 pkg_sources() {
     # Download any remote package sources. The existence of local files is
     # also checked.
-    repo_dir=$(pkg_find "$1")
+    pkg_find "$1"
 
     # Support packages without sources. Simply do nothing.
     [ -f "$repo_dir/sources" ] || return 0
@@ -225,7 +239,7 @@ pkg_sources() {
 pkg_extract() {
     # Extract all source archives to the build directory and copy over any
     # local repository files.
-    repo_dir=$(pkg_find "$1")
+    pkg_find "$1"
 
     # Support packages without sources. Simply do nothing.
     [ -f "$repo_dir/sources" ] || return 0
@@ -342,13 +356,15 @@ pkg_depends() {
     # Resolve all dependencies and generate an ordered list. The deepest
     # dependencies are listed first and then the parents in reverse order.
     contains "$deps" "$1" || {
+        pkg_find "$1"
+
         # Filter out non-explicit, aleady installed dependencies.
         [ "$3" ] && [ -z "$2" ] && (pkg_list "$1" >/dev/null) && return
 
         # Recurse through the dependencies of the child packages.
         while read -r dep _ || [ "$dep" ]; do
             [ "${dep##\#*}" ] && pkg_depends "$dep" '' "$3"
-        done 2>/dev/null < "$(pkg_find "$1")/depends" ||:
+        done 2>/dev/null < "$repo_dir/depends" ||:
 
         # After child dependencies are added to the list,
         # add the package which depends on them.
@@ -527,8 +543,10 @@ pkg_tar() (
     # contains the package's database entry.
     log "$1" "Creating tarball"
 
+    pkg_find "$1"
+
     # Read the version information to name the package.
-    read -r version release < "$(pkg_find "$1")/version"
+    read -r version release < "$repo_dir/version"
 
     # Use 'cd' to avoid needing tar's '-C' flag which may not be portable
     # across implementations.
@@ -613,7 +631,7 @@ pkg_build() {
 
         run_hook pre-extract "$pkg" "$pkg_dir/$pkg"
         pkg_extract "$pkg"
-        repo_dir=$(pkg_find "$pkg")
+        pkg_find "$pkg"
 
         # Install built packages to a directory under the package name to
         # avoid collisions with other packages.
@@ -696,7 +714,7 @@ pkg_build() {
 
 pkg_checksums() {
     # Generate checksums for packages.
-    repo_dir=$(pkg_find "$1")
+    pkg_find "$1"
 
     # Support packages without sources. Simply do nothing.
     [ -f "$repo_dir/sources" ] || return 0
@@ -731,7 +749,7 @@ pkg_verify() {
     verify_cmd="NR==FNR{a[\$1];next}/^git  .*/{next}!((\$1)in a){exit 1}"
 
     for pkg do
-        repo_dir=$(pkg_find "$pkg")
+        pkg_find "$pkg"
 
         [ -f "$repo_dir/sources" ] || continue
 
@@ -1342,8 +1360,10 @@ pkg_updates() {
     set +f --
 
     for pkg in "$sys_db/"*; do
+        pkg_find "${pkg##*/}"
+
         read -r db_ver db_rel < "$pkg/version"
-        read -r re_ver re_rel < "$(pkg_find "${pkg##*/}")/version"
+        read -r re_ver re_rel < "$repo_dir/version"
 
         # Compare installed packages to repository packages.
         [ "$db_ver-$db_rel" = "$re_ver-$re_rel" ] || {
@@ -1462,7 +1482,7 @@ args() {
             for pkg do pkg_lint    "$pkg"; done
             for pkg do pkg_sources "$pkg" c; done
             for pkg do
-                repo_dir=$(pkg_find "$pkg")
+                pkg_find "$pkg"
 
                 [ -f "$repo_dir/sources" ] || {
                     log "$pkg" "No sources file, skipping checksums"
@@ -1555,10 +1575,10 @@ args() {
         ;;
 
         *)
-            util=$(KISS_PATH=$PATH pkg_find "kiss-$action*" "" -x 2>/dev/null) ||
+            KISS_PATH=$PATH pkg_find "kiss-$action*" "" -x 2>/dev/null ||
                 die "'kiss $action' is not a valid command"
 
-            "$util" "$@"
+            "$repo_dir" "$@"
         ;;
     esac
 
