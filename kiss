@@ -1636,15 +1636,15 @@ main() {
     # do nothing on a normal system.
     mkdir -p "$KISS_ROOT/" 2>/dev/null ||:
 
-    # Create the required temporary directories and set the variables which
-    # point to them.
-    mkdir -p "${cac_dir:=${XDG_CACHE_HOME:-$HOME/.cache}/kiss}" \
-             "${mak_dir:=${KISS_TMPDIR:=$cac_dir}/build-$pid}" \
-             "${pkg_dir:=${KISS_TMPDIR:=$cac_dir}/pkg-$pid}" \
-             "${tar_dir:=${KISS_TMPDIR:=$cac_dir}/extract-$pid}" \
-             "${src_dir:=$cac_dir/sources}" \
-             "${log_dir:=$cac_dir/logs}" \
-             "${bin_dir:=$cac_dir/bin}"
+    # Create cache directories and define variables.
+    mkdir -p \
+        "${cac_dir:="${XDG_CACHE_HOME:-"${HOME:?HOME is null}/.cache"}/kiss"}" \
+        "${mak_dir:="${KISS_TMPDIR:="$cac_dir"}/build-$pid"}" \
+        "${pkg_dir:="${KISS_TMPDIR:="$cac_dir"}/pkg-$pid"}" \
+        "${tar_dir:="${KISS_TMPDIR:="$cac_dir"}/extract-$pid"}" \
+        "${src_dir:="$cac_dir/sources"}" \
+        "${log_dir:="$cac_dir/logs"}" \
+        "${bin_dir:="$cac_dir/bin"}"
 
     args "$@"
 }
