@@ -144,6 +144,7 @@ pkg_find() {
     done
 
     unset IFS
+    repo_dir=$1
 
     [ "$1" ] || {
         log "Package '$query' not in any repository"
@@ -152,8 +153,6 @@ pkg_find() {
 
     [ -z "$all" ] ||
         printf '%s\n' "$@"
-
-    repo_dir=$1
 }
 
 pkg_list() (
