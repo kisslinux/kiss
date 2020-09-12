@@ -151,8 +151,7 @@ pkg_find() {
         return 1
     }
 
-    [ -z "$all" ] ||
-        printf '%s\n' "$@"
+    [ -z "$all" ] || printf '%s\n' "$@"
 }
 
 pkg_list() {
@@ -350,7 +349,7 @@ pkg_extract() {
                     cp -f "$src_dir/$1/${src##*/}" .
 
                 else
-                    die "$1" "Local file $src not found"
+                    die "$1" "file $src not found"
                 fi
             ;;
         esac
