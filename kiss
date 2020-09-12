@@ -109,8 +109,6 @@ sh256() {
 }
 
 pkg_lint() {
-    log "$1" "Checking repository files"
-
     pkg_find "$1"
     cd "$repo_dir"
 
