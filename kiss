@@ -364,23 +364,25 @@ pkg_depends() {
     contains "$deps" "$1" || {
         # Filter out non-explicit, aleady installed dependencies.
         case $3-$2 in
-            *?-) ! pkg_list "$1" >/dev/null || return 0
+            *?-) pkg_list "$1" >/dev/null && return 0
         esac
 
-        pkg_find "$1" || repo_dir=null
+        pkg_find "$1"
 
         # Recurse through the dependencies of the child packages.
-        while read -r dep _ || [ "$dep" ]; do
-            case $dep in
-                \#* | '')
-                    # Comments and blank lines.
-                ;;
+        [ -f "$repo_dir/depends" ] && {
+            while read -r dep _ || [ "$dep" ]; do
+                case $dep in
+                    \#*|'')
+                        # Comments and blank lines.
+                    ;;
 
-                *)
-                    pkg_depends "$dep" '' "$3"
-                ;;
-            esac
-        done 2>/dev/null < "$repo_dir/depends" ||:
+                    *)
+                        pkg_depends "$dep" '' "$3"
+                    ;;
+                esac
+            done < "$repo_dir/depends"
+        }
 
         # After child dependencies are added to the list,
         # add the package which depends on them.
