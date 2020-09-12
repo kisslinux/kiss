@@ -1373,9 +1373,7 @@ pkg_updates() {
 
     contains "$*" kiss && {
         log "Detected package manager update"
-        log "The package manager will be updated first"
-
-        prompt
+        prompt "The package manager will be updated first"
 
         pkg_build kiss
         args i kiss
