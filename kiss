@@ -442,7 +442,8 @@ pkg_fixdeps() {
     cd "$pkg_dir/$1/$pkg_db/$1"
 
     # Generate a list of all installed manifests.
-    set +f; set -f -- "$sys_db/"*/manifest
+    set +f
+    set -f -- "$sys_db/"*/manifest
 
     # Create the depends file if it doesn't exist to have something to
     # compare against (even if empty). We will remove this blank file
@@ -466,6 +467,7 @@ pkg_fixdeps() {
                 "" | ld-* | libpthread.so* | lib[cm].so* | libdl.so* |\
                 librt.so* | libtrace.so*   | libxnet.so*)
                     continue
+                ;;
             esac
 
             # Figure out which package owns the file.
