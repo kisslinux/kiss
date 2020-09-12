@@ -1251,11 +1251,14 @@ pkg_updates() {
     # Create a list of all repositories.
     # See [1] at top of script.
     # shellcheck disable=2046,2086
-    { IFS=:; set -- $KISS_PATH; unset IFS; }
+    {
+        IFS=:
+        set -- $KISS_PATH
+        unset IFS
+    }
 
     # Update each repository in '$KISS_PATH'.
     for repo do
-        # Go to the root of the repository (if it exists).
         cd "$repo"
 
         case $(git remote 2>/dev/null) in
@@ -1265,12 +1268,9 @@ pkg_updates() {
             ;;
 
             *)
-                # Go to the repository's root directory.
                 cd "$(git rev-parse --show-toplevel)"
-
-                # Go to the real root directory if this is a submodule.
                 git_root=$(git rev-parse --show-superproject-working-tree)
-                cd "${git_root:-"$PWD"}"
+                cd "${git_root:-.}"
 
                 contains "$repos" "$PWD" || {
                     repos="$repos $PWD "
@@ -1343,7 +1343,7 @@ pkg_updates() {
 
         # Compare installed packages to repository packages.
         [ "$db_ver-$db_rel" = "$re_ver-$re_rel" ] || {
-            printf '%s\n' "${pkg##*/} $db_ver-$db_rel ==> $re_ver-$re_rel"
+            printf '%s\n' "${pkg##*/} $db_ver-$db_rel -> $re_ver-$re_rel"
             set -- "$@" "${pkg##*/}"
         }
     done
