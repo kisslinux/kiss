@@ -209,15 +209,12 @@ pkg_sources() {
     mkdir -p "$src_dir/$1" && cd "$src_dir/$1"
 
     while read -r src dest || [ "$src" ]; do
-        # Remote git repository or comment.
         if [ -z "${src##\#*}" ] || [ -z "${src##git+*}" ]; then
-            :
+            continue
 
-        # Remote source (cached).
         elif [ -f "${src##*/}" ]; then
             log "$1" "Found cached source '${src##*/}'"
 
-        # Remote source.
         elif [ -z "${src##*://*}" ]; then
             log "$1" "Downloading $src"
 
@@ -226,11 +223,9 @@ pkg_sources() {
                 die "$1" "Failed to download $src"
             }
 
-        # Local source (relative).
         elif [ -e "$repo_dir/$src" ]; then
             log "$1" "Found local relative source '$src'"
 
-        # Local source (absolute).
         elif [ -e "/$src" ]; then
             log "$1" "Found local absolute source '$src'"
 
