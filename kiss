@@ -158,7 +158,6 @@ pkg_find() {
 pkg_list() {
     cd "$sys_db"
 
-    # If no arguments are passed, list all.
     [ "$1" ] || {
         set +f
         set -f -- *
@@ -364,7 +363,7 @@ pkg_depends() {
     contains "$deps" "$1" || {
         # Filter out non-explicit, aleady installed dependencies.
         case $3-$2 in
-            *?-) pkg_list "$1" >/dev/null && return 0
+            *?-) pkg_list "$1" >/dev/null 2>&1 && return 0
         esac
 
         pkg_find "$1"
@@ -564,10 +563,6 @@ pkg_tar() (
 )
 
 pkg_build() {
-    # Build packages and turn them into packaged tarballs.
-
-    log "Resolving dependencies"
-
     # Mark packages passed on the command-line separately from those
     # detected as dependencies. We need to treat explicitly passed packages
     # differently from those pulled in as dependencies.
@@ -597,10 +592,8 @@ pkg_build() {
     # shellcheck disable=2046,2086
     set -- $deps $explicit
 
-    log "Building: $*"
-
     # Only ask for confirmation if more than one package needs to be built.
-    [ "$#" -gt 1 ] || [ "$pkg_update" ] && prompt
+    [ "$#" -gt 1 ] || [ "$pkg_update" ] && prompt "Building: $*"
 
     for pkg do pkg_lint "$pkg"; done
 
@@ -698,10 +691,8 @@ pkg_build() {
 }
 
 pkg_checksums() {
-    # Generate checksums for packages.
     pkg_find "$1"
 
-    # Support packages without sources. Simply do nothing.
     [ -f "$repo_dir/sources" ] || return 0
 
     while read -r src _ || [ "$src" ]; do
@@ -1377,13 +1368,8 @@ pkg_updates() {
         return
     }
 
-    log "Packages to update: $*"
-
-    # Build all packages requiring an update.
     pkg_update=1
     pkg_build "$@"
-
-    log "Updated all packages"
 }
 
 pkg_clean() {
