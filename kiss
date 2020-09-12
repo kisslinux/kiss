@@ -375,7 +375,7 @@ pkg_depends() {
                 ;;
 
                 *)
-                    pkg_depends "$dep" '' "$3" ||:
+                    pkg_depends "$dep" '' "$3"
                 ;;
             esac
         done 2>/dev/null < "$repo_dir/depends" ||:
