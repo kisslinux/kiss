@@ -390,27 +390,6 @@ pkg_depends() {
     }
 }
 
-pkg_order() {
-    # Order a list of packages based on dependence and take into account
-    # pre-built tarballs if this is to be called from 'kiss i'.
-    order=; redro=; deps=
-
-    for pkg do case $pkg in
-        /*.tar.*) deps="$deps $pkg " ;;
-        *.tar.*)  deps="$deps $ppwd/$pkg " ;;
-        *)        pkg_depends "$pkg" raw
-    esac done
-
-    # Filter the list, only keeping explicit packages. The purpose of these
-    # two loops is to order the argument list based on dependence.
-    for pkg in $deps; do
-        contains "$*" "$pkg" || contains "$*" "${pkg##"$ppwd/"}" &&
-            order="$order $pkg " redro=" $pkg $redro"
-    done
-
-    deps=
-}
-
 pkg_strip() {
     # Strip package binaries and libraries. This saves space on the system as
     # well as on the tarballs we ship for installation.
@@ -1401,13 +1380,8 @@ pkg_updates() {
     log "Packages to update: $*"
 
     # Build all packages requiring an update.
-    # See [1] at top of script.
-    # shellcheck disable=2046,2086
-    {
-        pkg_update=1
-        pkg_order "$@"
-        pkg_build $order
-    }
+    pkg_update=1
+    pkg_build "$@"
 
     log "Updated all packages"
 }
@@ -1518,13 +1492,16 @@ args() {
             done
         ;;
 
-        i|install|r|remove)
-            pkg_order "$@"
+        i|install)
+            for pkg do
+                pkg_install "$pkg"
+            done
+        ;;
 
-            case $action in
-                i*) for pkg in $order; do pkg_install "$pkg"; done ;;
-                r*) for pkg in $redro; do pkg_remove  "$pkg"; done
-            esac
+        r|remove)
+            for pkg do
+                pkg_remove "$pkg"
+            done
         ;;
 
         b|build)    pkg_build "${@:?No packages installed}" ;;
