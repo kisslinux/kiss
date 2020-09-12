@@ -201,7 +201,7 @@ pkg_sources() {
     # Support packages without sources. Simply do nothing.
     [ -f "$repo_dir/sources" ] || return 0
 
-    log "$1" "Downloading sources"
+    log "$1" "Fetching sources"
 
     # Store each downloaded source in a directory named after the package it
     # belongs to. This avoid conflicts between two packages having a source
@@ -209,8 +209,11 @@ pkg_sources() {
     mkdir -p "$src_dir/$1" && cd "$src_dir/$1"
 
     while read -r src dest || [ "$src" ]; do
-        if [ -z "${src##\#*}" ] || [ -z "${src##git+*}" ]; then
+        if [ -z "${src##\#*}" ]; then
             continue
+
+        elif [ -z "${src##git+*}" ]; then
+            log "$1" "Found git source '${src##git+}'"
 
         elif [ -f "${src##*/}" ]; then
             log "$1" "Found cached source '${src##*/}'"
