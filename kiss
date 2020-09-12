@@ -146,8 +146,10 @@ pkg_find() {
 
     unset IFS
 
-    [ "$1" ] ||
-        die "Package '$query' not in any repository"
+    [ "$1" ] || {
+        log "Package '$query' not in any repository"
+        return 1
+    }
 
     [ -z "$all" ] ||
         printf '%s\n' "$@"
@@ -155,8 +157,8 @@ pkg_find() {
     repo_dir=$1
 }
 
-pkg_list() {
-    cd "$sys_db" 2>/dev/null
+pkg_list() (
+    cd "$sys_db"
 
     # If no arguments are passed, list all.
     [ "$1" ] || {
@@ -174,7 +176,7 @@ pkg_list() {
 
         printf '%s\n' "$pkg $version"
     done
-}
+)
 
 pkg_cache() {
     # Find the tarball of a package using a glob. Use the first found match
@@ -358,14 +360,24 @@ pkg_depends() {
     # Resolve all dependencies and generate an ordered list. The deepest
     # dependencies are listed first and then the parents in reverse order.
     contains "$deps" "$1" || {
-        pkg_find "$1"
-
         # Filter out non-explicit, aleady installed dependencies.
-        [ "$3" ] && [ -z "$2" ] && (pkg_list "$1" >/dev/null) && return
+        case $3-$2 in
+            *?-) ! pkg_list "$1" >/dev/null || return 0
+        esac
+
+        pkg_find "$1" || repo_dir=null
 
         # Recurse through the dependencies of the child packages.
         while read -r dep _ || [ "$dep" ]; do
-            [ "${dep##\#*}" ] && pkg_depends "$dep" '' "$3"
+            case $dep in
+                \#* | '')
+                    # Comments and blank lines.
+                ;;
+
+                *)
+                    pkg_depends "$dep" '' "$3" ||:
+                ;;
+            esac
         done 2>/dev/null < "$repo_dir/depends" ||:
 
         # After child dependencies are added to the list,
@@ -1095,7 +1107,7 @@ pkg_etc() (
 pkg_remove() {
     # Remove a package and all of its files. The '/etc' directory is handled
     # differently and configuration files are *not* overwritten.
-    pkg_list "$1" >/dev/null || return
+    pkg_list "$1" >/dev/null
 
     # Make sure that nothing depends on this package.
     [ "$KISS_FORCE" = 1 ] || {
