@@ -155,7 +155,7 @@ pkg_find() {
         printf '%s\n' "$@"
 }
 
-pkg_list() (
+pkg_list() {
     cd "$sys_db"
 
     # If no arguments are passed, list all.
@@ -164,17 +164,19 @@ pkg_list() (
         set -f -- *
     }
 
-    for pkg do
-        [ -d "$pkg" ] || {
-            log "$pkg" "not installed"
+    for _pkg do
+        [ -d "$_pkg" ] || {
+            log "$_pkg" "not installed"
             return 1
         }
 
-        read -r version 2>/dev/null < "$pkg/version" || version=null
+        read -r version 2>/dev/null < "$_pkg/version" || version=null
 
-        printf '%s\n' "$pkg $version"
+        printf '%s\n' "$_pkg $version"
     done
-)
+
+    cd "$OLDPWD"
+}
 
 pkg_cache() {
     # Find the tarball of a package using a glob. Use the first found match
