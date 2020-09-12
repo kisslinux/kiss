@@ -251,7 +251,11 @@ pkg_extract() {
     while read -r src dest || [ "$src" ]; do
         mkdir -p "$mak_dir/$1/$dest" && cd "$mak_dir/$1/$dest"
 
-        case $src in \#*|'') ;;
+        case $src in
+            \#*|'')
+                # Comments and blank lines.
+            ;;
+
             # Git repository.
             git+*)
                 # Split the source into URL + OBJECT (branch or commit).
