@@ -733,7 +733,6 @@ pkg_conflicts() {
         printf '%s\n' "${PWD#"$KISS_ROOT"}/${file##*/}"
     done < "$tar_dir/$1/$pkg_db/$1/manifest" > "$mak_dir/$pid-m"
 
-    p_name=$1
     set +f
     set -f "$sys_db"/*/manifest
 
@@ -744,7 +743,8 @@ pkg_conflicts() {
     for manifest do
         shift
 
-        [ "$sys_db/$p_name/manifest" = "$manifest" ] && continue
+        [ "$sys_db/$pkg/manifest" = "$manifest" ] &&
+            continue
 
         set -- "$@" "$manifest"
     done
@@ -760,7 +760,8 @@ pkg_conflicts() {
     # Enable alternatives automatically if it is safe to do so.
     # This checks to see that the package that is about to be installed
     # doesn't overwrite anything it shouldn't in '/var/db/kiss/installed'.
-    grep -q ":/var/db/kiss/installed/" "$mak_dir/$pid-c" || choice_auto=1
+    grep -q ":/var/db/kiss/installed/" "$mak_dir/$pid-c" ||
+        choice_auto=1
 
     if [ "$KISS_CHOICE" != 0  ] &&
        [ "$choice_auto"  = 1  ] &&
@@ -787,11 +788,11 @@ pkg_conflicts() {
         #
         # Pretty nifty huh?
         while IFS=: read -r _ con; do
-            printf '%s\n' "Found conflict $con"
+            printf 'Found conflict %s\n' "$con"
 
             # Create the "choices" directory inside of the tarball.
             # This directory will store the conflicting file.
-            mkdir -p "$tar_dir/$p_name/${cho_dir:=var/db/kiss/choices}"
+            mkdir -p "$tar_dir/$pkg/${cho_dir:=var/db/kiss/choices}"
 
             # Construct the file name of the "db" entry of the
             # conflicting file. (pkg_name>usr>bin>ls)
@@ -799,26 +800,26 @@ pkg_conflicts() {
 
             # Move the conflicting file to the choices directory
             # and name it according to the format above.
-            mv -f "$tar_dir/$p_name/$con" \
-                  "$tar_dir/$p_name/$cho_dir/$p_name$con_name" 2>/dev/null || {
+            mv -f "$tar_dir/$pkg/$con" \
+                  "$tar_dir/$pkg/$cho_dir/$pkg$con_name" 2>/dev/null || {
                 log "File must be in ${con%/*} and not a symlink to it"
                 log "This usually occurs when a binary is installed to"
                 log "/sbin instead of /usr/bin (example)"
                 log "Before this package can be used as an alternative,"
-                log "this must be fixed in $p_name. Contact the maintainer"
+                log "this must be fixed in $pkg. Contact the maintainer"
                 die "by finding their details via 'kiss-maintainer'" "" "!>"
             }
         done < "$mak_dir/$pid-c"
 
-        log "$p_name" "Converted all conflicts to choices (kiss a)"
+        log "$pkg" "Converted all conflicts to choices (kiss a)"
 
         # Rewrite the package's manifest to update its location
         # to its new spot (and name) in the choices directory.
-        pkg_manifest "$p_name" "$tar_dir" 2>/dev/null
+        pkg_manifest "$pkg" "$tar_dir" 2>/dev/null
 
     elif [ -s "$mak_dir/$pid-c" ]; then
-        log "Package '$p_name' conflicts with another package" "" "!>"
-        log "Run 'KISS_CHOICE=1 kiss i $p_name' to add conflicts" "" "!>"
+        log "Package '$pkg' conflicts with another package" "" "!>"
+        log "Run 'KISS_CHOICE=1 kiss i $pkg' to add conflicts" "" "!>"
         die "as alternatives." "" "!>"
     fi
 }
