@@ -1024,7 +1024,6 @@ pkg_etc_file() {
     sum_new=$(sh256 "$1/$2")                         2>/dev/null ||:
     sum_sys=$(cd "$KISS_ROOT/"; sh256 "$2")          2>/dev/null ||:
     sum_old=$(awk "NR == $pkg_etc_cnt" "$mak_dir/c") 2>/dev/null ||:
-    echo $pkg_etc_cnt
 
     printf '%s\n' "Previous: ${sum_old:-null}"
     printf '%s\n' "System:   ${sum_sys:-null}"
