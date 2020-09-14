@@ -671,7 +671,7 @@ pkg_checksums() {
     while read -r src _ || [ "$src" ]; do
         # Skip comments, blank lines and git sources.
         if [ -z "${src##\#*}" ] || [ -z "${src##git+*}" ]; then
-            :
+            continue
 
         # Remote source.
         elif [ -z "${src##*://*}" ]; then
@@ -679,7 +679,7 @@ pkg_checksums() {
 
         # Skip directories.
         elif [ -d "$repo_dir/$src" ] || [ -d "/$src" ]; then
-            :
+            continue
 
         # Local file (relative).
         elif [ -f "$repo_dir/$src" ]; then
