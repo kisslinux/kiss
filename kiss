@@ -954,10 +954,13 @@ pkg_install_files() {
 
         # Copy files and create directories (preserving permissions),
         # skipping anything located in /etc/.
-        #
-        # The 'test' will run with '-e' for no-overwrite and '-z'
-        # for overwrite.
-        case $line in /etc/*) ;;
+        case $line in
+            /etc/?*[!/])
+                # Handle file in /etc/.
+                [ -d "$KISS_ROOT/$line" ] || test "$1" "$KISS_ROOT/$line" ||
+                    pkg_etc_file "$2" "${line#/}"
+            ;;
+
             */)
                 # Skip directories if they already exist in the file system.
                 # (Think /usr/bin, /usr/lib, etc).
@@ -977,6 +980,8 @@ pkg_install_files() {
                 }
         esac
     done ||:
+
+    pkg_etc_cnt=0
 }
 
 pkg_remove_files() {
@@ -1011,59 +1016,49 @@ pkg_remove_files() {
     done ||:
 }
 
-pkg_etc() (
-    [ -d "$tar_dir/$pkg/etc" ] || return 0
+pkg_etc_file() {
+    pkg_etc_cnt=$((pkg_etc_cnt + 1))
 
-    cd "$tar_dir/$pkg"
+    log "$pkg" "Doing 3-way handshake for $2"
 
-    # Create all directories beforehand.
-    find etc -type d | while read -r dir; do
-        mkdir -p "$KISS_ROOT/$dir"
-    done
+    sum_new=$(sh256 "$1/$2")                         2>/dev/null ||:
+    sum_sys=$(cd "$KISS_ROOT/"; sh256 "$2")          2>/dev/null ||:
+    sum_old=$(awk "NR == $pkg_etc_cnt" "$mak_dir/c") 2>/dev/null ||:
+    echo $pkg_etc_cnt
 
-    # Handle files in /etc/ based on a 3-way checksum check.
-    find etc -type f | sort | while read -r file; do
-        i=$((i + 1))
+    printf '%s\n' "Previous: ${sum_old:-null}"
+    printf '%s\n' "System:   ${sum_sys:-null}"
+    printf '%s\n' "New:      ${sum_new:-null}"
 
-        { sum_new=$(sh256 "$file")
-          sum_sys=$(cd "$KISS_ROOT/"; sh256 "$file")
-          sum_old=$(awk "NR == $i" "$mak_dir/c"); } 2>/dev/null ||:
+    # Use a case statement to easily compare three strings at
+    # the same time. Pretty nifty.
+    case ${sum_old:-null}${sum_sys:-null}${sum_new} in
+        # old = Y, sys = X, new = Y
+        "${sum_new}${sum_sys}${sum_old}")
+            log "Skipping $2"
+            return 0
+        ;;
 
-        log "$pkg" "Doing 3-way handshake for $file"
-        printf '%s\n' "Previous: ${sum_old:-null}"
-        printf '%s\n' "System:   ${sum_sys:-null}"
-        printf '%s\n' "New:      ${sum_new:-null}"
+        # old = X, sys = X, new = X
+        # old = X, sys = Y, new = Y
+        # old = X, sys = X, new = Y
+        "${sum_old}${sum_old}${sum_old}"|\
+        "${sum_old:-null}${sum_sys}${sum_sys}"|\
+        "${sum_sys}${sum_old}"*)
+            log "Installing $2"
+            new=
+        ;;
 
-        # Use a case statement to easily compare three strings at
-        # the same time. Pretty nifty.
-        case ${sum_old:-null}${sum_sys:-null}${sum_new} in
-            # old = Y, sys = X, new = Y
-            "${sum_new}${sum_sys}${sum_old}")
-                log "Skipping $file"
-                continue
-            ;;
+        # All other cases.
+        *)
+            war "$pkg" "saving /$2 as /$2.new"
+            new=.new
+        ;;
+    esac
 
-            # old = X, sys = X, new = X
-            # old = X, sys = Y, new = Y
-            # old = X, sys = X, new = Y
-            "${sum_old}${sum_old}${sum_old}"|\
-            "${sum_old:-null}${sum_sys}${sum_sys}"|\
-            "${sum_sys}${sum_old}"*)
-                log "Installing $file"
-                new=
-            ;;
-
-            # All other cases.
-            *)
-                war "$pkg" "saving /$file as /$file.new"
-                new=.new
-            ;;
-        esac
-
-        cp -fPp "$file" "$KISS_ROOT/${file}${new}"
-        chown root:root "$KISS_ROOT/${file}${new}" 2>/dev/null
-    done ||:
-)
+    cp -fPp "$1/$2" "$KISS_ROOT/${2}${new}"
+    chown root:root "$KISS_ROOT/${2}${new}" 2>/dev/null
+}
 
 pkg_remove() {
     # Remove a package and all of its files. The '/etc' directory is handled
@@ -1174,8 +1169,6 @@ pkg_install() {
     run_hook pre-install "$pkg" "$tar_dir/$pkg"
     pkg_conflicts "$pkg"
 
-    log "$pkg" "Installing package"
-
     # Block being able to abort the script with Ctrl+C during installation.
     # Removes all risk of the user aborting a package installation leaving
     # an incomplete package installed.
@@ -1186,16 +1179,8 @@ pkg_install() {
     cp -f "$sys_db/$pkg/manifest" "$mak_dir/m" 2>/dev/null ||:
     cp -f "$sys_db/$pkg/etcsums"  "$mak_dir/c" 2>/dev/null ||:
 
-    # Install the package's files by iterating over its manifest.
+    log "$pkg" "Installing package"
     pkg_install_files -z "$tar_dir/$pkg"
-
-    # Handle /etc/ files in a special way (via a 3-way checksum) to determine
-    # how these files should be installed. Do we overwrite the existing file?
-    # Do we install it as $file.new to avoid deleting user configuration? etc.
-    #
-    # This is more or less similar to Arch Linux's Pacman with the user manually
-    # handling the .new files when and if they appear.
-    pkg_etc
 
     # This is the aforementioned step removing any files from the old version of
     # the package if the installation is an update. Each file type has to be
@@ -1204,15 +1189,13 @@ pkg_install() {
     # Files in /etc/ are skipped entirely as they'll be handled via a 3-way
     # checksum system due to the nature of their existence.
     grep -vFxf "$sys_db/$pkg/manifest" "$mak_dir/m" 2>/dev/null |
-    pkg_remove_files
+        pkg_remove_files
 
     # Install the package's files a second time to fix any mess caused by the
     # above removal of the previous version of the package.
     log "$pkg" "Verifying installation"
     pkg_install_files -e "$tar_dir/$pkg"
 
-    # Reset 'trap' to its original value. Installation is done so we no longer
-    # need to block 'Ctrl+C'.
     trap pkg_clean EXIT INT
 
     if [ -x "$sys_db/$pkg/post-install" ]; then
@@ -1383,15 +1366,19 @@ args() {
     case $action in
         b|build|c|checksum|d|download|i|install|r|remove)
             [ "$1" ] || {
+                # Intentional.
+                # shellcheck disable=2031
                 export KISS_PATH=${PWD%/*}:$KISS_PATH
                 set -- "${PWD##*/}"
             }
 
-            case "$*" in
-                *'*'*|*'!'*|*'['*|*']'*|*' '*|*'	'*)
-                    die "Arguments contain invalid characters: '!*[ \t]'"
-                ;;
-            esac
+            for arg do
+                case $arg in
+                    *'*'*|*'!'*|*'['*|*']'*|*' '*|*'	'*)
+                        die "Argument contains: '!*[ \t]' ($arg)"
+                    ;;
+                esac
+            done
         ;;
     esac
 
