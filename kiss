@@ -692,6 +692,36 @@ pkg_checksums() {
     done < "$repo_dir/sources" || die "$1" "Failed to generate checksums"
 }
 
+pkg_checksums_save() {
+    # Generate and save checksums to file.
+    pkg_find "$pkg"
+
+    [ -f "$repo_dir/sources" ] ||
+        continue
+
+    sums=$(pkg_checksums "$pkg")
+
+    [ "$sums" ] || {
+        log "$pkg" "Nothing to do"
+        continue
+    }
+
+    # False positive ('>> file' with no command).
+    # shellcheck disable=2188
+    printf '%s\n' "$sums" |
+
+    if 2>/dev/null >> "$repo_dir/checksums"; then
+        tee "$repo_dir/checksums"
+
+    else
+        log "$pkg" "Need permissions to generate checksums"
+        file_owner "$repo_dir"
+        as_root tee "$repo_dir/checksums"
+    fi
+
+    log "$pkg" "Generated checksums"
+}
+
 pkg_verify() {
     # Verify all package checksums. This is achieved by generating a new set
     # of checksums and then comparing those with the old set.
@@ -1297,56 +1327,52 @@ args() {
     # once you memorize the commands.
     case $action in
         a|alternatives)
-            if [ "$1" = - ]; then
-                while read -r pkg path; do
-                    pkg_swap "$pkg" "$path"
-                done
+            case $1 in
+                -)
+                    while read -r pkg path; do
+                        pkg_swap "$pkg" "$path"
+                    done
+                ;;
 
-            elif [ "$1" ]; then
-                pkg_swap "$@"
+                '')
+                    set +f
 
-            else
-                # Go over each alternative and format the file
-                # name for listing. (pkg_name>usr>bin>ls)
-                set +f; for pkg in "$sys_db/../choices"/*; do
-                    printf '%s\n' "${pkg##*/}"
-                done | sed 's|>| /|; s|>|/|g; /\*/d'
-            fi
+                    # Go over each alternative and format the file
+                    # name for listing. (pkg_name>usr>bin>ls)
+                    for pkg in "$sys_db/../choices"/*; do
+                        printf '%s\n' "${pkg##*/}"
+                    done |
+
+                    sed 's|>| /|; s|>|/|g; /\*/d'
+                ;;
+
+                *)
+                    pkg_swap "$@"
+                ;;
+            esac
+        ;;
+
+        b|build)
+            pkg_build "${@:?No packages installed}"
         ;;
 
         c|checksum)
-            for pkg do pkg_lint    "$pkg"; done
-            for pkg do pkg_sources "$pkg" c; done
             for pkg do
-                pkg_find "$pkg"
+                pkg_lint "$pkg"
+            done
 
-                [ -f "$repo_dir/sources" ] || {
-                    log "$pkg" "No sources file, skipping checksums"
-                    continue
-                }
+            for pkg do
+                pkg_sources "$pkg"
+            done
 
-                sums=$(pkg_checksums "$pkg")
+            for pkg do
+                pkg_checksums_save "$pkg"
+            done
+        ;;
 
-                [ "$sums" ] || {
-                    log "$pkg" "No sources needing checksums"
-                    continue
-                }
-
-                # False positive ('>> file' with no command).
-                # shellcheck disable=2188
-                printf '%s\n' "$sums" |
-
-                if 2>/dev/null >> "$repo_dir/checksums"; then
-                    tee "$repo_dir/checksums"
-
-                else
-                    log "$pkg" "Need permissions to generate checksums"
-                    file_owner "$repo_dir"
-
-                    user=$user as_root tee "$repo_dir/checksums"
-                fi
-
-                log "$pkg" "Generated checksums"
+        d|download)
+            for pkg do
+                pkg_sources "$pkg"
             done
         ;;
 
@@ -1356,18 +1382,29 @@ args() {
             done
         ;;
 
+        l|list)
+            pkg_list "$@"
+        ;;
+
         r|remove)
             for pkg do
                 pkg_remove "$pkg"
             done
         ;;
 
-        b|build)    pkg_build "${@:?No packages installed}" ;;
-        d|download) for pkg do pkg_sources "$pkg"; done ;;
-        l|list)     pkg_list "$@" ;;
-        u|update)   pkg_updates ;;
-        s|search)   for pkg do pkg_find "$pkg" all; done ;;
-        v|version)  printf '5.1.0\n' ;;
+        s|search)
+            for pkg do
+                pkg_find "$pkg" all
+            done
+        ;;
+
+        u|update)
+            pkg_updates
+        ;;
+
+        v|version)
+            printf '5.1.0\n'
+        ;;
 
         '')
             log 'kiss [a|b|c|d|i|l|r|s|u|v] [pkg]...'
