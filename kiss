@@ -172,8 +172,6 @@ pkg_list() {
 
         printf '%s\n' "$_pkg $version"
     done
-
-    cd "$OLDPWD"
 }
 
 pkg_cache() {
@@ -360,24 +358,14 @@ pkg_depends() {
     # Resolve all dependencies and generate an ordered list. The deepest
     # dependencies are listed first and then the parents in reverse order.
     contains "$deps" "$1" || {
-        # Filter out non-explicit, aleady installed dependencies.
-        case $3-$2 in
-            *?-) pkg_list "$1" >/dev/null 2>&1 && return 0
-        esac
-
+        pkg_list "$1" >/dev/null 2>&1 && return 0
         pkg_find "$1"
 
         # Recurse through the dependencies of the child packages.
         [ -f "$repo_dir/depends" ] && {
             while read -r dep _ || [ "$dep" ]; do
                 case $dep in
-                    \#*|'')
-                        # Comments and blank lines.
-                    ;;
-
-                    *)
-                        pkg_depends "$dep" '' "$3"
-                    ;;
+                    [!\#]*) pkg_depends "$dep" ;;
                 esac
             done < "$repo_dir/depends"
         }
@@ -572,7 +560,7 @@ pkg_build() {
     # Any duplicates are also filtered out.
     for pkg do
         contains "$explicit" "$pkg" || {
-            pkg_depends "$pkg" explicit filter
+            pkg_depends "$pkg" explicit
             explicit="$explicit $pkg "
         }
     done
