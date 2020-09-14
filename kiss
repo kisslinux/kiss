@@ -692,18 +692,18 @@ pkg_checksums() {
     done < "$repo_dir/sources" || die "$1" "Failed to generate checksums"
 }
 
-pkg_checksums_save() {
+pkg_checksum_save() {
     # Generate and save checksums to file.
-    pkg_find "$pkg"
+    pkg_find "$1"
 
     [ -f "$repo_dir/sources" ] ||
-        continue
+        return 0
 
-    sums=$(pkg_checksums "$pkg")
+    sums=$(pkg_checksums "$1")
 
     [ "$sums" ] || {
-        log "$pkg" "Nothing to do"
-        continue
+        log "$1" "Nothing to do"
+        return 0
     }
 
     # False positive ('>> file' with no command).
@@ -714,12 +714,12 @@ pkg_checksums_save() {
         tee "$repo_dir/checksums"
 
     else
-        log "$pkg" "Need permissions to generate checksums"
+        log "$1" "Need permissions to generate checksums"
         file_owner "$repo_dir"
         as_root tee "$repo_dir/checksums"
     fi
 
-    log "$pkg" "Generated checksums"
+    log "$1" "Generated checksums"
 }
 
 pkg_verify() {
@@ -1366,7 +1366,7 @@ args() {
             done
 
             for pkg do
-                pkg_checksums_save "$pkg"
+                pkg_checksum_save "$pkg"
             done
         ;;
 
