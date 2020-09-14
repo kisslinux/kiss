@@ -1375,21 +1375,16 @@ args() {
 
     case $action in
         b|build|c|checksum|d|download|i|install|r|remove)
-            # This handles the globbing characters '*', '!', '[' and ']' and
-            # basic white-space. Invalid input characters in other words.
+            [ "$1" ] || {
+                export KISS_PATH=${PWD%/*}:$KISS_PATH
+                set -- "${PWD##*/}"
+            }
+
             case "$*" in
                 *'*'*|*'!'*|*'['*|*']'*|*' '*|*'	'*)
                     die "Arguments contain invalid characters: '!*[ \t]'"
                 ;;
             esac
-
-            # CRUX style usage using the current directory as the name of the
-            # package to be operated on. This needs to sit before the 'as_root()'
-            # calls as they reset the cwd during their invocations.
-            [ "$1" ] || {
-                export KISS_PATH=${PWD%/*}:$KISS_PATH
-                set -- "${PWD##*/}"
-            }
         ;;
     esac
 
