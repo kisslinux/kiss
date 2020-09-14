@@ -518,8 +518,7 @@ pkg_tar() (
 
     read -r version release < "$repo_dir/version"
 
-    # Use 'cd' to avoid needing tar's '-C' flag which may not be portable
-    # across implementations.
+    # Avoid tar -C (not portable).
     cd "$pkg_dir/$1"
 
     # Create a tarball from the contents of the built package.
