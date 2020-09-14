@@ -1116,15 +1116,19 @@ pkg_install() {
     [ "$KISS_FORCE" = 1 ] || {
         pkg_manifest_verify "$pkg_db/$pkg/manifest"
 
-        # Intentional.
-        # shellcheck disable=2030
-        (
-            KISS_PATH=$tar_dir/$pkg/$pkg_db:$KISS_PATH
+        [ -f "$pkg_db/$pkg/depends" ] && {
+            while read -r dep dep_type || [ "$dep" ]; do
+                case "$dep ${dep_type:-null}" in
+                    [!#]*\ null)
+                        pkg_list "$dep" >/dev/null 2>&1 ||
+                            dep_err="$dep_err$dep, "
+                    ;;
+                esac
+            done < "$pkg_db/$pkg/depends"
 
-            pkg_depends "$pkg" explicit runtime 2>/dev/null ||:
-
-            [ -z "$deps" ] || die "$pkg" "Missing $deps"
-        )
+            [ -z "$dep_err" ] ||
+                die "$pkg" "Missing ${dep_err%, }"
+        }
     }
 
     run_hook pre-install "$pkg" "$tar_dir/$pkg"
