@@ -584,7 +584,7 @@ pkg_build() {
     done
 
     for pkg do pkg_sources "$pkg"; done
-    pkg_verify "$@"
+    for pkg do pkg_verify  "$pkg"; done
 
     # Finally build and create tarballs for all passed packages and
     # dependencies.
@@ -695,35 +695,23 @@ pkg_checksums() {
 pkg_verify() {
     # Verify all package checksums. This is achieved by generating a new set
     # of checksums and then comparing those with the old set.
-    verify_cmd="NR==FNR{a[\$1];next}/^git  .*/{next}!((\$1)in a){exit 1}"
+    pkg_find "$pkg"
 
-    for pkg do
-        pkg_find "$pkg"
+    [ -f "$repo_dir/sources" ] ||
+        return 0
 
-        [ -f "$repo_dir/sources" ] || continue
+    sum_sys=$(pkg_checksums "$pkg")
 
-        verify_sum=$(pkg_checksums "$pkg")
+    [ "$sum_sys" ] ||
+        return 0
 
-        [ "$verify_sum" ] || continue
-        [ -f "$repo_dir/checksums" ] || die "$pkg" "checksums file missing"
+    [ -f "$repo_dir/checksums" ] ||
+        die "$pkg" "checksums file missing"
 
-        # Check that the first column (separated by whitespace) match in both
-        # checksum files. If any part of either file differs, mismatch. Abort.
-        printf '%s\n' "$verify_sum" |
+    sum_pkg=$(cut -b 1-64 < "$repo_dir/checksums")
 
-        awk "$verify_cmd" - "$repo_dir/checksums" || {
-            log "$pkg" "Checksum mismatch"
-
-            # Instead of dying above, log it to the terminal. Also define a
-            # variable so we *can* die after all checksum files have been
-            # checked.
-            mismatch="$mismatch$pkg "
-        }
-    done
-
-    [ -z "$mismatch" ] || die "Checksum mismatch with: ${mismatch% }"
-
-    log "Verified all checksums"
+    [ "$sum_sys" = "$sum_pkg" ] ||
+        die "$pkg" "Checksum mismatch"
 }
 
 pkg_conflicts() {
