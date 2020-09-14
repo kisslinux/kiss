@@ -51,12 +51,11 @@ as_root() {
 }
 
 file_owner() {
-    # shellcheck disable=2046
-    set -- $(ls -ld "$1")
+    read -r _ _ user _ <<EOF
+$(ls -ld "$1")
+EOF
 
-    user=${3:-root}
-
-    id -u "$user" >/dev/null 2>&1 || user=root
+    id -u "${user:=root}" >/dev/null 2>&1 || user=root
 }
 
 run_hook() {
