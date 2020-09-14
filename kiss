@@ -131,14 +131,14 @@ pkg_find() {
 
     set --
 
-    # shellcheck disable=2086
+    # Globbing disabled for KISS_PATH word-splitting
     for path in $KISS_PATH "${what:-"$sys_db"}"; do
         set +f
 
-        for path2 in "$path/"$query; do
-            test "${what:--d}" "$path2" || continue
-
-            set -f -- "$@" "$path2"
+        # Globbing enabled for search.
+        for path2 in "$path/"${query%%/*}; do
+            test "${what:--d}" "$path2" &&
+                set -f -- "$@" "$path2"
         done
     done
 
