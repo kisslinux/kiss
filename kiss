@@ -1099,33 +1099,13 @@ pkg_remove() {
 pkg_install() {
     # Install a built package tarball.
     #
-    # Package installation works similarly to the method used by Slackware in
-    # some of their tooling. It's not the obvious solution to the problem,
-    # however it is the best solution at this given time.
-    #
-    # When an installation is an update to an existing package, instead of
-    # removing the old version first we do something different.
-    #
-    # The new version is installed overwriting any files which it has in
-    # common with the previously installed version of the package.
-    #
-    # A "diff" is then generated between the old and new versions and contains
-    # any files existing in the old version but not the new version.
-    #
-    # The package manager then goes and removes these files which leaves us
-    # with the new package version in the file system and all traces of the
-    # old version gone.
-    #
-    # For good measure the package manager will then install the new package
-    # an additional time. This is to ensure that the above diff didn't contain
-    # anything incorrect.
-    #
-    # This is the better method as it is "seamless". An update to busybox won't
-    # create a window in which there is no access to all of its utilities to
-    # give an example.
+    # 1. Install package overwriting any existing files.
+    # 2. Diff old manifest against new one and remove any files which exist in
+    #    the old instance of the package but not the new one.
+    # 3. Install package again, verifying all files and repairing any damage
+    #    done by #2.
 
-    # Install can also take the full path to a tarball. We don't need to check
-    # the repository if this is the case.
+    # Handle tarball vs cache lookup (pkg_cache).
     if [ -z "${1%%*.tar.*}" ] && [ -f "$1" ]; then
         tar_file=$1 pkg=${1##*/} pkg=${pkg%#*}
 
@@ -1139,19 +1119,11 @@ pkg_install() {
     mkdir -p "$tar_dir/$pkg"
     cd       "$tar_dir/$pkg"
 
-    # The tarball is extracted to a temporary directory where its contents are
-    # then "installed" to the filesystem. Running this step as soon as possible
-    # allows us to also check the validity of the tarball and bail out early
-    # if needed.
     decompress "$tar_file" | tar xf -
 
-    # Naively assume that the existence of a manifest file is all that
-    # determines a valid KISS package from an invalid one. This should be a
-    # fine assumption to make in 99.99% of cases.
-    [ -f "./$pkg_db/$pkg/manifest" ] || die "Not a valid KISS package"
+    [ -f "./$pkg_db/$pkg/manifest" ] ||
+        die "Not a valid KISS package"
 
-    # Ensure that the tarball's manifest is correct by checking that each file
-    # and directory inside of it actually exists.
     [ "$KISS_FORCE" = 1 ] || {
         pkg_manifest_verify "$pkg_db/$pkg/manifest"
 
@@ -1169,9 +1141,7 @@ pkg_install() {
     run_hook pre-install "$pkg" "$tar_dir/$pkg"
     pkg_conflicts "$pkg"
 
-    # Block being able to abort the script with Ctrl+C during installation.
-    # Removes all risk of the user aborting a package installation leaving
-    # an incomplete package installed.
+    # Block Ctrl+C during installation.
     trap '' INT
 
     # If the package is already installed (and this is an upgrade) make a
@@ -1182,17 +1152,9 @@ pkg_install() {
     log "$pkg" "Installing package"
     pkg_install_files -z "$tar_dir/$pkg"
 
-    # This is the aforementioned step removing any files from the old version of
-    # the package if the installation is an update. Each file type has to be
-    # specially handled to ensure no system breakage occurs.
-    #
-    # Files in /etc/ are skipped entirely as they'll be handled via a 3-way
-    # checksum system due to the nature of their existence.
     grep -vFxf "$sys_db/$pkg/manifest" "$mak_dir/m" 2>/dev/null |
         pkg_remove_files
 
-    # Install the package's files a second time to fix any mess caused by the
-    # above removal of the previous version of the package.
     log "$pkg" "Verifying installation"
     pkg_install_files -e "$tar_dir/$pkg"
 
