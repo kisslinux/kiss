@@ -347,7 +347,7 @@ pkg_depends() {
         [ -f "$repo_dir/depends" ] &&
             while read -r dep _ || [ "$dep" ]; do
                 case $dep in
-                    [!\#]*)
+                    [!#]*)
                         pkg_list "$dep" >/dev/null 2>&1 ||
                             pkg_depends "$dep"
                     ;;
