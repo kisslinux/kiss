@@ -754,9 +754,6 @@ pkg_verify() {
 }
 
 pkg_conflicts() {
-    # Check to see if a package conflicts with another.
-    log "$1" "Checking for package conflicts"
-
     # Filter the tarball's manifest and select only files. Resolve all
     # symlinks in file paths as well.
     while read -r file; do
@@ -1020,22 +1017,15 @@ pkg_remove_files() {
 pkg_etc_file() {
     pkg_etc_cnt=$((pkg_etc_cnt + 1))
 
-    log "$pkg" "Doing 3-way handshake for $2"
-
     sum_new=$(sh256 "$1/$2")                         2>/dev/null ||:
     sum_sys=$(cd "$KISS_ROOT/"; sh256 "$2")          2>/dev/null ||:
     sum_old=$(awk "NR == $pkg_etc_cnt" "$mak_dir/c") 2>/dev/null ||:
-
-    printf '%s\n' "Previous: ${sum_old:-null}"
-    printf '%s\n' "System:   ${sum_sys:-null}"
-    printf '%s\n' "New:      ${sum_new:-null}"
 
     # Use a case statement to easily compare three strings at
     # the same time. Pretty nifty.
     case ${sum_old:-null}${sum_sys:-null}${sum_new} in
         # old = Y, sys = X, new = Y
         "${sum_new}${sum_sys}${sum_old}")
-            log "Skipping $2"
             return 0
         ;;
 
@@ -1045,13 +1035,12 @@ pkg_etc_file() {
         "${sum_old}${sum_old}${sum_old}"|\
         "${sum_old:-null}${sum_sys}${sum_sys}"|\
         "${sum_sys}${sum_old}"*)
-            log "Installing $2"
             new=
         ;;
 
         # All other cases.
         *)
-            war "$pkg" "saving /$2 as /$2.new"
+            printf 'Saving /%s as /%s.new\n' "$2" "$2"
             new=.new
         ;;
     esac
@@ -1132,7 +1121,7 @@ pkg_install() {
         (
             KISS_PATH=$tar_dir/$pkg/$pkg_db:$KISS_PATH
 
-            pkg_depends "$pkg" explicit 2>/dev/null ||:
+            pkg_depends "$pkg" explicit runtime 2>/dev/null ||:
 
             [ -z "$deps" ] || die "$pkg" "Missing $deps"
         )
