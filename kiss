@@ -410,8 +410,6 @@ pkg_fixdeps() {
     # dependencies pulled in by the package's build suite.
     log "$1" "Checking for missing dependencies"
 
-    pkg_name=$1
-
     cd "$pkg_dir/$1/$pkg_db/$1"
 
     set +f
@@ -449,11 +447,11 @@ pkg_fixdeps() {
 
             # Skip listing some packages as dependencies.
             case $dep in
-                gcc                     |\
-                llvm                    |\
-                "${pkg_name%%-bin}"     |\
-                "${pkg_name%%-esr}"     |\
-                "${pkg_name%%-esr-bin}" |\
+                gcc                |\
+                llvm               |\
+                "${pkg%%-bin}"     |\
+                "${pkg%%-esr}"     |\
+                "${pkg%%-esr-bin}" |\
                 "")
                     continue
                 ;;
