@@ -192,15 +192,11 @@ pkg_sources() {
     # also checked.
     pkg_find "$1"
 
-    # Support packages without sources. Simply do nothing.
     [ -f "$repo_dir/sources" ] || return 0
 
     log "$1" "Fetching sources"
-
-    # Store each downloaded source in a directory named after the package it
-    # belongs to. This avoid conflicts between two packages having a source
-    # of the same name.
-    mkdir -p "$src_dir/$1" && cd "$src_dir/$1"
+    mkdir -p "$src_dir/$1"
+    cd "$src_dir/$1"
 
     while read -r src dest || [ "$src" ]; do
         if [ -z "${src##\#*}" ]; then
@@ -237,7 +233,6 @@ pkg_extract() {
     # local repository files.
     pkg_find "$1"
 
-    # Support packages without sources. Simply do nothing.
     [ -f "$repo_dir/sources" ] || return 0
 
     log "$1" "Extracting sources"
@@ -246,18 +241,15 @@ pkg_extract() {
         mkdir -p "$mak_dir/$1/$dest" && cd "$mak_dir/$1/$dest"
 
         case $src in
-            \#*|'')
+            \#* | '')
                 # Comments and blank lines.
             ;;
 
-            # Git repository.
             git+*)
                 # Split the source into URL + OBJECT (branch or commit).
                 url=${src##git+} com=${url##*[@#]} com=${com#${url%[#@]*}}
 
-                # This magic will shallow clone branches, commits or the
-                # regular repository. It correctly handles cases where a
-                # shallow clone is not possible.
+                # Shallow clone branches, commits or default branch.
                 log "$1" "Cloning ${url%[#@]*}"; {
                     git init
                     git remote add origin "${url%[#@]*}"
@@ -266,18 +258,15 @@ pkg_extract() {
                 } || die "$1" "Failed to clone $src"
             ;;
 
-            # Tarballs of any kind. This is a shell equivalent of
-            # GNU tar's '--strip-components 1'.
             *://*.tar|*://*.tar.??|*://*.tar.???|*://*.tar.????|*://*.t?z)
-                # Decompress the archive to a temporary .tar archive.
                 decompress "$src_dir/$1/${src##*/}" > .ktar
 
-                # Extract the tar archive to the current directory.
-                tar xf .ktar || die "$1" "Couldn't extract ${src##*/}"
+                tar xf .ktar ||
+                    die "$1" "Couldn't extract ${src##*/}"
 
                 # Iterate over all directories in the first level of the
-                # tarball's manifest. This is our equivalent of GNU tar's
-                # '--strip-components 1'.
+                # tarball's manifest. This does the equivalent to  GNU tar's
+                # '--strip-components 1' in a portable way.
                 tar tf .ktar | while IFS=/ read -r dir _; do
                     # Some tarballs contain './' as the top-level directory,
                     # we need to skip these occurances.
@@ -295,9 +284,6 @@ pkg_extract() {
                     # We can't use '-exec {} +' with any arguments between
                     # the '{}' and '+' as this is not POSIX. We must also
                     # use '$0' and '$@' to reference all arguments.
-                    #
-                    # Using only '$@' causes a single file from each
-                    # invocation to be left out of the list. Weird, right?
                     {
                         find "$pid-$dir/." ! -name . -prune \
                             -exec sh -c 'mv -f "$0" "$@" .' {} + ||
@@ -317,7 +303,6 @@ pkg_extract() {
                 rm -f .ktar
             ;;
 
-            # Zip archives.
             *://*.zip)
                 unzip "$src_dir/$1/${src##*/}" ||
                     die "$1" "Couldn't extract ${src##*/}"
@@ -404,6 +389,7 @@ pkg_strip() {
             # REL (object files (.o), static libraries (.a)).
             *177*E*L*F*0000020\ 001\ *|*\!*\<*a*r*c*h*\>*)
                 strip -g -R .comment -R .note "$file"
+                printf 'stripped debug .%s\n' "${file##"$pkg_dir/$1"}"
             ;;
 
             # EXEC (binaries), DYN (shared libraries).
@@ -412,6 +398,7 @@ pkg_strip() {
             # symbol entries which makes this safe to do.
             *177*E*L*F*0000020\ 00[23]\ *)
                 strip -s -R .comment -R .note "$file"
+                printf 'stripped all  .%s\n' "${file##"$pkg_dir/$1"}"
             ;;
         esac
     done 2>/dev/null ||:
@@ -486,22 +473,18 @@ pkg_fixdeps() {
 }
 
 pkg_manifest() (
-    # Generate the package's manifest file. This is a list of each file
-    # and directory inside the package. The file is used when uninstalling
-    # packages, checking for package conflicts and for general debugging.
-    log "$1" "Generating manifest"
-
     # This function runs as a sub-shell to avoid having to 'cd' back to the
     # prior directory before being able to continue.
-    cd "${2:-$pkg_dir}/$1"
+    cd "${2:-"$pkg_dir"}/$1"
 
     # find: Print all files and directories and append '/' to directories.
-    # sort: Sort the output in *reverse*. Directories appear *after* their
-    #       contents.
     # sed:  Remove the first character in each line (./dir -> /dir) and
     #       remove all lines which only contain '.'.
-    find . -type d -exec printf '%s/\n' {} + -o -print | sort -r |
-        sed '/^\.\/$/d;ss.ss' > "${2:-$pkg_dir}/$1/$pkg_db/$1/manifest"
+    find . -type d -exec printf '%s/\n' {} + -o -print |
+
+    sort -r |
+
+    sed '/^\.\/$/d;ss.ss' > "${2:-$pkg_dir}/$1/$pkg_db/$1/manifest"
 )
 
 pkg_manifest_verify() {
@@ -517,10 +500,6 @@ pkg_manifest_verify() {
 }
 
 pkg_etcsums() (
-    # Generate checksums for each configuration file in the package's /etc/
-    # directory for use in "smart" handling of these files.
-    log "$1" "Generating etcsums"
-
     # This function runs as a sub-shell to avoid having to 'cd' back to the
     # prior directory before being able to continue.
     [ -d "$pkg_dir/$1/etc" ] || return 0
@@ -535,13 +514,8 @@ pkg_etcsums() (
 )
 
 pkg_tar() (
-    # Create a tarball from the built package's files. This tarball also
-    # contains the package's database entry.
-    log "$1" "Creating tarball"
-
     pkg_find "$1"
 
-    # Read the version information to name the package.
     read -r version release < "$repo_dir/version"
 
     # Use 'cd' to avoid needing tar's '-C' flag which may not be portable
@@ -558,7 +532,6 @@ pkg_tar() (
         zst)  zstd -z  ;;
     esac > "$bin_dir/$1#$version-$release.tar.${KISS_COMPRESS:-gz}"
 
-    log "$1" "Successfully created tarball"
     run_hook post-package "$1"
 )
 
@@ -653,7 +626,6 @@ pkg_build() {
         # database entry.
         cp -LRf "$repo_dir" "$pkg_dir/$pkg/$pkg_db/"
 
-        log "$pkg" "Successfully built package"
         run_hook post-build "$pkg" "$pkg_dir/$pkg"
 
         # Remove all .la files from the packages. They're unneeded and cause
@@ -678,6 +650,8 @@ pkg_build() {
         pkg_manifest "$pkg"
         pkg_etcsums  "$pkg"
         pkg_tar      "$pkg"
+
+        log "$pkg" "Successfully built package"
 
         # Install only dependencies of passed packages. If this is an update,
         # install the built package regardless.
