@@ -720,26 +720,21 @@ pkg_conflicts() {
     while read -r file; do
         file=$KISS_ROOT/${file#/}
 
-        # Skip all directories.
-        case $file in */) continue; esac
+        case $file in
+            *[!/])
+                cd -P "${file%/*}" 2>/dev/null ||
+                    PWD=${file%/*}
 
-        # Attempt to resolve symlinks by using 'cd'.
-        # If this fails, fallback to the file's parent
-        # directory.
-        cd -P "${file%/*}" 2>/dev/null || PWD=${file%/*}
-
-        # Print the file with all symlinks in its path
-        # resolved to their real locations.
-        printf '%s\n' "${PWD#"$KISS_ROOT"}/${file##*/}"
+                printf '%s\n' "${PWD#"$KISS_ROOT"}/${file##*/}"
+            ;;
+        esac
     done < "$tar_dir/$1/$pkg_db/$1/manifest" > "$mak_dir/$pid-m"
 
     set +f
     set -f "$sys_db"/*/manifest
 
     # Generate a list of all installed package manifests and remove the
-    # current package from the list. This is the simplest method of
-    # dropping an item from the argument list. The one downside is that
-    # it cannot live in a function due to scoping of arguments.
+    # current package from the list.
     for manifest do
         shift
 
@@ -749,44 +744,22 @@ pkg_conflicts() {
         set -- "$@" "$manifest"
     done
 
-    # Return here if there is nothing to check conflicts against.
     [ "$#" != 0 ] || return 0
 
-    # Store the list of found conflicts in a file as we'll be using the
-    # information multiple times. Storing things in the cache dir allows
-    # us to be lazy as they'll be automatically removed on script end.
+    # Store the list of found conflicts in a file for reuse.
     grep -Fxf "$mak_dir/$pid-m" -- "$@" 2>/dev/null > "$mak_dir/$pid-c" ||:
 
-    # Enable alternatives automatically if it is safe to do so.
-    # This checks to see that the package that is about to be installed
-    # doesn't overwrite anything it shouldn't in '/var/db/kiss/installed'.
-    grep -q ":/var/db/kiss/installed/" "$mak_dir/$pid-c" ||
-        choice_auto=1
-
-    if [ "$KISS_CHOICE" != 0  ] &&
-       [ "$choice_auto"  = 1  ] &&
-       [ -s "$mak_dir/$pid-c" ]; then
-        # This is a novel way of offering an "alternatives" system.
-        # It is entirely dynamic and all "choices" are created and
-        # destroyed on the fly.
+    if [ "$KISS_CHOICE" != 0  ] && [ -s "$mak_dir/$pid-c" ]; then
+        # Choices are dynamically created and destroyed.
         #
-        # When a conflict is found between two packages, the file
-        # is moved to a directory called "choices" and its name
-        # changed to store its parent package and its intended
-        # location.
+        # All file conflicts are installed to the choices directory
+        # rather than their original destination. The package's
+        # manifest is updated to reflect this.
         #
-        # The package's manifest is then updated to reflect this
-        # new location.
-        #
-        # The 'kiss alternatives' command parses this directory and
-        # offers you the CHOICE of *swapping* entries in this
-        # directory for those on the filesystem.
-        #
-        # The alternatives command does the same thing we do here,
-        # it rewrites manifests and moves files around to make
-        # this work.
-        #
-        # Pretty nifty huh?
+        # Swapping between choices just moves the locations of two
+        # files around. The file in the system is copied to the
+        # choices directory and the choice is moved to the system
+        # (overwriting the remaining prior copy)
         while IFS=: read -r _ con; do
             printf 'Found conflict %s\n' "$con"
 
@@ -796,18 +769,18 @@ pkg_conflicts() {
 
             # Construct the file name of the "db" entry of the
             # conflicting file. (pkg_name>usr>bin>ls)
-            con_name=$(printf %s "$con" | sed 's|/|>|g')
+            con_name=$(printf %s "$pkg$con" | sed 's|/|>|g')
 
             # Move the conflicting file to the choices directory
             # and name it according to the format above.
             mv -f "$tar_dir/$pkg/$con" \
-                  "$tar_dir/$pkg/$cho_dir/$pkg$con_name" 2>/dev/null || {
+                  "$tar_dir/$pkg/$cho_dir/$con_name" 2>/dev/null || {
                 log "File must be in ${con%/*} and not a symlink to it"
-                log "This usually occurs when a binary is installed to"
+                log "This can occur when a binary is installed to"
                 log "/sbin instead of /usr/bin (example)"
-                log "Before this package can be used as an alternative,"
+                log "Before this file can be used as an alternative,"
                 log "this must be fixed in $pkg. Contact the maintainer"
-                die "by finding their details via 'kiss-maintainer'" "" "!>"
+                die "by finding their details via kiss-maintainer" "" "!>"
             }
         done < "$mak_dir/$pid-c"
 
