@@ -207,13 +207,13 @@ pkg_sources() {
             continue
 
         elif [ -z "${src##git+*}" ]; then
-            log "$1" "Found git source '${src##git+}'"
+            printf 'found git      %s\n' "${src##git+}"
 
         elif [ -f "${src##*/}" ]; then
-            log "$1" "Found cached source '${src##*/}'"
+            printf 'found cached   %s\n' "${src##*/}"
 
         elif [ -z "${src##*://*}" ]; then
-            log "$1" "Downloading $src"
+            printf 'downloading %s\n' "$src"
 
             curl "$src" -fLo "${src##*/}" || {
                 rm -f "${src##*/}"
@@ -221,10 +221,10 @@ pkg_sources() {
             }
 
         elif [ -e "$repo_dir/$src" ]; then
-            log "$1" "Found local relative source '$src'"
+            printf 'found relative %s\n' "$src"
 
         elif [ -e "/$src" ]; then
-            log "$1" "Found local absolute source '$src'"
+            printf 'found absolute %s\n' "$src"
 
         else
             die "$1" "No local file '$src'"
