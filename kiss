@@ -154,22 +154,21 @@ pkg_find() {
 }
 
 pkg_list() {
-    cd "$sys_db"
-
     [ "$1" ] || {
         set +f
-        set -f -- *
+        set -f -- "$sys_db/"*
     }
 
     for _pkg do
-        [ -d "$_pkg" ] || {
-            log "$_pkg" "not installed"
+        [ -d "$sys_db/${_pkg##*/}" ] || {
+            log "${_pkg##*/}" "not installed"
             return 1
         }
 
-        read -r version 2>/dev/null < "$_pkg/version" || version=null
+        read -r _ver 2>/dev/null < "$sys_db/${_pkg##*/}/version" ||
+            _ver=null
 
-        printf '%s\n' "$_pkg $version"
+        printf '%s\n' "${_pkg##*/} $_ver"
     done
 }
 
@@ -503,6 +502,18 @@ pkg_manifest() (
     find . -type d -exec printf '%s/\n' {} + -o -print | sort -r |
         sed '/^\.\/$/d;ss.ss' > "${2:-$pkg_dir}/$1/$pkg_db/$1/manifest"
 )
+
+pkg_manifest_verify() {
+    # Ensure that everything listed in the manifest exists in the tarball.
+    while read -r line; do
+        [ -h "./$line" ] ||
+        [ -e "./$line" ] ||
+            man_err="$man_err$line, "
+    done < "$1"
+
+    [ -z "$man_err" ] ||
+        die "$pkg" "Files in manifest missing from tarball: ${man_err%, }"
+}
 
 pkg_etcsums() (
     # Generate checksums for each configuration file in the package's /etc/
@@ -1001,9 +1012,9 @@ pkg_remove_files() {
 }
 
 pkg_etc() (
-    [ -d "$tar_dir/$pkg_name/etc" ] || return 0
+    [ -d "$tar_dir/$pkg/etc" ] || return 0
 
-    cd "$tar_dir/$pkg_name"
+    cd "$tar_dir/$pkg"
 
     # Create all directories beforehand.
     find etc -type d | while read -r dir; do
@@ -1018,7 +1029,7 @@ pkg_etc() (
           sum_sys=$(cd "$KISS_ROOT/"; sh256 "$file")
           sum_old=$(awk "NR == $i" "$mak_dir/c"); } 2>/dev/null ||:
 
-        log "$pkg_name" "Doing 3-way handshake for $file"
+        log "$pkg" "Doing 3-way handshake for $file"
         printf '%s\n' "Previous: ${sum_old:-null}"
         printf '%s\n' "System:   ${sum_sys:-null}"
         printf '%s\n' "New:      ${sum_new:-null}"
@@ -1044,7 +1055,7 @@ pkg_etc() (
 
             # All other cases.
             *)
-                war "$pkg_name" "saving /$file as /$file.new"
+                war "$pkg" "saving /$file as /$file.new"
                 new=.new
             ;;
         esac
@@ -1120,21 +1131,18 @@ pkg_install() {
 
     # Install can also take the full path to a tarball. We don't need to check
     # the repository if this is the case.
-    if [ -f "$1" ] && [ -z "${1%%*.tar.*}" ]; then
-        tar_file=$1 pkg_name=${1##*/} pkg_name=${pkg_name%#*}
+    if [ -z "${1%%*.tar.*}" ] && [ -f "$1" ]; then
+        tar_file=$1 pkg=${1##*/} pkg=${pkg%#*}
 
-    elif pkg_cache "$1" 2>/dev/null; then
-        pkg_name=$1
-
-    else
+    elif ! pkg_cache "$1" 2>/dev/null; then
         case $1 in
             *.tar.*) die "Tarball '$1' does not exist" ;;
             *)       die "Package '$1' has not yet been built"
         esac
     fi
 
-    mkdir -p "$tar_dir/$pkg_name"
-    cd       "$tar_dir/$pkg_name"
+    mkdir -p "$tar_dir/$pkg"
+    cd       "$tar_dir/$pkg"
 
     # The tarball is extracted to a temporary directory where its contents are
     # then "installed" to the filesystem. Running this step as soon as possible
@@ -1145,32 +1153,28 @@ pkg_install() {
     # Naively assume that the existence of a manifest file is all that
     # determines a valid KISS package from an invalid one. This should be a
     # fine assumption to make in 99.99% of cases.
-    [ -f "./$pkg_db/$pkg_name/manifest" ] || die "Not a valid KISS package"
+    [ -f "./$pkg_db/$pkg/manifest" ] || die "Not a valid KISS package"
 
     # Ensure that the tarball's manifest is correct by checking that each file
     # and directory inside of it actually exists.
     [ "$KISS_FORCE" = 1 ] || {
-        log "$pkg_name" "Checking that manifest is valid"
-        while read -r line; do
-            [ -h "./$line" ] || [ -e "./$line" ] ||
-                die "File $line missing from tarball but mentioned in manifest"
-        done < "$pkg_db/$pkg_name/manifest"
+        pkg_manifest_verify "$pkg_db/$pkg/manifest"
 
-        log "$pkg_name" "Checking that all dependencies are installed"
-        [ -f "$tar_dir/$pkg_name/$pkg_db/$pkg_name/depends" ] &&
-            while read -r dep dep_type || [ "$dep" ]; do
-                [ "${dep##\#*}" ] || continue
-                [ "$dep_type" ]   || pkg_list "$dep" >/dev/null ||
-                    install_dep="$install_dep'$dep', "
-            done < "$tar_dir/$pkg_name/$pkg_db/$pkg_name/depends"
+        # Intentional.
+        # shellcheck disable=2030
+        (
+            KISS_PATH=$tar_dir/$pkg/$pkg_db:$KISS_PATH
 
-        [ "$install_dep" ] && die "$1" "Package requires ${install_dep%, }"
+            pkg_depends "$pkg" explicit 2>/dev/null ||:
+
+            [ -z "$deps" ] || die "$pkg" "Missing $deps"
+        )
     }
 
-    run_hook pre-install "$pkg_name" "$tar_dir/$pkg_name"
-    pkg_conflicts "$pkg_name"
+    run_hook pre-install "$pkg" "$tar_dir/$pkg"
+    pkg_conflicts "$pkg"
 
-    log "$pkg_name" "Installing package"
+    log "$pkg" "Installing package"
 
     # Block being able to abort the script with Ctrl+C during installation.
     # Removes all risk of the user aborting a package installation leaving
@@ -1179,11 +1183,11 @@ pkg_install() {
 
     # If the package is already installed (and this is an upgrade) make a
     # backup of the manifest and etcsums files.
-    cp -f "$sys_db/$pkg_name/manifest" "$mak_dir/m" 2>/dev/null ||:
-    cp -f "$sys_db/$pkg_name/etcsums"  "$mak_dir/c" 2>/dev/null ||:
+    cp -f "$sys_db/$pkg/manifest" "$mak_dir/m" 2>/dev/null ||:
+    cp -f "$sys_db/$pkg/etcsums"  "$mak_dir/c" 2>/dev/null ||:
 
     # Install the package's files by iterating over its manifest.
-    pkg_install_files -z "$tar_dir/$pkg_name"
+    pkg_install_files -z "$tar_dir/$pkg"
 
     # Handle /etc/ files in a special way (via a 3-way checksum) to determine
     # how these files should be installed. Do we overwrite the existing file?
@@ -1199,25 +1203,25 @@ pkg_install() {
     #
     # Files in /etc/ are skipped entirely as they'll be handled via a 3-way
     # checksum system due to the nature of their existence.
-    grep -vFxf "$sys_db/$pkg_name/manifest" "$mak_dir/m" 2>/dev/null |
+    grep -vFxf "$sys_db/$pkg/manifest" "$mak_dir/m" 2>/dev/null |
     pkg_remove_files
 
     # Install the package's files a second time to fix any mess caused by the
     # above removal of the previous version of the package.
-    log "$pkg_name" "Verifying installation"
-    pkg_install_files -e "$tar_dir/$pkg_name"
+    log "$pkg" "Verifying installation"
+    pkg_install_files -e "$tar_dir/$pkg"
 
     # Reset 'trap' to its original value. Installation is done so we no longer
     # need to block 'Ctrl+C'.
     trap pkg_clean EXIT INT
 
-    if [ -x "$sys_db/$pkg_name/post-install" ]; then
-        log "$pkg_name" "Running post-install hook"
+    if [ -x "$sys_db/$pkg/post-install" ]; then
+        log "$pkg" "Running post-install hook"
 
-        hook_output=$("$sys_db/$pkg_name/post-install" 2>&1)
+        hook_output=$("$sys_db/$pkg/post-install" 2>&1)
 
         [ -z "$hook_output" ] || {
-            log "$pkg_name" "Running post-install hook" 2>&1
+            log "$pkg" "Running post-install hook" 2>&1
             printf '%s\n' "$hook_output"
         } |
 
@@ -1225,9 +1229,9 @@ pkg_install() {
         tee -a "$log_dir/post-install-$time-$pid" >/dev/null
     fi
 
-    run_hook post-install "$pkg_name" "$sys_db/$pkg_name"
+    run_hook post-install "$pkg" "$sys_db/$pkg"
 
-    log "$pkg_name" "Installed successfully"
+    log "$pkg" "Installed successfully"
 }
 
 pkg_updates() {
