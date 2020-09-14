@@ -359,7 +359,7 @@ pkg_depends() {
         pkg_find "$1"
 
         # Recurse through the dependencies of the child packages.
-        [ -f "$repo_dir/depends" ] && {
+        [ -f "$repo_dir/depends" ] &&
             while read -r dep _ || [ "$dep" ]; do
                 case $dep in
                     [!\#]*)
@@ -368,7 +368,6 @@ pkg_depends() {
                     ;;
                 esac
             done < "$repo_dir/depends"
-        }
 
         # After child dependencies are added to the list,
         # add the package which depends on them.
