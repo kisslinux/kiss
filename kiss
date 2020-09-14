@@ -36,7 +36,7 @@ as_root() {
     [ "$uid" = 0 ] || log "Using '${su:=su}' (to become ${user:=root})"
 
     case ${su##*/} in
-        doas|sudo|sls)
+        doas | sudo | sls)
             "$su" -u "$user" -- env "$@"
         ;;
 
@@ -387,7 +387,7 @@ pkg_strip() {
     find "$pkg_dir/$1" -type f | while read -r file; do
         case $(od -A o -t c -N 18 "$file") in
             # REL (object files (.o), static libraries (.a)).
-            *177*E*L*F*0000020\ 001\ *|*\!*\<*a*r*c*h*\>*)
+            *177*E*L*F*0000020\ 001\ * | *\!*\<*a*r*c*h*\>*)
                 strip -g -R .comment -R .note "$file"
                 printf 'stripped debug .%s\n' "${file##"$pkg_dir/$1"}"
             ;;
@@ -430,35 +430,47 @@ pkg_fixdeps() {
     find "$pkg_dir/${PWD##*/}/" -type f 2>/dev/null |
 
     while read -r file; do
-        # Run 'ldd' on the file and parse each line. The code then checks to
-        # see which packages own the linked libraries and it prints the result.
         ldd "$file" 2>/dev/null | while read -r _ _ dep _; do
             # Resolve path symlinks to find the real location to the library.
             cd -P "${dep%/*}" 2>/dev/null || continue
 
             # Skip files owned by libc and POSIX.
             case ${dep##*/} in
-                "" | ld-* | libpthread.so* | lib[cm].so* | libdl.so* |\
-                librt.so* | libtrace.so*   | libxnet.so*)
+                ld-*           |\
+                lib[cm].so*    |\
+                libdl.so*      |\
+                libpthread.so* |\
+                librt.so*      |\
+                libtrace.so*   |\
+                libxnet.so*    |\
+                "")
                     continue
                 ;;
             esac
 
             # Figure out which package owns the file.
             dep=$(grep -lFx "${PWD#"$KISS_ROOT"}/${dep##*/}" "$@")
-            dep=${dep%/*} dep=${dep##*/}
+            dep=${dep%/*}
+            dep=${dep##*/}
 
             case $dep in
                 # Skip listing these packages as dependencies.
-                # The pkg_name portions are to workaround incorrect detections
-                # from -bin or -esr packages.
-                ""|gcc|llvm|"${pkg_name%%-bin}"|\
-                "${pkg_name%%-esr}"|"${pkg_name%%-esr-bin}") ;;
+                gcc                     |\
+                llvm                    |\
+                "${pkg_name%%-bin}"     |\
+                "${pkg_name%%-esr}"     |\
+                "${pkg_name%%-esr-bin}" |\
+                "")
+                   continue
+                ;;
+
 
                 *) printf '%s\n' "$dep"
             esac
         done ||:
-    done | sort -uk1,1 depends - > "$mak_dir/d"
+    done |
+
+    sort -uk1,1 depends - > "$mak_dir/d"
 
     # Display a 'diff' of the new dependencies against the old ones.
     diff -U 3 depends - < "$mak_dir/d" ||:
