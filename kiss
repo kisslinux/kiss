@@ -1373,41 +1373,45 @@ args() {
     action=$1
     shift "$(($# != 0))"
 
-    # Unless this is a search, sanitize the user's input. The call to
-    # 'pkg_find()' supports basic globbing, ensure input doesn't expand
-    # to anything except for when this behavior is needed.
-    #
-    # This handles the globbing characters '*', '!', '[' and ']' as per:
-    # https://pubs.opengroup.org/onlinepubs/009695399/utilities/xcu_chap02.html
-    [ "${action##[as]*}" ] && case "$*" in *\**|*\!*|*\[*|*\]*)
-        die "Arguments contain invalid characters: '!*[]' ($*)"
-    esac
+    case $action in
+        b|build|c|checksum|d|download|i|install|r|remove)
+            # This handles the globbing characters '*', '!', '[' and ']' and
+            # basic white-space. Invalid input characters in other words.
+            case "$*" in
+                *'*'*|*'!'*|*'['*|*']'*|*' '*|*'	'*)
+                    die "Arguments contain invalid characters: '!*[ \t]'"
+                ;;
+            esac
 
-    # CRUX style usage using the current directory as the name of the package
-    # to be operated on. This needs to sit before the 'as_root()' calls as
-    # they reset the current working directory during their invocations.
-    [ "$1" ] || case $action in b|build|c|checksum|d|download|i|install|r|remove)
-        export KISS_PATH=${PWD%/*}:$KISS_PATH
-        set -- "${PWD##*/}"
+            # CRUX style usage using the current directory as the name of the
+            # package to be operated on. This needs to sit before the 'as_root()'
+            # calls as they reset the cwd during their invocations.
+            [ "$1" ] || {
+                export KISS_PATH=${PWD%/*}:$KISS_PATH
+                set -- "${PWD##*/}"
+            }
+        ;;
     esac
 
     # Rerun the script as root with a fixed environment if needed. We sadly
     # can't run singular functions as root so this is needed.
-    case $action in a|alternatives|i|install|r|remove)
-        [ -z "$1" ] || [ -w "$KISS_ROOT/" ] || [ "$uid" = 0 ] || {
-            as_root HOME="$HOME" \
-                    XDG_CACHE_HOME="$XDG_CACHE_HOME" \
-                    KISS_PATH="$KISS_PATH" \
-                    KISS_FORCE="$KISS_FORCE" \
-                    KISS_ROOT="$KISS_ROOT" \
-                    KISS_CHOICE="$KISS_CHOICE" \
-                    KISS_COLOR="$KISS_COLOR" \
-                    KISS_TMPDIR="$KISS_TMPDIR" \
-                    KISS_PID="$KISS_PID" \
-                    "$0" "$action" "$@"
+    case $action in
+        a|alternatives|i|install|r|remove)
+            [ -z "$1" ] || [ -w "$KISS_ROOT/" ] || [ "$uid" = 0 ] || {
+                as_root HOME="$HOME" \
+                        XDG_CACHE_HOME="$XDG_CACHE_HOME" \
+                        KISS_PATH="$KISS_PATH" \
+                        KISS_FORCE="$KISS_FORCE" \
+                        KISS_ROOT="$KISS_ROOT" \
+                        KISS_CHOICE="$KISS_CHOICE" \
+                        KISS_COLOR="$KISS_COLOR" \
+                        KISS_TMPDIR="$KISS_TMPDIR" \
+                        KISS_PID="$KISS_PID" \
+                        "$0" "$action" "$@"
 
-            return
-        }
+                return
+            }
+        ;;
     esac
 
     # Actions can be abbreviated to their first letter. This saves keystrokes
