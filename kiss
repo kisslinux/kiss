@@ -1186,8 +1186,8 @@ pkg_updates() {
     log "Updating repositories"
 
     # Create a list of all repositories.
-    # See [1] at top of script.
-    # shellcheck disable=2046,2086
+    # Intentional behavior.
+    # shellcheck disable=2031,2046,2086
     {
         IFS=:
         set -- $KISS_PATH
