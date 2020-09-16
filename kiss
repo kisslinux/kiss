@@ -253,7 +253,7 @@ pkg_extract() {
                 log "$1" "Cloning ${url%[#@]*}"; {
                     git init
                     git remote add origin "${url%[#@]*}"
-                    git fetch --depth=1 origin "$com" || git fetch
+                    git fetch --tags --depth=1 origin "$com" || git fetch --tags
                     git checkout "${com:-FETCH_HEAD}"
                 } || die "$1" "Failed to clone $src"
             ;;
