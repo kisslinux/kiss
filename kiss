@@ -341,7 +341,7 @@ pkg_depends() {
     # Resolve all dependencies and generate an ordered list. The deepest
     # dependencies are listed first and then the parents in reverse order.
     contains "$deps" "$1" || {
-        pkg_find "$1"
+        pkg_find "$1" 2>/dev/null ||:
 
         # Recurse through the dependencies of the child packages.
         [ -f "$repo_dir/depends" ] &&
@@ -548,24 +548,25 @@ pkg_build() {
         }
     done
 
-    # If this is an update, don't always build explicitly passsed packages
-    # and instead install pre-built binaries if they exist.
+    # If not an update, ignore the cache and build everything given
+    # on the command-line. If this is an update, use the cache.
     [ "$pkg_update" ] || explicit_build=$explicit
 
     # If an explicit package is a dependency of another explicit package,
     # remove it from the explicit list as it needs to be installed as a
     # dependency.
     for pkg do
-        contains "$deps" "$pkg" || explicit2=" $explicit2 $pkg "
+        contains "$deps" "$pkg" ||
+            explicit2=" $explicit2 $pkg "
     done
     explicit=$explicit2
 
-    # See [1] at top of script.
+    # Intentional, globbing disabled.
     # shellcheck disable=2046,2086
     set -- $deps $explicit
 
-    # Only ask for confirmation if more than one package needs to be built.
-    [ "$#" -gt 1 ] || [ "$pkg_update" ] && prompt "Building: $*"
+    [ "$#" -gt 1 ] || [ "$pkg_update" = 1 ] &&
+        prompt "Building $*"
 
     for pkg do pkg_lint "$pkg"; done
 
@@ -1493,8 +1494,8 @@ main() {
     # Figure out which 'sudo' command to use based on the user's choice or what
     # is available on the system.
     su=${KISS_SU:-"$(
-        command -v sudo || 
-        command -v doas || 
+        command -v sudo ||
+        command -v doas ||
         command -v sls
     )"} || su=su
 
