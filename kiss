@@ -576,7 +576,11 @@ pkg_build() {
     for pkg do
         ! contains "$explicit_build" "$pkg" && pkg_cache "$pkg" && {
             log "$pkg" "Installing binary from cache"
-            (KISS_FORCE=1 args i "$tar_file")
+
+            (
+                KISS_FORCE=1
+                args i "$tar_file"
+            )
 
             # Remove the now installed package from the build list.
             shift
@@ -657,7 +661,11 @@ pkg_build() {
         contains "$explicit" "$pkg" && [ -z "$pkg_update" ] && continue
 
         log "$pkg" "Needed as a dependency or has an update, installing"
-        (KISS_FORCE=1 args i "$pkg")
+
+        (
+            KISS_FORCE=1
+            args i "$pkg"
+        )
     done
 
     log "Successfully built all packages"
@@ -1484,7 +1492,11 @@ main() {
 
     # Figure out which 'sudo' command to use based on the user's choice or what
     # is available on the system.
-    su=${KISS_SU:-"$(command -v sudo || command -v doas || command -v sls)"} ||:
+    su=${KISS_SU:-"$(
+        command -v sudo || 
+        command -v doas || 
+        command -v sls
+    )"} || su=su
 
     # Store the date and time of script invocation to be used as the name of
     # the log files the package manager creates uring builds.

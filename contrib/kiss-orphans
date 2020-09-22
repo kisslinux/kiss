@@ -2,6 +2,7 @@
 # List orphaned packages
 
 cd "$KISS_ROOT/var/db/kiss/installed/"
+set -- *
 
 for pkg in *; do
     case $pkg in
