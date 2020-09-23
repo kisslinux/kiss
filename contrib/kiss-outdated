@@ -229,7 +229,7 @@ main() {
         exit 1
     }
 
-    printf '[Checking repology.org for outdated packages in %s]\n\n' "$1" >&2
+    printf '\n[Checking repology.org for outdated packages in %s]\n\n' "$1" >&2
 
     for pkg in */; do
         pkg=${pkg%%/}
