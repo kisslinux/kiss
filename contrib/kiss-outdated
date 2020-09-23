@@ -1,52 +1,54 @@
 #!/bin/sh
-# Check repository packages for updates
+# Check repository for outdated packages
 #
 # Intended behavior.
 # shellcheck disable=2106
 
-kiss search "${@:-*}" | (while read -r pkg_loc _; do {
-    read -r ver _ 2>/dev/null < "$pkg_loc/version" || continue
+[ "$1" ] || {
+    printf 'usage: kiss outdated /path/to/repo\n' >&2
+    exit 1
+}
 
-    pkg=${pkg_loc##*/}
+cd "$1" 2>/dev/null || {
+    printf 'repository %s is inaccessible\n' "$1" >&2
+    exit 1
+}
 
-    # Fix some package names.
-    case $pkg in
-        *-bin)   fix=${pkg%%-bin} ;;
-        *[0-9]r) fix=${pkg%%r} ;;
-    esac
+printf 'Checking for outdated packages in %s\n' "$1" >&2
 
-    # Ignore duplicates.
-    # shellcheck disable=2106
-    case $seen in
-        *" ${fix:-$pkg} "*) continue ;;
-        *) seen=" $seen ${fix:-$pkg} " ;;
-    esac
+for pkg in *; do
+    read -r ver _ < "$pkg/version" || {
+        printf 'warning: %s/version not found' "$PWD/$pkg" >&2
+        continue
+    }
 
-    # Grab the repology version from the SVG file.
-    rep=$(curl -s "https://repology.org/badge/latest-versions/${fix:-$pkg}.svg")
+    [ "$ver" = git ] && {
+        printf 'warning: skipping check for %s, version is git\n' "$pkg" >&2
+        continue
+    }
+
+    pkg=${pkg%%-bin}
+    pkg=${pkg%%-git}
+
+    rep=$(curl -s "https://repology.org/badge/latest-versions/$pkg.svg") || {
+        printf 'warning: failed to grab version for %s\n' "$pkg"
+        continue
+    }
+
     rep=${rep%</text>*}
     rep=${rep##*>}
 
-    # Skip these.
-    {
-        case $rep in -|''|' ') continue; esac
-        case $ver in git)      continue; esac
-    }
+    case $rep in
+        *", $ver"* | *"$ver,"* | "$ver")
+            # Found match, do nothing.
+        ;;
 
-    # Split the comma separated list.
-    # Intentional (and safe) splitting.
-    # shellcheck disable=2086
-    {
-        IFS=', '
-        set -f
-        set +f -- $rep
-        unset IFS
-    }
+        - | '' | ' ')
+            printf 'warning: empty response from remote for %s\n' "$pkg"
+        ;;
 
-    # Parse comma separated version lists.
-    {
-        for v; do case $v in "$ver") match=1; esac; done
-
-        [ "$match" ] || printf '%s\n' "$pkg $ver -> $rep"
-    }
-} & done; wait)
+        *)
+            printf '%s\n' "$pkg $ver -> $rep"
+        ;;
+    esac
+done
