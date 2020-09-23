@@ -20,7 +20,7 @@ for pkg in */; do
     pkg=${pkg%%/}
 
     read -r ver _ 2>/dev/null < "$pkg/version" || {
-        printf '%s: local version not found' "$pkg" >&2
+        printf '%s: local version not found\n' "$pkg" >&2
         continue
     }
 
