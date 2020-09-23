@@ -6,8 +6,8 @@ repology_version() {
     # svg latest-version badge and extracting the version from the xml.
     repology_name "$1"
 
-    rep=$(curl -s "https://repology.org/badge/latest-versions/$remote.svg") && {
-        remote_ver=${rep%</text>*}
+    r=$(curl -Ss "https://repology.org/badge/latest-versions/$remote.svg") && {
+        remote_ver=${r%</text>*}
         remote_ver=${remote_ver##*>}
     }
 }
