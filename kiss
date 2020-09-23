@@ -578,6 +578,8 @@ pkg_build() {
         ! contains "$explicit_build" "$pkg" && pkg_cache "$pkg" && {
             log "$pkg" "Installing binary from cache"
 
+            # False positive.
+            # shellcheck disable=2030
             (
                 KISS_FORCE=1
                 args i "$tar_file"
@@ -663,6 +665,8 @@ pkg_build() {
 
         log "$pkg" "Needed as a dependency or has an update, installing"
 
+        # False positive.
+        # shellcheck disable=2030
         (
             KISS_FORCE=1
             args i "$pkg"
@@ -1028,7 +1032,8 @@ pkg_remove() {
     # differently and configuration files are *not* overwritten.
     pkg_list "$1" >/dev/null
 
-    # Make sure that nothing depends on this package.
+    # False positive.
+    # shellcheck disable=2031
     [ "$KISS_FORCE" = 1 ] || {
         log "$1" "Checking for reverse dependencies"
 
@@ -1087,6 +1092,8 @@ pkg_install() {
     [ -f "./$pkg_db/$pkg/manifest" ] ||
         die "Not a valid KISS package"
 
+    # False positive.
+    # shellcheck disable=2031
     [ "$KISS_FORCE" = 1 ] || {
         pkg_manifest_verify "$pkg_db/$pkg/manifest"
 
@@ -1313,6 +1320,9 @@ args() {
 
     # Rerun the script as root with a fixed environment if needed. We sadly
     # can't run singular functions as root so this is needed.
+    #
+    # False positive.
+    # shellcheck disable=2031
     case $action in
         a|alternatives|i|install|r|remove)
             [ -z "$1" ] || [ -w "$KISS_ROOT/" ] || [ "$uid" = 0 ] || {
