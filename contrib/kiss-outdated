@@ -1,8 +1,5 @@
 #!/bin/sh
 # Check repository for outdated packages
-#
-# Intended behavior.
-# shellcheck disable=2106
 
 remote_name() {
     # Repology names some packages differently to us. This function fixes
