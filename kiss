@@ -1515,10 +1515,8 @@ main() {
     # This is used enough to warrant a place here.
     uid=$(id -u)
 
-    # (lazily) ensure that the KISS_ROOT doesn't end with a '/'.
-    KISS_ROOT=${KISS_ROOT%/}
-    KISS_ROOT=${KISS_ROOT%/}
-    KISS_ROOT=${KISS_ROOT%/}
+    # Ensure that the KISS_ROOT doesn't end with a '/'.
+    KISS_ROOT=${KISS_ROOT%"${KISS_ROOT##*[!/]}"}
 
     # Define some paths which we will then use throughout the script.
     sys_db=$KISS_ROOT/${pkg_db:=var/db/kiss/installed}
