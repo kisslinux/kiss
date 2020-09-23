@@ -4,53 +4,93 @@
 # Intended behavior.
 # shellcheck disable=2106
 
-[ "$1" ] || {
-    printf 'usage: kiss outdated /path/to/repo\n' >&2
-    exit 1
-}
+remote_name() {
+    # Repology names some packages differently to us. This function fixes
+    # any known naming inconsistences that aren't a result of packaging error.
+    remote=$(printf %s "$1" | tr '[:upper:]' '[:lower:]')
+    remote=${remote%%-bin}
+    remote=${remote%%-git}
 
-cd "$1" 2>/dev/null || {
-    printf 'repository %s is inaccessible\n' "$1" >&2
-    exit 1
-}
-
-printf 'Checking repology.org for outdated packages in %s\n' "$1" >&2
-
-for pkg in */; do
-    pkg=${pkg%%/}
-
-    read -r ver _ 2>/dev/null < "$pkg/version" || {
-        printf '%s: local version not found\n' "$pkg" >&2
-        continue
-    }
-
-    [ "$ver" = git ] && {
-        printf '%s: skipping, version is git\n' "$pkg" >&2
-        continue
-    }
-
-    pkg=${pkg%%-bin}
-    pkg=${pkg%%-git}
-
-    rep=$(curl -s "https://repology.org/badge/latest-versions/$pkg.svg") || {
-        printf '%s: failed to grab version from repology\n' "$pkg" >&2
-        continue
-    }
-
-    rep=${rep%</text>*}
-    rep=${rep##*>}
-
-    case $rep in
-        *", $ver"* | *"$ver,"* | "$ver")
-            # Found match, do nothing.
+    case $remote in
+        baselayout)
+            remote=baselayout-kiss
         ;;
 
-        - | '' | ' ')
-            printf '%s: empty response, is pkg named correctly?\n' "$pkg" >&2
+        gtk+[0-9])
+            remote=gtk
         ;;
 
-        *)
-            printf '%s: %s -> %s\n' "$pkg" "$ver" "$rep"
+        kiss)
+            remote=kiss-package-manager
+        ;;
+
+        st)
+            remote=st-term
+        ;;
+
+        xf86-*)
+            remote=xdrv:${remote##*-}
         ;;
     esac
-done
+}
+
+remote_ver() {
+    # Grab the package's version as known by repology.org by downloading the
+    # SVG badge and extracting the version from the XML. This is far simpler
+    # to work with rather than using the API directly.
+    remote_name "$1"
+
+    rep=$(curl -s "https://repology.org/badge/latest-versions/$remote.svg") && {
+        remote_ver=${rep%</text>*}
+        remote_ver=${remote_ver##*>}
+    }
+}
+
+main() {
+    [ "$1" ] || {
+        printf 'usage: kiss outdated /path/to/repo\n' >&2
+        exit 1
+    }
+
+    cd "$1" 2>/dev/null || {
+        printf 'repository %s is inaccessible\n' "$1" >&2
+        exit 1
+    }
+
+    printf 'Checking repology.org for outdated packages in %s\n' "$1" >&2
+
+    for pkg in */; do
+        pkg=${pkg%%/}
+
+        read -r ver _ 2>/dev/null < "$pkg/version" || {
+            printf '%s: local version not found\n' "$pkg" >&2
+            continue
+        }
+
+        [ "$ver" = git ] && {
+            printf '%s: skipping, version is git\n' "$pkg" >&2
+            continue
+        }
+
+        remote_ver "$pkg" || {
+            printf '%s: failed to grab version from repology\n' "$pkg" >&2
+            continue
+        }
+
+        case $remote_ver in
+            *", $ver"* | *"$ver,"* | "$ver")
+                # Found match, do nothing.
+            ;;
+
+            - | '' | ' ')
+                printf '%s: empty response, named correctly?\n' "$pkg" >&2
+            ;;
+
+            *)
+                printf '%s: %s -> %s\n' "$pkg" "$ver" "$remote_ver"
+            ;;
+        esac
+    done
+}
+
+main "$@"
