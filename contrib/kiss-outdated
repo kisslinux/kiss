@@ -14,7 +14,7 @@ cd "$1" 2>/dev/null || {
     exit 1
 }
 
-printf 'Checking for outdated packages in %s\n' "$1" >&2
+printf 'Checking repology.org for outdated packages in %s\n' "$1" >&2
 
 for pkg in */; do
     pkg=${pkg%%/}
@@ -46,7 +46,7 @@ for pkg in */; do
         ;;
 
         - | '' | ' ')
-            printf '%s: empty response from remote\n' "$pkg" >&2
+            printf '%s: empty response, is pkg named correctly?\n' "$pkg" >&2
         ;;
 
         *)
