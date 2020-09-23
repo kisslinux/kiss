@@ -16,14 +16,16 @@ cd "$1" 2>/dev/null || {
 
 printf 'Checking for outdated packages in %s\n' "$1" >&2
 
-for pkg in *; do
-    read -r ver _ < "$pkg/version" || {
-        printf 'warning: %s/version not found' "$PWD/$pkg" >&2
+for pkg in */; do
+    pkg=${pkg%%/}
+
+    read -r ver _ 2>/dev/null < "$pkg/version" || {
+        printf '%s: local version not found' "$pkg" >&2
         continue
     }
 
     [ "$ver" = git ] && {
-        printf 'warning: skipping check for %s, version is git\n' "$pkg" >&2
+        printf '%s: skipping, version is git\n' "$pkg" >&2
         continue
     }
 
@@ -31,7 +33,7 @@ for pkg in *; do
     pkg=${pkg%%-git}
 
     rep=$(curl -s "https://repology.org/badge/latest-versions/$pkg.svg") || {
-        printf 'warning: failed to grab version for %s\n' "$pkg"
+        printf '%s: failed to grab version from repology\n' "$pkg" >&2
         continue
     }
 
@@ -44,11 +46,11 @@ for pkg in *; do
         ;;
 
         - | '' | ' ')
-            printf 'warning: empty response from remote for %s\n' "$pkg"
+            printf '%s: empty response from remote\n' "$pkg" >&2
         ;;
 
         *)
-            printf '%s\n' "$pkg $ver -> $rep"
+            printf '%s: %s -> %s\n' "$pkg" "$ver" "$rep"
         ;;
     esac
 done
