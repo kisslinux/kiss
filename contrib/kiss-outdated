@@ -1,46 +1,221 @@
 #!/bin/sh
 # Check repository for outdated packages
 
-remote_name() {
-    # Repology names some packages differently to us. This function fixes
-    # any known naming inconsistences that aren't a result of packaging error.
-    remote=$(printf %s "$1" | tr '[:upper:]' '[:lower:]')
-    remote=${remote%%-bin}
-    remote=${remote%%-git}
+repology_version() {
+    # Grab the package's version as known by repology.org by downloading the
+    # svg latest-version badge and extracting the version from the xml.
+    repology_name "$1"
+
+    rep=$(curl -s "https://repology.org/badge/latest-versions/$remote.svg") && {
+        remote_ver=${rep%</text>*}
+        remote_ver=${remote_ver##*>}
+    }
+}
+
+repology_name() {
+    # Fix any known naming inconsistences between packages and Repology.
+    remote=$(
+        # Strip unrelated suffixes.
+        remote=${1%%-bin}
+        remote=${remote%%-git}
+
+        printf %s "$remote" |
+
+        # Remote names are all lowercase.
+        tr '[:upper:]' '[:lower:]' |
+
+        # Remote always uses -.
+        tr _ -
+    )
 
     case $remote in
         baselayout)
             remote=baselayout-kiss
         ;;
 
-        gtk+[0-9])
+        dash)
+            remote=dash-shell
+        ;;
+
+        dejavu-ttf)
+            remote=fonts:dejavu
+        ;;
+
+        dsp)
+            remote=dsp-audio-processing
+        ;;
+
+        emacs-nox)
+            # TODO [community]: Make default emacs no x11?
+            remote=emacs
+        ;;
+
+        fd)
+            remote=fd-find
+        ;;
+
+        fetsh)
+            # TODO [community]: Rename package?
+            remote=fet.sh
+        ;;
+
+        firefox-esr)
+            remote=firefox
+        ;;
+
+        font-awesome-ttf)
+            remote=fonts:fontawesome
+        ;;
+
+        gc)
+            remote=boehm-gc
+        ;;
+
+        gnugrep)
+            # shell-check is dumb here so this must be quoted.
+            remote='grep'
+        ;;
+
+        gnupg[12])
+            # Reported to repology.org.
+            # https://github.com/repology/repology-rules/issues/285
+            remote=gnupg
+        ;;
+
+        gtk+[23])
             remote=gtk
+        ;;
+
+        gst-*)
+            remote=gstreamer:${remote##*-}
+        ;;
+
+        gtar)
+            remote=tar
+        ;;
+
+        hack)
+            # It might be nice to adopt Repology's naming scheme for
+            # fonts as it also makes them self-documenting and easy
+            # to search for ('kiss s font:\*).
+            remote=fonts:hack
+        ;;
+
+        harfbuzz-icu)
+            # TODO: Report to repology.org?
+            # Package split.
+            remote=harfbuzz
         ;;
 
         kiss)
             remote=kiss-package-manager
         ;;
 
+        liberation-fonts)
+            remote=fonts:liberation
+        ;;
+
+        libmupdf | libxaw3d)
+            # TODO [community]: Rename packages?
+            remote=${remote##lib}
+        ;;
+
+        links2)
+            # TODO [community]: Rename package?
+            remote=links
+        ;;
+
+        lux)
+            remote=lux-brightness-ventto
+        ;;
+
+        man-pages)
+            # TODO: Report to repology.org.
+            # man-pages       -> manpages
+            # man-pages-posix -> man-pages-posix
+            remote=manpages
+        ;;
+
+        netsurf-fb)
+            remote=netsurf
+        ;;
+
+        openjpeg2)
+            # TODO [community]: Rename package?
+            remote=openjpeg
+        ;;
+
+        osh)
+            remote=oil-shell
+        ;;
+
+        pinentry-dmenu)
+            remote=pinentry-dmenu-cemkeylan
+        ;;
+
+        pyqt5)
+            # TODO [community]: Rename package?
+            remote=python-qt
+        ;;
+
+        python2)
+            remote=python
+        ;;
+
+        qt5*)
+            remote=qt
+        ;;
+
+        rage)
+            remote=rage-encryption-tool
+        ;;
+
+        sane)
+            remote=sane-backends
+        ;;
+
+        spleen-font)
+            remote=fonts:spleen
+        ;;
+
+        sshfs)
+            remote=fusefs:sshfs
+        ;;
+
+        surf)
+            remote=surf-browser
+        ;;
+
         st)
             remote=st-term
+        ;;
+
+        terminus-font)
+            remote=fonts:terminus
+        ;;
+
+        tiv)
+            remote=tiv-unclassified
+        ;;
+
+        unifont)
+            remote=fonts:unifont
+        ;;
+
+        webkit2gtk)
+            # TODO [community]: Rename package?
+            remote=webkitgtk
         ;;
 
         xf86-*)
             remote=xdrv:${remote##*-}
         ;;
+
+        xmlsec1)
+            # TODO [community]: Rename package?
+            remote=xmlsec
+        ;;
     esac
-}
-
-remote_ver() {
-    # Grab the package's version as known by repology.org by downloading the
-    # SVG badge and extracting the version from the XML. This is far simpler
-    # to work with rather than using the API directly.
-    remote_name "$1"
-
-    rep=$(curl -s "https://repology.org/badge/latest-versions/$remote.svg") && {
-        remote_ver=${rep%</text>*}
-        remote_ver=${remote_ver##*>}
-    }
 }
 
 main() {
@@ -54,37 +229,41 @@ main() {
         exit 1
     }
 
-    printf 'Checking repology.org for outdated packages in %s\n' "$1" >&2
+    printf '[Checking repology.org for outdated packages in %s]\n\n' "$1" >&2
 
     for pkg in */; do
         pkg=${pkg%%/}
 
         read -r ver _ 2>/dev/null < "$pkg/version" || {
-            printf '%s: local version not found\n' "$pkg" >&2
+            printf '%-30s local version not found\n' "$pkg" >&2
             continue
         }
 
         [ "$ver" = git ] && {
-            printf '%s: skipping, version is git\n' "$pkg" >&2
+            printf '%-30s git\n' "$pkg" >&2
             continue
         }
 
-        remote_ver "$pkg" || {
-            printf '%s: failed to grab version from repology\n' "$pkg" >&2
+        repology_version "$pkg" || {
+            printf '%-30s network error\n' "$pkg" >&2
             continue
         }
 
         case $remote_ver in
             *", $ver"* | *"$ver,"* | "$ver")
-                # Found match, do nothing.
+                # Package up-to-date, do nothing.
             ;;
 
             - | '' | ' ')
-                printf '%s: empty response, named correctly?\n' "$pkg" >&2
+                printf '\n%s: empty response\n' "$pkg" >&2
+                printf 'possible causes:\n' >&2
+                printf '    package name differs from repology name,\n' >&2
+                printf '    package not tracked by repology,\n' >&2
+                printf '    network error\n\n' >&2
             ;;
 
             *)
-                printf '%s: %s -> %s\n' "$pkg" "$ver" "$remote_ver"
+                printf '%-30s %s -> %s\n' "$pkg" "$ver" "$remote_ver"
             ;;
         esac
     done
