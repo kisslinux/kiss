@@ -1,17 +1,15 @@
 #!/bin/sh -e
 # List orphaned packages
 
-cd "$KISS_ROOT/var/db/kiss/installed/"
-set -- *
+cd "$KISS_ROOT/var/db/kiss/installed"
 
-for pkg in *; do
-    case $pkg in
-        # Exemptions for orphans which aren't really
-        # orphans. Exclude them from the list.
-        baseinit|baselayout|gcc|e2fsprogs|musl|\
-        make|busybox|bzip2|grub|kiss|git)
-            continue
-    esac
+# List of installed packages.
+printf -- '%s\n' * > "${TMPDIR:-/tmp}/packages"
 
-    grep -q "^$pkg$" ./*/depends || printf '%s\n' "$pkg"
-done
+# List of runtime dependencies.
+grep -hv ' make\|^#' ./*/depends | sort -u |
+
+# Remove items in list 2 from list 1.
+comm -23 "${TMPDIR:-/tmp}/packages" -
+
+rm -f "${TMPDIR:-/tmp}/packages"
