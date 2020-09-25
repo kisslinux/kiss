@@ -367,8 +367,16 @@ pkg_depends() {
             while read -r dep _ || [ "$dep" ]; do
                 case $dep in
                     [!#]*)
-                        pkg_list "$dep" >/dev/null 2>&1 ||
-                            pkg_depends "$dep"
+                        case $2 in
+                            show-installed)
+                                pkg_depends "$dep" "$2"
+                            ;;
+
+                            *)
+                                pkg_list "$dep" >/dev/null 2>&1 ||
+                                    pkg_depends "$dep"
+                            ;;
+                        esac
                     ;;
                 esac
             done < "$repo_dir/depends"
@@ -417,7 +425,7 @@ pkg_strip() {
             # symbol entries which makes this safe to do.
             *177*E*L*F*0000020\ 00[23]\ *)
                 strip -s -R .comment -R .note "$file"
-                printf 'stripped all  .%s\n' "${file##"$pkg_dir/$1"}"
+                printf 'stripped all   .%s\n' "${file##"$pkg_dir/$1"}"
             ;;
         esac
     done 2>/dev/null ||:
@@ -435,6 +443,11 @@ pkg_fixdeps() {
     set -f -- "$sys_db/"*/manifest
 
     : >> depends
+
+    # Generate list of all dependencies.
+    deps="gcc llvm"
+    pkg_depends "$pkg" show-installed
+    deps="$deps $pkg ${pkg%%-bin} ${pkg%%-git}"
 
     find "$pkg_dir/${PWD##*/}/" -type f 2>/dev/null |
 
@@ -464,21 +477,8 @@ pkg_fixdeps() {
             dep=${dep%/*}
             dep=${dep##*/}
 
-            # Skip listing some packages as dependencies.
-            case $dep in
-                gcc                |\
-                llvm               |\
-                "${pkg%%-bin}"     |\
-                "${pkg%%-esr}"     |\
-                "${pkg%%-esr-bin}" |\
-                "")
-                    continue
-                ;;
-
-                *)
-                    printf '%s\n' "$dep"
-                ;;
-            esac
+            # Only list dependencies not mentioned in any (nested) depends file.
+            contains "$deps" "$dep" || printf '%s\n' "$dep"
         done ||:
     done |
 
