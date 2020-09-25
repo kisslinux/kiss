@@ -466,11 +466,6 @@ pkg_fixdeps() {
                     "$elf_cmd" -d "$file" |
                         grep -q "NEEDED.* \[${dep##*/}\]"
                 ;;
-
-                *objdump)
-                    "$elf_cmd" -p "$file" |
-                        grep -q "NEEDED.* ${dep##*/}\$"
-                ;;
             esac || continue
 
             # Figure out which package owns the file.
@@ -1527,8 +1522,9 @@ main() {
 
     # Figure out which utility is available to dump elf information.
     elf_cmd=${KISS_ELFCMD:="$(
-        command -v readelf ||
-        command -v objdump
+        command -v readelf      ||
+        command -v eu-readelf   ||
+        command -v llvm-readelf
     )"} ||:
 
     # Store the date and time of script invocation to be used as the name of
