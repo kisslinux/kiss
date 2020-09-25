@@ -926,7 +926,7 @@ pkg_install_files() {
     sort "$2/$pkg_db/${2##*/}/manifest" |
 
     while read -r line; do
-        [ -d "$KISS_ROOT/$line" ] &&
+        [ -d "$KISS_ROOT/$line" ] || test "$1" "$KISS_ROOT/$line" &&
             continue
 
         rwx=$(ls -ld "$2/$line") oct='' b='' o=0
@@ -950,8 +950,7 @@ pkg_install_files() {
         # Copy files and create directories (preserving permissions).
         case $line in
             /etc/?*[!/])
-                test "$1" "$KISS_ROOT/$line" ||
-                    pkg_etc_file "$2" "${line#/}"
+                pkg_etc_file "$2" "${line#/}"
             ;;
 
             */)
@@ -959,14 +958,13 @@ pkg_install_files() {
             ;;
 
             *)
-                test "$1" "$KISS_ROOT/$line" || {
-                    cp -fP "$2/$line" "$KISS_ROOT/$line"
+                cp -fP "$2/$line" "$KISS_ROOT/$line"
 
-                    # This prepends $b which represents sticky bit,
-                    # setuid, setfgid, etc.
-                    [ -h "$KISS_ROOT/$line" ] ||
-                        chmod "$b$oct" "$KISS_ROOT/$line"
-                }
+                # This prepends $b which represents sticky bit,
+                # setuid, setfgid, etc.
+                [ -h "$KISS_ROOT/$line" ] ||
+                    chmod "$b$oct" "$KISS_ROOT/$line"
+            ;;
         esac
     done ||:
 
