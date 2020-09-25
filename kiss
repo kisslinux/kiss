@@ -863,7 +863,13 @@ pkg_swap() {
     # Swap between package alternatives.
     pkg_list "$1" >/dev/null
 
-    alt=$(printf %s "$1$2" | sed 's|/|>|g')
+    # pkg_name + /path/to/file -> pkg_name>path>to>file
+    alt=$(
+        printf %s "$1$2" |
+
+        sed 's|/|>|g'
+    )
+
     cd "$sys_db/../choices"
 
     if [ ! -f "$alt" ] && [ ! -h "$alt" ]; then
@@ -1225,44 +1231,41 @@ pkg_updates() {
                         git pull && git submodule update --remote --init -f
                             "
 
-                            # 'sudo' and 'doas' properly parse command-line
-                            # arguments and split them in the common way. 'su'
-                            # on the other hand requires that each argument be
-                            # properly quoted as the command passed to it must
-                            # be a string... This sets quotes where needed.
-                            case $su in *su) git_cmd="'$git_cmd'"; esac
+                            # 'su' requires that command be quoted.
+                            case $su in *su)
+                                git_cmd="'$git_cmd'"
+                            esac
 
-                            # Spawn a subshell to run multiple commands as
-                            # root at once. This makes things easier on users
-                            # who aren't using persist/timestamps for auth
-                            # caching.
-                            user=$user as_root sh -c "$git_cmd"
+                            as_root sh -c "$git_cmd"
                         )
                     fi
                 }
             ;;
         esac
 
-        [ ! -x update ] || {
+        if [ -x update ]; then
             log "$PWD" "Running update hook"
             ./update
-        }
+        fi
     done
 
     log "Checking for new package versions"
 
     set +f --
 
-    for pkg in "$sys_db/"*; do
-        pkg_find "${pkg##*/}"
+    for _pkg in "$sys_db/"*; do
+        pkg_find "${_pkg##*/}"
 
-        read -r db_ver db_rel < "$pkg/version"
+        read -r db_ver db_rel < "$_pkg/version"
         read -r re_ver re_rel < "$repo_dir/version"
 
-        # Compare installed packages to repository packages.
         [ "$db_ver-$db_rel" = "$re_ver-$re_rel" ] || {
-            printf '%s\n' "${pkg##*/} $db_ver-$db_rel -> $re_ver-$re_rel"
-            set -- "$@" "${pkg##*/}"
+            printf '%s %s-%s -> %s-%s\n' \
+                "${_pkg##*/}" \
+                "$db_ver" "$db_rel" \
+                "$re_ver" "$re_rel"
+
+            set -- "$@" "${_pkg##*/}"
         }
     done
 
