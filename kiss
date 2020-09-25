@@ -926,6 +926,9 @@ pkg_install_files() {
     sort "$2/$pkg_db/${2##*/}/manifest" |
 
     while read -r line; do
+        [ -d "$KISS_ROOT/$line" ] &&
+            continue
+
         rwx=$(ls -ld "$2/$line") oct='' b='' o=0
 
         # Convert the output of 'ls' (rwxrwx---) to octal. This is a
@@ -947,17 +950,16 @@ pkg_install_files() {
         # Copy files and create directories (preserving permissions).
         case $line in
             /etc/?*[!/])
-                test -d "$KISS_ROOT/$line" -o "$1" "$KISS_ROOT/$line" ||
+                test "$1" "$KISS_ROOT/$line" ||
                     pkg_etc_file "$2" "${line#/}"
             ;;
 
             */)
-                test -d "$KISS_ROOT/$line" ||
-                    mkdir -m "$oct" "$KISS_ROOT/$line"
+                mkdir -m "$oct" "$KISS_ROOT/$line"
             ;;
 
             *)
-                test -d "$KISS_ROOT/$line" -o "$1" "$KISS_ROOT/$line" || {
+                test "$1" "$KISS_ROOT/$line" || {
                     cp -fP "$2/$line" "$KISS_ROOT/$line"
 
                     # This prepends $b which represents sticky bit,
@@ -991,15 +993,15 @@ pkg_remove_files() {
         file=$KISS_ROOT/$file
 
         # Remove files.
-        if test -f "$file" -a ! -h "$file"; then
+        if [ -f "$file" ] && [ ! -h "$file" ]; then
             rm -f "$file"
 
         # Remove file symlinks.
-        elif test -h "$file" -a ! -d "$file"; then
+        elif [ -h "$file" ] && [ ! -d "$file" ]; then
             rm -f "$file"
 
         # Remove directories if empty.
-        elif test -d "$file" -a ! -h "$file"; then
+        elif [ -d "$file" ] && [ ! -h "$file" ]; then
             rmdir "$file" 2>/dev/null ||:
         fi
     done ||:
