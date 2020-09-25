@@ -462,12 +462,12 @@ pkg_fixdeps() {
 
             # Check if ldd result is direct dependency of package.
             case ${elf_cmd##*/} in
-                readelf)
+                *readelf)
                     "$elf_cmd" -d "$file" |
                         grep -q "NEEDED.* \[${dep##*/}\]"
                 ;;
 
-                objdump)
+                *objdump)
                     "$elf_cmd" -p "$file" |
                         grep -q "NEEDED.* ${dep##*/}\$"
                 ;;
