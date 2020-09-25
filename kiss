@@ -58,6 +58,24 @@ EOF
     id -u "${user:=root}" >/dev/null 2>&1 || user=root
 }
 
+find_replace() {
+    while IFS= read -r _line; do
+        case $_line in
+            "$1")
+                printf '%s\n' "$2"
+            ;;
+
+            *)
+                printf '%s\n' "$_line"
+            ;;
+        esac
+    done < "$3" |
+
+    sort -r > "$tmp_dir/.sed"
+
+    mv -f "$tmp_dir/.sed" "$3"
+}
+
 run_hook() {
     # Provide a default post-build hook to remove files and directories
     # for things we don't support out of the box. One can simply define
@@ -264,21 +282,20 @@ pkg_extract() {
             ;;
 
             *://*.tar|*://*.tar.??|*://*.tar.???|*://*.tar.????|*://*.t?z)
-                decompress "$src_dir/$1/${src##*/}" > .ktar
+                decompress "$src_dir/$1/${src##*/}" \
+                    > "$tmp_dir/.tar"
 
-                tar xf .ktar ||
+                tar xf "$tmp_dir/.tar" ||
                     die "$1" "Couldn't extract ${src##*/}"
 
                 # Iterate over all directories in the first level of the
-                # tarball's manifest. This does the equivalent to  GNU tar's
+                # tarball's manifest. This does the equivalent to GNU tar's
                 # '--strip-components 1' in a portable way.
-                tar tf .ktar | while IFS=/ read -r dir _; do
-                    # Some tarballs contain './' as the top-level directory,
-                    # we need to skip these occurances.
+                tar tf "$tmp_dir/.tar" | while IFS=/ read -r dir _; do
+                    # Handles tarballs with './' as top-level directory.
                     [ -d "${dir#.}" ] || continue
 
-                    # Move the directory to prevent naming conflicts between
-                    # the child and parent
+                    # Avoid naming conflicts.
                     mv -f "$dir" "$pid-$dir"
 
                     # First attempt to move all files up a directory level,
@@ -297,15 +314,12 @@ pkg_extract() {
                             -exec sh -c 'cp -fRp "$0" "$@" .' {} +
                     } 2>/dev/null
 
-                    # Remove the directory now that all files have been
-                    # transferred out of it. This can't be a simple 'rmdir'
-                    # as we may leave files in here due to above.
+                    # Clean up after ourselves.
                     rm -rf "$pid-$dir"
                 done
 
-                # Clean up after ourselves and remove the temporary tar
-                # archive we've created. Not needed at all really.
-                rm -f .ktar
+                # Clean up after ourselves.
+                rm -f "$tmp_dir/.tar"
             ;;
 
             *://*.zip)
@@ -468,11 +482,11 @@ pkg_fixdeps() {
         done ||:
     done |
 
-    sort -uk1,1 depends - > "$mak_dir/d"
+    sort -uk1,1 depends - > "$tmp_dir/.fixdeps"
 
-    diff -U 3 depends - < "$mak_dir/d" ||:
+    diff -U 3 depends - < "$tmp_dir/.fixdeps" ||:
 
-    mv -f "$mak_dir/d" depends
+    mv -f "$tmp_dir/.fixdeps" depends
 
     [ -s depends ] || rm -f depends
 }
@@ -489,7 +503,7 @@ pkg_manifest() (
 
     sort -r |
 
-    sed '/^\.\/$/d;ss.ss' > "${2:-$pkg_dir}/$1/$pkg_db/$1/manifest"
+    sed '/^\.\/$/d;ss.ss' > "${2:-"$pkg_dir"}/$1/$pkg_db/$1/manifest"
 )
 
 pkg_manifest_verify() {
@@ -644,17 +658,16 @@ pkg_build() {
         # issue with harfbuzz (See: 05096e5a4dc6db5d202342f538d067d87ae7135e).
         find "$pkg_dir/$pkg/usr/lib" -name \*.la -exec rm -f {} + 2>/dev/null ||:
 
-        # Remove this unneeded file from all packages as it is an endless
-        # source of conflicts. This is used with info pages we we do not support.
+        # Endless source of conflicts.
         rm -f "$pkg_dir/$pkg/usr/lib/charset.alias"
 
         # Create the manifest file early and make it empty. This ensures that
         # the manifest is added to the manifest.
         : > "$pkg_dir/$pkg/$pkg_db/$pkg/manifest"
 
-        # If the package contains '/etc', add a file called 'etcsums' to the
-        # manifest. See comment directly above.
-        [ -d "$pkg_dir/$pkg/etc" ] && : > "$pkg_dir/$pkg/$pkg_db/$pkg/etcsums"
+        # Same for etcsums if /etc exists in package.
+        [ -d "$pkg_dir/$pkg/etc" ] &&
+            : > "$pkg_dir/$pkg/$pkg_db/$pkg/etcsums"
 
         pkg_strip    "$pkg"
         pkg_fixdeps  "$pkg"
@@ -776,7 +789,7 @@ pkg_conflicts() {
                 printf '%s\n' "${PWD#"$KISS_ROOT"}/${file##*/}"
             ;;
         esac
-    done < "$tar_dir/$1/$pkg_db/$1/manifest" > "$mak_dir/$pid-m"
+    done < "$tar_dir/$1/$pkg_db/$1/manifest" > "$tmp_dir/.manifest"
 
     set +f
     set -f "$sys_db"/*/manifest
@@ -795,9 +808,10 @@ pkg_conflicts() {
     [ "$#" != 0 ] || return 0
 
     # Store the list of found conflicts in a file for reuse.
-    grep -Fxf "$mak_dir/$pid-m" -- "$@" 2>/dev/null > "$mak_dir/$pid-c" ||:
+    grep -Fxf "$tmp_dir/.manifest" -- "$@" 2>/dev/null \
+        > "$tmp_dir/.conflicts" ||:
 
-    if [ "$KISS_CHOICE" != 0  ] && [ -s "$mak_dir/$pid-c" ]; then
+    if [ "$KISS_CHOICE" != 0  ] && [ -s "$tmp_dir/.conflicts" ]; then
         # Choices are dynamically created and destroyed.
         #
         # All file conflicts are installed to the choices directory
@@ -830,7 +844,7 @@ pkg_conflicts() {
                 log "this must be fixed in $pkg. Contact the maintainer"
                 die "by finding their details via kiss-maintainer" "" "!>"
             }
-        done < "$mak_dir/$pid-c"
+        done < "$tmp_dir/.conflicts"
 
         log "$pkg" "Converted all conflicts to choices (kiss a)"
 
@@ -838,7 +852,7 @@ pkg_conflicts() {
         # to its new spot (and name) in the choices directory.
         pkg_manifest "$pkg" "$tar_dir" 2>/dev/null
 
-    elif [ -s "$mak_dir/$pid-c" ]; then
+    elif [ -s "$tmp_dir/.conflicts" ]; then
         log "Package '$pkg' conflicts with another package" "" "!>"
         log "Run 'KISS_CHOICE=1 kiss i $pkg' to add conflicts" "" "!>"
         die "as alternatives." "" "!>"
@@ -852,59 +866,51 @@ pkg_swap() {
     alt=$(printf %s "$1$2" | sed 's|/|>|g')
     cd "$sys_db/../choices"
 
-    [ -f "$alt" ] || [ -h "$alt" ] ||
+    if [ ! -f "$alt" ] && [ ! -h "$alt" ]; then
         die "Alternative '$1 $2' doesn't exist"
 
-    if [ -f "$2" ]; then
+    elif [ -f "$2" ]; then
         # Figure out which package owns the file we are going to swap for
         # another package's. Print the full path to the manifest file which
         # contains the match to our search.
-        pkg_owns=$(set +f; grep -lFx "$2" "$sys_db/"*/manifest) ||:
+        pkg_owns=$(
+            set +f
+            grep -lFx "$2" "$sys_db/"*/manifest
+        ) ||:
 
         # Extract the package name from the path above.
         pkg_owns=${pkg_owns%/*}
         pkg_owns=${pkg_owns##*/}
 
-        # Ensure that the file we're going to swap is actually owned by a
-        # package. If it is not, we have to die here.
-        [ "$pkg_owns" ] || die "File '$2' exists on filesystem but isn't owned"
+        case $pkg_owns in
+            '')
+                die "File '$2' exists on filesystem but isn't owned"
+            ;;
 
-        log "Swapping '$2' from '$pkg_owns' to '$1'"
+            *)
+                # Convert the current owner to an alternative and rewrite its
+                # manifest file to reflect this.
+                cp -Pf "$KISS_ROOT/$2" "$pkg_owns>${alt#*>}"
 
-        # Convert the current owner to an alternative and rewrite its manifest
-        # file to reflect this.
-        cp -Pf "$KISS_ROOT/$2" "$pkg_owns>${alt#*>}"
-
-        # Replace the matching line in the manifest with the desired replacement.
-        # This used to be a 'sed' call which turned out to be a little
-        # error-prone in some cases. This new method is a tad slower but ensures
-        # we never wipe the file due to a command error.
-        while read -r line; do
-            case $line in
-                "$2") printf '%s\n' "${PWD#"$KISS_ROOT"}/$pkg_owns>${alt#*>}" ;;
-                   *) printf '%s\n' "$line" ;;
-            esac
-        done < "../installed/$pkg_owns/manifest" | sort -r > "$mak_dir/.$1"
-
-        mv -f "$mak_dir/.$1" "../installed/$pkg_owns/manifest"
+                find_replace \
+                    "$2" \
+                    "${PWD#"$KISS_ROOT"}/$pkg_owns>${alt#*>}" \
+                    "../installed/$pkg_owns/manifest"
+            ;;
+        esac
     fi
 
     # Convert the desired alternative to a real file and rewrite the manifest
     # file to reflect this. The reverse of above.
     mv -f "$alt" "$KISS_ROOT/$2"
 
-    # Replace the matching line in the manifest with the desired replacement.
-    # This used to be a 'sed' call which turned out to be a little error-prone
-    # in some cases. This new method is a tad slower but ensures we never wipe
-    # the file due to a command error.
-    while read -r line; do
-        case $line in
-            "${PWD#"$KISS_ROOT"}/$alt") printf '%s\n' "$2" ;;
-                                     *) printf '%s\n' "$line" ;;
-        esac
-    done < "../installed/$1/manifest" | sort -r > "$mak_dir/.$1"
+    # Update the matching line in the manifest.
+    find_replace \
+        "${PWD#"$KISS_ROOT"}/$alt" \
+        "$2" \
+        "../installed/$1/manifest"
 
-    mv -f "$mak_dir/.$1" "../installed/$1/manifest"
+    printf '%s is now provided by %s (was %s)\n' "$2" "$1" "$pkg_owns"
 }
 
 pkg_install_files() {
@@ -914,13 +920,10 @@ pkg_install_files() {
     sort "$2/$pkg_db/${2##*/}/manifest" |
 
     while read -r line; do
-        # Grab the octal permissions so that directory creation
-        # preserves permissions.
-        # See: [2] at top of script.
         rwx=$(ls -ld "$2/$line") oct='' b='' o=0
 
-        # Convert the output of 'ls' (rwxrwx---) to octal. This is simply
-        # a 1-9 loop with the second digit being the value of the field.
+        # Convert the output of 'ls' (rwxrwx---) to octal. This is a
+        # 1-9 loop with the second digit being the value of the field.
         for c in 14 22 31 44 52 61 74 82 91; do
             rwx=${rwx#?}
 
@@ -933,29 +936,24 @@ pkg_install_files() {
             [ "$((${c%?} % 3))" = 0 ] && oct=$oct$o o=0
         done
 
-        # Copy files and create directories (preserving permissions),
-        # skipping anything located in /etc/.
+        # Copy files and create directories (preserving permissions).
         case $line in
             /etc/?*[!/])
-                # Handle file in /etc/.
                 [ -d "$KISS_ROOT/$line" ] || test "$1" "$KISS_ROOT/$line" ||
                     pkg_etc_file "$2" "${line#/}"
             ;;
 
             */)
-                # Skip directories if they already exist in the file system.
-                # (Think /usr/bin, /usr/lib, etc).
-                [ -d "$KISS_ROOT/$line" ] || mkdir -m "$oct" "$KISS_ROOT/$line"
+                [ -d "$KISS_ROOT/$line" ] ||
+                    mkdir -m "$oct" "$KISS_ROOT/$line"
             ;;
 
             *)
-                # Skip directories as they're likely symlinks in this case.
-                # Pure directories in manifests have a suffix of '/'.
                 [ -d "$KISS_ROOT/$line" ] || test "$1" "$KISS_ROOT/$line" || {
                     cp -fP "$2/$line" "$KISS_ROOT/$line"
 
-                    # Skip changing permissions of symlinks. This prevents
-                    # errors when the symlink exists prior to the target.
+                    # This prepends $b which represents sticky bit, setuid,
+                    # setfgid, etc.
                     [ -h "$KISS_ROOT/$line" ] ||
                         chmod "$b$oct" "$KISS_ROOT/$line"
                 }
@@ -972,7 +970,7 @@ pkg_remove_files() {
     while read -r file; do
         case $file in /etc/?*[!/])
             sum_sys=$(sh256 "$KISS_ROOT/$file")
-            sum_old=$(grep -F "$sum_sys" "$mak_dir/c")
+            sum_old=$(grep -F "$sum_sys" "$tmp_dir/.etcsums")
 
             [ "$sum_sys" = "$sum_old" ] || {
                 printf 'Skipping %s (modified)\n' "$file"
@@ -1000,9 +998,9 @@ pkg_remove_files() {
 pkg_etc_file() {
     pkg_etc_cnt=$((pkg_etc_cnt + 1))
 
-    sum_new=$(sh256 "$1/$2")                         2>/dev/null ||:
-    sum_sys=$(cd "$KISS_ROOT/"; sh256 "$2")          2>/dev/null ||:
-    sum_old=$(awk "NR == $pkg_etc_cnt" "$mak_dir/c") 2>/dev/null ||:
+    sum_new=$(sh256 "$1/$2")                                2>/dev/null ||:
+    sum_sys=$(cd "$KISS_ROOT/"; sh256 "$2")                 2>/dev/null ||:
+    sum_old=$(awk "NR == $pkg_etc_cnt" "$tmp_dir/.etcsums") 2>/dev/null ||:
 
     # Use a case statement to easily compare three strings at
     # the same time. Pretty nifty.
@@ -1042,8 +1040,12 @@ pkg_remove() {
     [ "$KISS_FORCE" = 1 ] || {
         log "$1" "Checking for reverse dependencies"
 
-        (cd "$sys_db"; set +f; grep -lFx "$1" -- */depends) &&
-            die "$1" "Can't remove package, others depend on it"
+        (
+            cd "$sys_db"
+            set +f
+            grep -lFx "$1" -- */depends
+
+        ) && die "$1" "Can't remove package, others depend on it"
     }
 
     # Block being able to abort the script with 'Ctrl+C' during removal.
@@ -1057,7 +1059,7 @@ pkg_remove() {
     fi
 
     # Make a backup of the etcsums file (if it exists).
-    cp -f "$sys_db/$1/etcsums" "$mak_dir/c" 2>/dev/null ||:
+    cp -f "$sys_db/$1/etcsums" "$tmp_dir/.etcsums" 2>/dev/null ||:
 
     log "$1" "Removing package"
     pkg_remove_files < "$sys_db/$1/manifest"
@@ -1125,13 +1127,13 @@ pkg_install() {
 
     # If the package is already installed (and this is an upgrade) make a
     # backup of the manifest and etcsums files.
-    cp -f "$sys_db/$pkg/manifest" "$mak_dir/m" 2>/dev/null ||:
-    cp -f "$sys_db/$pkg/etcsums"  "$mak_dir/c" 2>/dev/null ||:
+    cp -f "$sys_db/$pkg/manifest" "$tmp_dir/.manifest" 2>/dev/null ||:
+    cp -f "$sys_db/$pkg/etcsums"  "$tmp_dir/.etcsums"  2>/dev/null ||:
 
     log "$pkg" "Installing package"
     pkg_install_files -z "$tar_dir/$pkg"
 
-    grep -vFxf "$sys_db/$pkg/manifest" "$mak_dir/m" 2>/dev/null |
+    grep -vFxf "$sys_db/$pkg/manifest" "$tmp_dir/.manifest" 2>/dev/null |
         pkg_remove_files
 
     log "$pkg" "Verifying installation"
@@ -1291,10 +1293,7 @@ pkg_updates() {
 pkg_clean() {
     # Clean up on exit or error. This removes everything related to the build.
     [ "$KISS_DEBUG" = 1 ] ||
-        rm -rf \
-            "$mak_dir" \
-            "$pkg_dir" \
-            "$tar_dir"
+        rm -rf "$tmp_dir"
 }
 
 args() {
@@ -1363,15 +1362,15 @@ args() {
 
                     # Go over each alternative and format the file
                     # name for listing. (pkg_name>usr>bin>ls)
-                    for pkg in "$sys_db/../choices"/*; do
-                        printf '%s\n' "${pkg##*/}"
+                    for _pkg in "$sys_db/../choices"/*; do
+                        printf '%s\n' "${_pkg##*/}"
                     done |
 
                     sed 's|>| /|; s|>|/|g; /\*/d'
                 ;;
 
                 *)
-                    pkg_swap "$@"
+                    pkg_swap "$1" "$2"
                 ;;
             esac
         ;;
@@ -1528,12 +1527,13 @@ main() {
     # Create cache directories and define variables.
     mkdir -p \
         "${cac_dir:="${XDG_CACHE_HOME:-"${HOME:?HOME is null}/.cache"}/kiss"}" \
-        "${mak_dir:="${KISS_TMPDIR:="$cac_dir"}/build-$pid"}" \
-        "${pkg_dir:="${KISS_TMPDIR:="$cac_dir"}/pkg-$pid"}" \
-        "${tar_dir:="${KISS_TMPDIR:="$cac_dir"}/extract-$pid"}" \
-        "${src_dir:="$cac_dir/sources"}" \
-        "${log_dir:="$cac_dir/logs"}" \
-        "${bin_dir:="$cac_dir/bin"}"
+            "${src_dir:="$cac_dir/sources"}" \
+            "${log_dir:="$cac_dir/logs"}" \
+            "${bin_dir:="$cac_dir/bin"}" \
+        "${tmp_dir:="${KISS_TMPDIR:="$cac_dir/proc"}/$pid"}" \
+            "${mak_dir:="$tmp_dir/build"}" \
+            "${pkg_dir:="$tmp_dir/pkg"}" \
+            "${tar_dir:="$tmp_dir/extract"}"
 
     args "$@"
 }
