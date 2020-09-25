@@ -445,9 +445,9 @@ pkg_fixdeps() {
     : >> depends
 
     # Generate list of all dependencies.
-    deps="gcc llvm"
+    deps=
     pkg_depends "$pkg" show-installed
-    deps="$deps $pkg ${pkg%%-bin} ${pkg%%-git}"
+    deps="$deps gcc llvm $pkg ${pkg%%-bin} ${pkg%%-git}"
 
     find "$pkg_dir/${PWD##*/}/" -type f 2>/dev/null |
 
