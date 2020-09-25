@@ -461,7 +461,7 @@ pkg_fixdeps() {
             esac
 
             # Check if ldd result is direct dependency of package.
-            case ${elf_cmd##*/} in
+            case $elf_cmd in
                 *readelf)
                     "$elf_cmd" -d "$file" |
                         grep -q "NEEDED.* \[${dep##*/}\]"
