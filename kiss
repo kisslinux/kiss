@@ -939,27 +939,29 @@ pkg_install_files() {
                  [ST]*): "$((b+=1))" ;;
             esac
 
-            [ "$((${c%?} % 3))" = 0 ] && oct=$oct$o o=0
+            case $((${c%?} % 3)) in
+                0) oct=$oct$o o=0
+            esac
         done
 
         # Copy files and create directories (preserving permissions).
         case $line in
             /etc/?*[!/])
-                [ -d "$KISS_ROOT/$line" ] || test "$1" "$KISS_ROOT/$line" ||
+                test -d "$KISS_ROOT/$line" -o "$1" "$KISS_ROOT/$line" ||
                     pkg_etc_file "$2" "${line#/}"
             ;;
 
             */)
-                [ -d "$KISS_ROOT/$line" ] ||
+                test -d "$KISS_ROOT/$line" ||
                     mkdir -m "$oct" "$KISS_ROOT/$line"
             ;;
 
             *)
-                [ -d "$KISS_ROOT/$line" ] || test "$1" "$KISS_ROOT/$line" || {
+                test -d "$KISS_ROOT/$line" -o "$1" "$KISS_ROOT/$line" || {
                     cp -fP "$2/$line" "$KISS_ROOT/$line"
 
-                    # This prepends $b which represents sticky bit, setuid,
-                    # setfgid, etc.
+                    # This prepends $b which represents sticky bit,
+                    # setuid, setfgid, etc.
                     [ -h "$KISS_ROOT/$line" ] ||
                         chmod "$b$oct" "$KISS_ROOT/$line"
                 }
@@ -974,28 +976,30 @@ pkg_remove_files() {
     # installation and package removal. Combining the removals in these two
     # functions allows us to stop duplicating code.
     while read -r file; do
-        case $file in /etc/?*[!/])
-            sum_sys=$(sh256 "$KISS_ROOT/$file")
-            sum_old=$(grep -F "$sum_sys" "$tmp_dir/.etcsums")
+        case $file in
+            /etc/?*[!/])
+                sum_sys=$(sh256 "$KISS_ROOT/$file") ||:
+                sum_old=$(grep -F "$sum_sys" "$tmp_dir/.etcsums") ||:
 
-            [ "$sum_sys" = "$sum_old" ] || {
-                printf 'Skipping %s (modified)\n' "$file"
-                continue
-            }
-        esac 2>/dev/null ||:
+                [ "$sum_sys" = "$sum_old" ] || {
+                    printf 'Skipping %s (modified)\n' "$file"
+                    continue
+                }
+            ;;
+        esac 2>/dev/null
 
         file=$KISS_ROOT/$file
 
         # Remove files.
-        if [ -f "$file" ] && [ ! -h "$file" ]; then
+        if test -f "$file" -a ! -h "$file"; then
             rm -f "$file"
 
         # Remove file symlinks.
-        elif [ -h "$file" ] && [ ! -d "$file" ]; then
+        elif test -h "$file" -a ! -d "$file"; then
             rm -f "$file"
 
         # Remove directories if empty.
-        elif [ -d "$file" ] && [ ! -h "$file" ]; then
+        elif test -d "$file" -a ! -h "$file"; then
             rmdir "$file" 2>/dev/null ||:
         fi
     done ||:
@@ -1032,8 +1036,7 @@ pkg_etc_file() {
         ;;
     esac
 
-    cp -fPp "$1/$2" "$KISS_ROOT/${2}${new}"
-    chown root:root "$KISS_ROOT/${2}${new}" 2>/dev/null
+    cp -fP "$1/$2" "$KISS_ROOT/${2}${new}"
 }
 
 pkg_remove() {
@@ -1335,13 +1338,13 @@ args() {
             [ -z "$1" ] || [ -w "$KISS_ROOT/" ] || [ "$uid" = 0 ] || {
                 as_root HOME="$HOME" \
                         XDG_CACHE_HOME="$XDG_CACHE_HOME" \
-                        KISS_PATH="$KISS_PATH" \
-                        KISS_FORCE="$KISS_FORCE" \
-                        KISS_ROOT="$KISS_ROOT" \
                         KISS_CHOICE="$KISS_CHOICE" \
                         KISS_COLOR="$KISS_COLOR" \
-                        KISS_TMPDIR="$KISS_TMPDIR" \
+                        KISS_FORCE="$KISS_FORCE" \
+                        KISS_PATH="$KISS_PATH" \
                         KISS_PID="$KISS_PID" \
+                        KISS_ROOT="$KISS_ROOT" \
+                        KISS_TMPDIR="$KISS_TMPDIR" \
                         "$0" "$action" "$@"
 
                 return
@@ -1365,8 +1368,8 @@ args() {
 
                     # Go over each alternative and format the file
                     # name for listing. (pkg_name>usr>bin>ls)
-                    for _pkg in "$sys_db/../choices"/*; do
-                        printf '%s\n' "${_pkg##*/}"
+                    for pkg in "$sys_db/../choices"/*; do
+                        printf '%s\n' "${pkg##*/}"
                     done |
 
                     sed 's|>| /|; s|>|/|g; /\*/d'
