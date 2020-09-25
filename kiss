@@ -367,16 +367,8 @@ pkg_depends() {
             while read -r dep _ || [ "$dep" ]; do
                 case $dep in
                     [!#]*)
-                        case $2 in
-                            show-installed)
-                                pkg_depends "$dep" "$2"
-                            ;;
-
-                            *)
-                                pkg_list "$dep" >/dev/null 2>&1 ||
-                                    pkg_depends "$dep"
-                            ;;
-                        esac
+                        pkg_list "$dep" >/dev/null 2>&1 ||
+                            pkg_depends "$dep"
                     ;;
                 esac
             done < "$repo_dir/depends"
@@ -444,11 +436,6 @@ pkg_fixdeps() {
 
     : >> depends
 
-    # Generate list of all dependencies.
-    deps=
-    pkg_depends "$pkg" show-installed
-    deps="$deps gcc llvm $pkg ${pkg%%-bin} ${pkg%%-git}"
-
     find "$pkg_dir/${PWD##*/}/" -type f 2>/dev/null |
 
     while read -r file; do
@@ -456,7 +443,8 @@ pkg_fixdeps() {
 
         while read -r _ _ dep _; do
             # Resolve path symlinks to find the real location to the library.
-            cd -P "${dep%/*}" 2>/dev/null || continue
+            cd -P "$KISS_ROOT/${dep%/*}" 2>/dev/null ||
+                continue
 
             # Skip files owned by libc and POSIX.
             case ${dep##*/} in
@@ -472,13 +460,38 @@ pkg_fixdeps() {
                 ;;
             esac
 
+            # Check if ldd result is direct dependency of package.
+            case ${elf_cmd##*/} in
+                readelf)
+                    "$elf_cmd" -d "$file" |
+                        grep -q "NEEDED.* \[${dep##*/}\]"
+                ;;
+
+                objdump)
+                    "$elf_cmd" -p "$file" |
+                        grep -q "NEEDED.* ${dep##*/}\$"
+                ;;
+            esac || continue
+
             # Figure out which package owns the file.
             dep=$(grep -lFx "${PWD#"$KISS_ROOT"}/${dep##*/}" "$@")
             dep=${dep%/*}
             dep=${dep##*/}
 
-            # Only list dependencies not mentioned in any (nested) depends file.
-            contains "$deps" "$dep" || printf '%s\n' "$dep"
+            case $dep in
+                gcc            | \
+                llvm           | \
+                "$pkg"         | \
+                "${pkg%%-bin}" | \
+                "${pkg%%-git}" | \
+                '')
+                    # Do nothing.
+                ;;
+
+                *)
+                    printf '%s\n' "$dep"
+                ;;
+            esac
         done ||:
     done |
 
@@ -1511,6 +1524,12 @@ main() {
         command -v doas ||
         command -v sls
     )"} || su=su
+
+    # Figure out which utility is available to dump elf information.
+    elf_cmd=${KISS_ELFCMD:="$(
+        command -v readelf ||
+        command -v objdump
+    )"} ||:
 
     # Store the date and time of script invocation to be used as the name of
     # the log files the package manager creates uring builds.
