@@ -446,7 +446,7 @@ pkg_fix_deps() {
     find "$pkg_dir/${PWD##*/}/" -type f 2>/dev/null |
 
     while read -r file; do
-        case ${elf_cmd##*/} in
+        case $elf_cmd in
             *readelf)
                 "$elf_cmd" -d "$file"
             ;;
