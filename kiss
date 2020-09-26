@@ -481,11 +481,11 @@ pkg_fix_deps() {
                         ;;
 
                         *)
-                            pkg_owner -l "/${line#/}\$" "$@" ||
+                              pkg_owner -l "/${line#/}\$" manifest ||
+                            ! pkg_owner -l "/${line#/}\$" "$@" &&
                                 continue
 
-                            [ "$pkg_owner" = "$pkg" ] ||
-                                printf '%s\n' "$pkg_owner"
+                            printf '%s\n' "$pkg_owner"
                         ;;
                     esac
                 ;;
