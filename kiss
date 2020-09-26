@@ -21,7 +21,15 @@ die() {
 }
 
 contains() {
-    case " $1 " in *" $2 "*) return 0; esac; return 1
+    _sep=${3:- }
+
+    case "${_sep}${1}${_sep}" in
+        *"${_sep}${2}${_sep}"*)
+            return 0
+        ;;
+    esac
+
+    return 1
 }
 
 prompt() {
@@ -382,7 +390,7 @@ pkg_depends() {
 
         # After child dependencies are added to the list,
         # add the package which depends on them.
-        [ "$2" = explicit ] || deps="$deps $1 "
+        [ "$2" = explicit ] || deps="$deps $1"
     }
 }
 
@@ -574,7 +582,7 @@ pkg_build() {
     for pkg do
         contains "$explicit" "$pkg" || {
             pkg_depends "$pkg" explicit
-            explicit="$explicit $pkg "
+            explicit="$explicit $pkg"
         }
     done
 
@@ -587,7 +595,7 @@ pkg_build() {
     # dependency.
     for pkg do
         contains "$deps" "$pkg" ||
-            explicit2=" $explicit2 $pkg "
+            explicit2="$explicit2 $pkg"
     done
     explicit=$explicit2
 
@@ -1198,8 +1206,8 @@ pkg_updates() {
                 git_root=$(git rev-parse --show-superproject-working-tree)
                 cd "${git_root:-.}"
 
-                contains "$repos" "$PWD" || {
-                    repos="$repos $PWD "
+                contains "$repos" "$PWD" : || {
+                    repos="$repos:$PWD"
 
                     # Display a tick if signing is enabled for this repository.
                     case $(git config merge.verifySignatures) in
@@ -1335,16 +1343,17 @@ args() {
     case $action in
         a|alternatives|i|install|r|remove)
             [ -z "$1" ] || [ -w "$KISS_ROOT/" ] || [ "$uid" = 0 ] || {
-                as_root HOME="$HOME" \
-                        XDG_CACHE_HOME="$XDG_CACHE_HOME" \
-                        KISS_CHOICE="$KISS_CHOICE" \
-                        KISS_COLOR="$KISS_COLOR" \
-                        KISS_FORCE="$KISS_FORCE" \
-                        KISS_PATH="$KISS_PATH" \
-                        KISS_PID="$KISS_PID" \
-                        KISS_ROOT="$KISS_ROOT" \
-                        KISS_TMPDIR="$KISS_TMPDIR" \
-                        "$0" "$action" "$@"
+                as_root \
+                    HOME="$HOME" \
+                    XDG_CACHE_HOME="$XDG_CACHE_HOME" \
+                    KISS_CHOICE="$KISS_CHOICE" \
+                    KISS_COLOR="$KISS_COLOR" \
+                    KISS_FORCE="$KISS_FORCE" \
+                    KISS_PATH="$KISS_PATH" \
+                    KISS_PID="$KISS_PID" \
+                    KISS_ROOT="$KISS_ROOT" \
+                    KISS_TMPDIR="$KISS_TMPDIR" \
+                    "$0" "$action" "$@"
 
                 return
             }
@@ -1459,7 +1468,7 @@ args() {
                 name=${file#*/kiss-}
 
                 contains "$list" "$name" || {
-                    list=" $list $name "
+                    list="$list $name"
 
                     printf '%-15s ' "$name"
                     sed -n 's/^# *//;2p' "$file"
