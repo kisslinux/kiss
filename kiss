@@ -126,7 +126,7 @@ sh256() {
 }
 
 pkg_owner() {
-    pkg_owner=$(grep -lFx "$@") && {
+    pkg_owner=$(grep "$@") && {
         pkg_owner=${pkg_owner%/*}
         pkg_owner=${pkg_owner##*/}
     }
@@ -430,11 +430,11 @@ pkg_strip() {
     done 2>/dev/null ||:
 }
 
-pkg_fixdeps() {
+pkg_fix_deps() {
     # Dynamically look for missing runtime dependencies by checking each
     # binary and library with 'ldd'. This catches any extra libraries and or
     # dependencies pulled in by the package's build suite.
-    log "$1" "Checking for missing dependencies"
+    log "$1" "Looking for dependencies (using ${elf_cmd##*/})"
 
     cd "$pkg_dir/$1/$pkg_db/$1"
 
@@ -446,49 +446,48 @@ pkg_fixdeps() {
     find "$pkg_dir/${PWD##*/}/" -type f 2>/dev/null |
 
     while read -r file; do
-        ldd "$file" 2>/dev/null |
+        case ${elf_cmd##*/} in
+            *readelf)
+                "$elf_cmd" -d "$file"
+            ;;
 
-        while read -r _ _ dep _; do
-            # Resolve path symlinks to find the real location to the library.
-            cd -P "$KISS_ROOT/${dep%/*}" 2>/dev/null ||
-                continue
+            *)
+                ldd "$file"
+            ;;
+        esac 2>/dev/null |
 
-            # Skip files owned by libc and POSIX.
-            case ${dep##*/} in
-                ld-*           |\
-                lib[cm].so*    |\
-                libdl.so*      |\
-                libpthread.so* |\
-                librt.so*      |\
-                libtrace.so*   |\
-                libxnet.so*    |\
-                "")
-                    continue
-                ;;
-            esac
+        while read -r line; do
+            case $line in
+                *NEEDED*\[*\] | *'=>'*)
+                    # readelf: 0x0000 (NEEDED) Shared library: [libjson-c.so.5]
+                    line=${line##*[}
+                    line=${line%%]*}
 
-            # Check if ldd result is direct dependency of package.
-            case $elf_cmd in
-                *readelf)
-                    "$elf_cmd" -d "$file" |
-                        grep -q "NEEDED.* \[${dep##*/}\]"
-                ;;
-            esac || continue
+                    # ldd:     libjson-c.so.5 => /lib/libjson-c.so.5 ...
+                    line=${line##*=> }
+                    line=${line%% *}
 
-            # Figure out which package owns the file.
-            pkg_owner "${PWD#"$KISS_ROOT"}/${dep##*/}" "$@" ||
-                continue
+                    # Skip files owned by libc and POSIX.
+                    case ${line##*/} in
+                        ld-*           |\
+                        lib[cm].so*    |\
+                        libdl.so*      |\
+                        libpthread.so* |\
+                        librt.so*      |\
+                        libtrace.so*   |\
+                        libxnet.so*    )
+                            continue
+                        ;;
+                    esac
 
-            case $pkg_owner in
-                gcc            | \
-                llvm           | \
-                "$pkg"         | \
-                "${pkg%%-bin}" | \
-                "${pkg%%-git}" )
-                    # Do nothing.
-                ;;
+                    pkg_owner -l "/${line#/}\$" "$@" || continue
 
-                *)
+                    case $pkg_owner in
+                        gcc | llvm | "$pkg")
+                            continue
+                        ;;
+                    esac
+
                     printf '%s\n' "$pkg_owner"
                 ;;
             esac
@@ -683,7 +682,7 @@ pkg_build() {
             : > "$pkg_dir/$pkg/$pkg_db/$pkg/etcsums"
 
         pkg_strip    "$pkg"
-        pkg_fixdeps  "$pkg"
+        pkg_fix_deps "$pkg"
         pkg_manifest "$pkg"
         pkg_etcsums  "$pkg"
         pkg_tar      "$pkg"
@@ -893,7 +892,7 @@ pkg_swap() {
         # another package's. Print the full path to the manifest file which
         # contains the match to our search.
         set +f
-        pkg_owner "$2" "$sys_db/"*/manifest ||
+        pkg_owner -lFx "$2" "$sys_db/"*/manifest ||
             die "File '$2' exists on filesystem but isn't owned"
         set -f
 
@@ -1514,11 +1513,11 @@ main() {
     )"} || su=su
 
     # Figure out which utility is available to dump elf information.
-    elf_cmd=${KISS_ELFCMD:="$(
+    elf_cmd=${KISS_ELF:="$(
         command -v readelf      ||
         command -v eu-readelf   ||
         command -v llvm-readelf
-    )"} ||:
+    )"} || elf_cmd=ldd
 
     # Store the date and time of script invocation to be used as the name of
     # the log files the package manager creates uring builds.
