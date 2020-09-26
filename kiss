@@ -452,7 +452,7 @@ pkg_fix_deps() {
             ;;
 
             *)
-                ldd "$file"
+                ldd -- "$file"
             ;;
         esac 2>/dev/null |
 
@@ -475,20 +475,19 @@ pkg_fix_deps() {
                         libpthread.so* |\
                         librt.so*      |\
                         libtrace.so*   |\
-                        libxnet.so*    )
+                        libxnet.so*    |\
+                        ldd)
                             continue
                         ;;
-                    esac
 
-                    pkg_owner -l "/${line#/}\$" "$@" || continue
+                        *)
+                            pkg_owner -l "/${line#/}\$" "$@" ||
+                                continue
 
-                    case $pkg_owner in
-                        gcc | llvm | "$pkg")
-                            continue
+                            [ "$pkg_owner" = "$pkg" ] ||
+                                printf '%s\n' "$pkg_owner"
                         ;;
                     esac
-
-                    printf '%s\n' "$pkg_owner"
                 ;;
             esac
         done ||:
