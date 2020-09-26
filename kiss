@@ -192,22 +192,15 @@ pkg_find() {
 }
 
 pkg_list() {
-    [ "$1" ] || {
-        set +f
-        set -f -- "$sys_db/"*
+    [ -d "$sys_db/$1" ] || {
+        log "$1" "not installed"
+        return 1
     }
 
-    for _pkg do
-        [ -d "$sys_db/${_pkg##*/}" ] || {
-            log "${_pkg##*/}" "not installed"
-            return 1
-        }
+    read -r _ver 2>/dev/null < "$sys_db/$1/version" ||
+        _ver=null
 
-        read -r _ver 2>/dev/null < "$sys_db/${_pkg##*/}/version" ||
-            _ver=null
-
-        printf '%s\n' "${_pkg##*/} $_ver"
-    done
+    printf '%s\n' "$1 $_ver"
 }
 
 pkg_cache() {
@@ -1420,7 +1413,15 @@ args() {
         ;;
 
         l|list)
-            pkg_list "$@"
+            [ "$1" ] || {
+                cd "$sys_db"
+                set +f
+                set -f -- *
+            }
+
+            for pkg do
+                pkg_list "$pkg"
+            done
         ;;
 
         r|remove)
@@ -1440,7 +1441,7 @@ args() {
         ;;
 
         v|version)
-            printf '5.1.0\n'
+            printf '6.0.0\n'
         ;;
 
         '')
@@ -1506,7 +1507,7 @@ main() {
     # to each specific KISS instance. This allows multiple package manager
     # instances to be run at once. Store the value in another variable so
     # that it doesn't change beneath us.
-    pid=${KISS_PID:-$$}
+    pid=${KISS_PID:-"$$"}
 
     # Catch errors and ensure that build files and directories are cleaned
     # up before we die. This occurs on 'Ctrl+C' as well as success and error.
