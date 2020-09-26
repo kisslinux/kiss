@@ -125,6 +125,13 @@ sh256() {
     printf '%s\n' "${hash%% *}"
 }
 
+pkg_owner() {
+    pkg_owner=$(grep -lFx "$@") && {
+        pkg_owner=${pkg_owner%/*}
+        pkg_owner=${pkg_owner##*/}
+    }
+}
+
 pkg_lint() {
     pkg_find "$1"
     cd "$repo_dir"
@@ -469,22 +476,20 @@ pkg_fixdeps() {
             esac || continue
 
             # Figure out which package owns the file.
-            dep=$(grep -lFx "${PWD#"$KISS_ROOT"}/${dep##*/}" "$@")
-            dep=${dep%/*}
-            dep=${dep##*/}
+            pkg_owner "${PWD#"$KISS_ROOT"}/${dep##*/}" "$@" ||
+                continue
 
-            case $dep in
+            case $pkg_owner in
                 gcc            | \
                 llvm           | \
                 "$pkg"         | \
                 "${pkg%%-bin}" | \
-                "${pkg%%-git}" | \
-                '')
+                "${pkg%%-git}" )
                     # Do nothing.
                 ;;
 
                 *)
-                    printf '%s\n' "$dep"
+                    printf '%s\n' "$pkg_owner"
                 ;;
             esac
         done ||:
@@ -887,31 +892,19 @@ pkg_swap() {
         # Figure out which package owns the file we are going to swap for
         # another package's. Print the full path to the manifest file which
         # contains the match to our search.
-        pkg_owns=$(
-            set +f
-            grep -lFx "$2" "$sys_db/"*/manifest
-        ) ||:
+        set +f
+        pkg_owner "$2" "$sys_db/"*/manifest ||
+            die "File '$2' exists on filesystem but isn't owned"
+        set -f
 
-        # Extract the package name from the path above.
-        pkg_owns=${pkg_owns%/*}
-        pkg_owns=${pkg_owns##*/}
+        # Convert the current owner to an alternative and rewrite its
+        # manifest file to reflect this.
+        cp -Pf "$KISS_ROOT/$2" "$pkg_owner>${alt#*>}"
 
-        case $pkg_owns in
-            '')
-                die "File '$2' exists on filesystem but isn't owned"
-            ;;
-
-            *)
-                # Convert the current owner to an alternative and rewrite its
-                # manifest file to reflect this.
-                cp -Pf "$KISS_ROOT/$2" "$pkg_owns>${alt#*>}"
-
-                find_replace \
-                    "$2" \
-                    "${PWD#"$KISS_ROOT"}/$pkg_owns>${alt#*>}" \
-                    "../installed/$pkg_owns/manifest"
-            ;;
-        esac
+        find_replace \
+            "$2" \
+            "${PWD#"$KISS_ROOT"}/$pkg_owner>${alt#*>}" \
+            "../installed/$pkg_owner/manifest"
     fi
 
     # Convert the desired alternative to a real file and rewrite the manifest
@@ -924,7 +917,7 @@ pkg_swap() {
         "$2" \
         "../installed/$1/manifest"
 
-    printf '%s is now provided by %s (was %s)\n' "$2" "$1" "$pkg_owns"
+    printf '%s is now provided by %s (was %s)\n' "$2" "$1" "$pkg_owner"
 }
 
 pkg_install_files() {
