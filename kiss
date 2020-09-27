@@ -16,18 +16,6 @@ die() {
     exit 1
 }
 
-contains() {
-    _sep=${3:- }
-
-    case "${_sep}${1}${_sep}" in
-        *"${_sep}${2}${_sep}"*)
-            return 0
-        ;;
-    esac
-
-    return 1
-}
-
 prompt() {
     [ "$1" ] && log "$1"
 
@@ -52,6 +40,18 @@ as_root() {
             die "invalid KISS_SU value '$su' (valid: doas, sudo, sls, su)"
         ;;
     esac
+}
+
+contains() {
+    _sep=${3:- }
+
+    case "${_sep}${1}${_sep}" in
+        *"${_sep}${2}${_sep}"*)
+            return 0
+        ;;
+    esac
+
+    return 1
 }
 
 file_owner() {
