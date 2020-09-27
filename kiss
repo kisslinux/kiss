@@ -113,13 +113,11 @@ run_repo_hook() {
     log "$2" "running $1 hook"
 
     if [ -x "$_hook" ]; then
-        "$_hook" 2>&1
+        "$_hook"
 
     else
         cat "$_hook"
     fi
-
-    # TODO: Reintroduce some kind of logging here.
 }
 
 decompress() {
@@ -660,7 +658,7 @@ pkg_build() {
 
         # Install built packages to a directory under the package name to
         # avoid collisions with other packages.
-        mkdir -p "$pkg_dir/$pkg/$pkg_db" "$mak_dir/$pkg" "$log_dir/$pkg"
+        mkdir -p "$pkg_dir/$pkg/$pkg_db" "$mak_dir/$pkg"
         cd "$mak_dir/$pkg"
 
         # Log the version so we can pass it to the package build file.
@@ -675,16 +673,16 @@ pkg_build() {
         {
             "$repo_dir/build" "$pkg_dir/$pkg" "$build_version" 2>&1 || {
                 log "$pkg" "build failed"
-                log "$pkg" "log stored to $log_dir/$pkg/$date-$pid"
+                log "$pkg" "log stored to $log_dir/$pkg-$pid-${date##*-}"
                 run_user_hook build-fail "$pkg" "$pkg_dir/$pkg"
                 pkg_clean
                 kill 0
             }
-        } | tee "$log_dir/$pkg/$date-$pid"
+        } | tee "$log_dir/$pkg-$pid-${date##*-}"
 
         # Delete the log file if the build succeeded to prevent the directory
         # from filling very quickly with useless logs.
-        [ "$KISS_KEEPLOG" = 1 ] || rm -f "$log_dir/$pkg/$date-$pid"
+        [ "$KISS_KEEPLOG" = 1 ] || rm -f "$log_dir/$pkg-$pid-${date##*-}"
 
         # Copy the repository files to the package directory. This acts as the
         # database entry.
@@ -1534,7 +1532,7 @@ main() {
 
     # Store the date and time of script invocation to be used as the name of
     # the log files the package manager creates uring builds.
-    date=$(date +%Y-%m-%d-%H:%M)
+    date=$(date +%Y-%m-%d-%H:%M:%S)
 
     # Make note of the user's current ID to do root checks later on.
     # This is used enough to warrant a place here.
@@ -1554,7 +1552,7 @@ main() {
     mkdir -p \
         "${cac_dir:="${XDG_CACHE_HOME:-"${HOME:?HOME is null}/.cache"}/kiss"}" \
             "${src_dir:="$cac_dir/sources"}" \
-            "${log_dir:="$cac_dir/logs"}" \
+            "${log_dir:="$cac_dir/logs/${date%-*}"}" \
             "${bin_dir:="$cac_dir/bin"}" \
         "${tmp_dir:="${KISS_TMPDIR:="$cac_dir/proc"}/$pid"}" \
             "${mak_dir:="$tmp_dir/build"}" \
