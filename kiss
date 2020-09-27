@@ -577,12 +577,12 @@ pkg_tar() (
 
     # Create a tarball from the contents of the built package.
     tar cf - . | case ${KISS_COMPRESS:-gz} in
-        bz2)  bzip2 -z ;;
-        gz)   gzip -6  ;;
-        lzma) lzma -z  ;;
-        lz)   lzip -z  ;;
-        xz)   xz -zT 0 ;;
-        zst)  zstd -z  ;;
+        bz2)  bzip2 -z    ;;
+        gz)   gzip  -6    ;;
+        lzma) lzma  -z    ;;
+        lz)   lzip  -z    ;;
+        xz)   xz    -zT 0 ;;
+        zst)  zstd  -z    ;;
     esac > "$bin_dir/$1#$version-$release.tar.${KISS_COMPRESS:-gz}"
 
     run_user_hook post-package "$1"
