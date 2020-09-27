@@ -1512,19 +1512,19 @@ main() {
     }
 
     # Set the default values of system directories.
-    sys_dir PREFIX              "${KISS_PREFIX-/usr}"
-    sys_dir LIBDIR              "${KISS_LIBDIR:-lib}"
-    sys_dir LIBEXECDIR          "${KISS_LIBEXECDIR:-libexec}"
-    sys_dir BINDIR              "${KISS_BINDIR:-bin}"
-    sys_dir SBINDIR             "${KISS_SBINDIR:-sbin}"
-    sys_dir SYSCONFDIR          "${KISS_SYSCONFDIR:-etc}"
-    sys_dir INCLUDEDIR          "${KISS_INCLUDEDIR:-include}"
-    sys_dir KISS_LOCALSTATEDIR  "${KISS_LOCALSTATEDIR:-var}"
-    sys_dir KISS_SHAREDSTATEDIR "${KISS_SHAREDSTATEDIR:-com}"
-    sys_dir DATADIR             "${KISS_DATADIR:-share}"
-    sys_dir INFODIR             "${KISS_INFODIR:-"$KISS_DATADIR/info"}"
-    sys_dir MANDIR              "${KISS_MANDIR:-"$KISS_DATADIR/man"}"
-    sys_dir ROOT                "$KISS_ROOT"
+    sys_dir PREFIX         "${KISS_PREFIX-/usr}"
+    sys_dir LIBDIR         "${KISS_LIBDIR:-lib}"
+    sys_dir LIBEXECDIR     "${KISS_LIBEXECDIR:-libexec}"
+    sys_dir BINDIR         "${KISS_BINDIR:-bin}"
+    sys_dir SBINDIR        "${KISS_SBINDIR:-sbin}"
+    sys_dir SYSCONFDIR     "${KISS_SYSCONFDIR:-etc}"
+    sys_dir INCLUDEDIR     "${KISS_INCLUDEDIR:-include}"
+    sys_dir LOCALSTATEDIR  "${KISS_LOCALSTATEDIR:-var}"
+    sys_dir SHAREDSTATEDIR "${KISS_SHAREDSTATEDIR:-com}"
+    sys_dir DATADIR        "${KISS_DATADIR:-share}"
+    sys_dir INFODIR        "${KISS_INFODIR:-"$KISS_DATADIR/info"}"
+    sys_dir MANDIR         "${KISS_MANDIR:-"$KISS_DATADIR/man"}"
+    sys_dir ROOT           "$KISS_ROOT"
 
     # Allow the user to disable colors in output via an environment variable.
     # Check this once so as to not slow down printing.
