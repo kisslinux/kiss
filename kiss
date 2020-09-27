@@ -54,6 +54,12 @@ contains() {
     return 1
 }
 
+sys_dir() {
+    # Export environment variable named in $1.
+    # Strip all trailing slashes from path held in $2.
+    export "KISS_$1=${2%"${2##*[!/]}"}"
+}
+
 file_owner() {
     read -r _ _ user _ <<EOF
 $(ls -ld "$1")
@@ -1506,12 +1512,13 @@ main() {
     set -ef
 
     # Set the default values of system directories.
-    export KISS_PREFIX=${KISS_PREFIX-/usr}
-    export KISS_LIBDIR=${KISS_LIBDIR:-lib}
-    export KISS_BINDIR=${KISS_BINDIR:-bin}
-    export KISS_ETCDIR=${KISS_ETCDIR:-etc}
-    export KISS_INCDIR=${KISS_INCDIR:-include}
-    export KISS_DATADIR=${KISS_DATADIR:-share}
+    sys_dir PREFIX  "${KISS_PREFIX-/usr}"
+    sys_dir LIBDIR  "${KISS_LIBDIR-lib}"
+    sys_dir BINDIR  "${KISS_BINDIR-bin}"
+    sys_dir ETCDIR  "${KISS_ETCDIR-etc}"
+    sys_dir INCDIR  "${KISS_INCDIR-include}"
+    sys_dir DATADIR "${KISS_DATADIR-share}"
+    sys_dir ROOT    "$KISS_ROOT"
 
     # Allow the user to disable colors in output via an environment variable.
     # Check this once so as to not slow down printing.
@@ -1553,9 +1560,6 @@ main() {
     # Make note of the user's current ID to do root checks later on.
     # This is used enough to warrant a place here.
     uid=$(id -u)
-
-    # Ensure that the KISS_ROOT doesn't end with a '/'.
-    KISS_ROOT=${KISS_ROOT%"${KISS_ROOT##*[!/]}"}
 
     # Define some paths which we will then use throughout the script.
     sys_db=$KISS_ROOT/${pkg_db:=var/db/kiss/installed}
