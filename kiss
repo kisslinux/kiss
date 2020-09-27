@@ -1513,11 +1513,11 @@ main() {
 
     # Set the default values of system directories.
     sys_dir PREFIX  "${KISS_PREFIX-/usr}"
-    sys_dir LIBDIR  "${KISS_LIBDIR-lib}"
-    sys_dir BINDIR  "${KISS_BINDIR-bin}"
-    sys_dir ETCDIR  "${KISS_ETCDIR-etc}"
-    sys_dir INCDIR  "${KISS_INCDIR-include}"
-    sys_dir DATADIR "${KISS_DATADIR-share}"
+    sys_dir LIBDIR  "${KISS_LIBDIR:-lib}"
+    sys_dir BINDIR  "${KISS_BINDIR:-bin}"
+    sys_dir ETCDIR  "${KISS_ETCDIR:-etc}"
+    sys_dir INCDIR  "${KISS_INCDIR:-include}"
+    sys_dir DATADIR "${KISS_DATADIR:-share}"
     sys_dir ROOT    "$KISS_ROOT"
 
     # Allow the user to disable colors in output via an environment variable.
