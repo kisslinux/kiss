@@ -672,15 +672,15 @@ pkg_build() {
         # killing the script ourselves.
         { "$repo_dir/build" "$pkg_dir/$pkg" "$build_version" 2>&1 || {
             log "$pkg" "build failed"
-            log "$pkg" "log stored to $log_dir/$pkg/$pid-$time"
+            log "$pkg" "log stored to $log_dir/$pkg/$pid-$date"
             run_user_hook build-fail "$pkg" "$pkg_dir/$pkg"
             pkg_clean
             kill 0
-        } } | tee "$log_dir/$pkg/$pid-$time"
+        } } | tee "$log_dir/$pkg/$pid-$date"
 
         # Delete the log file if the build succeeded to prevent the directory
         # from filling very quickly with useless logs.
-        [ "$KISS_KEEPLOG" = 1 ] || rm -f "$log_dir/$pkg/$pid-$time"
+        [ "$KISS_KEEPLOG" = 1 ] || rm -f "$log_dir/$pkg/$pid-$date"
 
         # Copy the repository files to the package directory. This acts as the
         # database entry.
@@ -1530,7 +1530,7 @@ main() {
 
     # Store the date and time of script invocation to be used as the name of
     # the log files the package manager creates uring builds.
-    time=$(date +%Y-%m-%d)
+    date=$(date +%Y-%m-%d-%H:%M)
 
     # Make note of the user's current ID to do root checks later on.
     # This is used enough to warrant a place here.
