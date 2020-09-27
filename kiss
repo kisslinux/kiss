@@ -118,6 +118,8 @@ run_repo_hook() {
     else
         cat "$_hook"
     fi
+
+    # TODO: Reintroduce some kind of logging here.
 }
 
 decompress() {
@@ -672,15 +674,15 @@ pkg_build() {
         # killing the script ourselves.
         { "$repo_dir/build" "$pkg_dir/$pkg" "$build_version" 2>&1 || {
             log "$pkg" "build failed"
-            log "$pkg" "log stored to $log_dir/$pkg/$pid-$date"
+            log "$pkg" "log stored to $log_dir/$pkg/$date-$pid"
             run_user_hook build-fail "$pkg" "$pkg_dir/$pkg"
             pkg_clean
             kill 0
-        } } | tee "$log_dir/$pkg/$pid-$date"
+        } } | tee "$log_dir/$pkg/$date-$pid"
 
         # Delete the log file if the build succeeded to prevent the directory
         # from filling very quickly with useless logs.
-        [ "$KISS_KEEPLOG" = 1 ] || rm -f "$log_dir/$pkg/$pid-$date"
+        [ "$KISS_KEEPLOG" = 1 ] || rm -f "$log_dir/$pkg/$date-$pid"
 
         # Copy the repository files to the package directory. This acts as the
         # database entry.
