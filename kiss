@@ -1507,8 +1507,8 @@ main() {
 
     # Set the default values of system directories.
     export KISS_PREFIX=${KISS_PREFIX:-/usr}
-    export KISS_LIBDIR=${KISS_LIBDIR:-/lib}
-    export KISS_DATADIR=${KISS_DATADIR:-/share}
+    export KISS_LIBDIR=${KISS_LIBDIR:-lib}
+    export KISS_DATADIR=${KISS_DATADIR:-share}
 
     # Allow the user to disable colors in output via an environment variable.
     # Check this once so as to not slow down printing.
