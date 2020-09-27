@@ -54,12 +54,6 @@ contains() {
     return 1
 }
 
-sys_dir() {
-    # Export environment variable named in $1.
-    # Strip all trailing slashes from path held in $2.
-    export "KISS_$1=${2%"${2##*[!/]}"}"
-}
-
 file_owner() {
     read -r _ _ user _ <<EOF
 $(ls -ld "$1")
@@ -567,13 +561,13 @@ pkg_manifest_verify() {
 pkg_etcsums() (
     # This function runs as a sub-shell to avoid having to 'cd' back to the
     # prior directory before being able to continue.
-    [ -d "$pkg_dir/$1/$KISS_ETCDIR" ] || return 0
+    [ -d "$pkg_dir/$1/$KISS_SYSCONFDIR" ] || return 0
 
     cd "$pkg_dir/$1"
 
     # This can't be a simple 'find -exec' as 'sh256' is a shell function
     # and not a real command of any kind. This is the shell equivalent.
-    find "$KISS_ETCDIR" -type f | sort | while read -r line; do
+    find "$KISS_SYSCONFDIR" -type f | sort | while read -r line; do
         sh256 "$line"
     done > "$pkg_dir/$1/$pkg_db/$1/etcsums"
 )
@@ -717,7 +711,7 @@ pkg_build() {
         : > "$pkg_dir/$pkg/$pkg_db/$pkg/manifest"
 
         # Same for etcsums if /etc exists in package.
-        [ -d "$pkg_dir/$pkg/$KISS_ETCDIR" ] &&
+        [ -d "$pkg_dir/$pkg/$KISS_SYSCONFDIR" ] &&
             : > "$pkg_dir/$pkg/$pkg_db/$pkg/etcsums"
 
         pkg_strip    "$pkg"
@@ -982,7 +976,7 @@ pkg_install_files() {
 
         # Copy files and create directories (preserving permissions).
         case $line in
-            /"$KISS_ETCDIR"/?*[!/])
+            /"$KISS_SYSCONFDIR"/?*[!/])
                 pkg_etc_file "$2" "${line#/}"
             ;;
 
@@ -1010,7 +1004,7 @@ pkg_remove_files() {
     # functions allows us to stop duplicating code.
     while read -r file; do
         case $file in
-            /"$KISS_ETCDIR"/?*[!/])
+            /"$KISS_SYSCONFDIR"/?*[!/])
                 sum_sys=$(sh256 "$KISS_ROOT/$file") ||:
                 sum_old=$(grep -F "$sum_sys" "$tmp_dir/.etcsums") ||:
 
@@ -1511,14 +1505,26 @@ main() {
     # Globally disable globbing and enable exit-on-error.
     set -ef
 
+    sys_dir() {
+        # Export environment variable named in $1.
+        # Strip all trailing slashes from path held in $2.
+        export "KISS_$1=${2%"${2##*[!/]}"}"
+    }
+
     # Set the default values of system directories.
-    sys_dir PREFIX  "${KISS_PREFIX-/usr}"
-    sys_dir LIBDIR  "${KISS_LIBDIR-lib}"
-    sys_dir BINDIR  "${KISS_BINDIR-bin}"
-    sys_dir ETCDIR  "${KISS_ETCDIR-etc}"
-    sys_dir INCDIR  "${KISS_INCDIR-include}"
-    sys_dir DATADIR "${KISS_DATADIR-share}"
-    sys_dir ROOT    "$KISS_ROOT"
+    sys_dir PREFIX              "${KISS_PREFIX-/usr}"
+    sys_dir LIBDIR              "${KISS_LIBDIR:-lib}"
+    sys_dir LIBEXECDIR          "${KISS_LIBEXECDIR:-libexec}"
+    sys_dir BINDIR              "${KISS_BINDIR:-bin}"
+    sys_dir SBINDIR             "${KISS_SBINDIR:-sbin}"
+    sys_dir SYSCONFDIR          "${KISS_SYSCONFDIR:-etc}"
+    sys_dir INCLUDEDIR          "${KISS_INCLUDEDIR:-include}"
+    sys_dir KISS_LOCALSTATEDIR  "${KISS_LOCALSTATEDIR:-var}"
+    sys_dir KISS_SHAREDSTATEDIR "${KISS_SHAREDSTATEDIR:-com}"
+    sys_dir DATADIR             "${KISS_DATADIR:-share}"
+    sys_dir INFODIR             "${KISS_INFODIR:-"$KISS_DATADIR/info"}"
+    sys_dir MANDIR              "${KISS_MANDIR:-"$KISS_DATADIR/man"}"
+    sys_dir ROOT                "$KISS_ROOT"
 
     # Allow the user to disable colors in output via an environment variable.
     # Check this once so as to not slow down printing.
