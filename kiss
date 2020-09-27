@@ -105,16 +105,18 @@ run_repo_hook() {
     # Execute hooks which have the executable permission set, cat hooks which
     # don't. Allows packages which only need to display a message to avoid
     # executing any code.
-    [ -f "$sys_db/$2/$1" ] ||
+    _hook=${3:-"$sys_db/$2/$1"}
+
+    [ -f "$_hook" ] ||
         return 0
 
     log "$2" "running $1 hook"
 
-    if [ -x "$sys_db/$2/$1" ]; then
-        "$sys_db/$2/$1" 2>&1
+    if [ -x "$_hook" ]; then
+        "$_hook" 2>&1
 
     else
-        cat "$sys_db/$2/$1"
+        cat "$_hook"
     fi
 }
 
@@ -1174,7 +1176,7 @@ pkg_install() {
     log "$pkg" "installed successfully"
 }
 
-pkg_updates() {
+sys_update() {
     # Check all installed packages for updates. So long as the installed
     # version and the version in the repositories differ, it's considered
     # an update.
@@ -1252,10 +1254,7 @@ pkg_updates() {
             ;;
         esac
 
-        if [ -x update ]; then
-            log "$PWD" "running update hook"
-            ./update
-        fi
+        run_repo_hook update "$PWD" update
     done
 
     log "checking for new package versions"
@@ -1443,7 +1442,7 @@ args() {
         ;;
 
         u|update)
-            pkg_updates
+            sys_update
         ;;
 
         v|version)
