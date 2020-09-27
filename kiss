@@ -1506,7 +1506,7 @@ main() {
     set -ef
 
     # Set the default values of system directories.
-    export KISS_PREFIX=${KISS_PREFIX:-/usr}
+    export KISS_PREFIX=${KISS_PREFIX-/usr}
     export KISS_LIBDIR=${KISS_LIBDIR:-lib}
     export KISS_DATADIR=${KISS_DATADIR:-share}
 
