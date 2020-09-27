@@ -561,13 +561,13 @@ pkg_manifest_verify() {
 pkg_etcsums() (
     # This function runs as a sub-shell to avoid having to 'cd' back to the
     # prior directory before being able to continue.
-    [ -d "$pkg_dir/$1/etc" ] || return 0
+    [ -d "$pkg_dir/$1/$KISS_ETCDIR" ] || return 0
 
     cd "$pkg_dir/$1"
 
     # This can't be a simple 'find -exec' as 'sh256' is a shell function
     # and not a real command of any kind. This is the shell equivalent.
-    find etc -type f | sort | while read -r line; do
+    find "$KISS_ETCDIR" -type f | sort | while read -r line; do
         sh256 "$line"
     done > "$pkg_dir/$1/$pkg_db/$1/etcsums"
 )
@@ -711,7 +711,7 @@ pkg_build() {
         : > "$pkg_dir/$pkg/$pkg_db/$pkg/manifest"
 
         # Same for etcsums if /etc exists in package.
-        [ -d "$pkg_dir/$pkg/etc" ] &&
+        [ -d "$pkg_dir/$pkg/$KISS_ETCDIR" ] &&
             : > "$pkg_dir/$pkg/$pkg_db/$pkg/etcsums"
 
         pkg_strip    "$pkg"
@@ -976,7 +976,7 @@ pkg_install_files() {
 
         # Copy files and create directories (preserving permissions).
         case $line in
-            /etc/?*[!/])
+            /"$KISS_ETCDIR"/?*[!/])
                 pkg_etc_file "$2" "${line#/}"
             ;;
 
@@ -1004,7 +1004,7 @@ pkg_remove_files() {
     # functions allows us to stop duplicating code.
     while read -r file; do
         case $file in
-            /etc/?*[!/])
+            /"$KISS_ETCDIR"/?*[!/])
                 sum_sys=$(sh256 "$KISS_ROOT/$file") ||:
                 sum_old=$(grep -F "$sum_sys" "$tmp_dir/.etcsums") ||:
 
@@ -1509,6 +1509,7 @@ main() {
     export KISS_PREFIX=${KISS_PREFIX-/usr}
     export KISS_LIBDIR=${KISS_LIBDIR:-lib}
     export KISS_BINDIR=${KISS_BINDIR:-bin}
+    export KISS_ETCDIR=${KISS_ETCDIR:-etc}
     export KISS_INCDIR=${KISS_INCDIR:-include}
     export KISS_DATADIR=${KISS_DATADIR:-share}
 
