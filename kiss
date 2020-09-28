@@ -89,10 +89,10 @@ run_user_hook() {
         # their own hook to override this behavior.
         -post-build)
             rm -rf \
-                "$3/$KISS_PREFIX/$KISS_DATADIR/gettext" \
-                "$3/$KISS_PREFIX/$KISS_DATADIR/polkit-1" \
-                "$3/$KISS_PREFIX/$KISS_DATADIR/locale" \
-                "$3/$KISS_PREFIX/$KISS_DATADIR/info"
+                "$3/usr/share/gettext" \
+                "$3/usr/share/polkit-1" \
+                "$3/usr/share/locale" \
+                "$3/usr/share/info"
         ;;
 
         [!-]*)
@@ -561,13 +561,13 @@ pkg_manifest_verify() {
 pkg_etcsums() (
     # This function runs as a sub-shell to avoid having to 'cd' back to the
     # prior directory before being able to continue.
-    [ -d "$pkg_dir/$1/$KISS_SYSCONFDIR" ] || return 0
+    [ -d "$pkg_dir/$1/etc" ] || return 0
 
     cd "$pkg_dir/$1"
 
     # This can't be a simple 'find -exec' as 'sh256' is a shell function
     # and not a real command of any kind. This is the shell equivalent.
-    find "$KISS_SYSCONFDIR" -type f | sort | while read -r line; do
+    find etc -type f | sort | while read -r line; do
         sh256 "$line"
     done > "$pkg_dir/$1/$pkg_db/$1/etcsums"
 )
@@ -698,20 +698,20 @@ pkg_build() {
         # Remove all .la files from the packages. They're unneeded and cause
         # issues when a package stops providing one. This recently caused an
         # issue with harfbuzz (See: 05096e5a4dc6db5d202342f538d067d87ae7135e).
-        find "$pkg_dir/$pkg/$KISS_PREFIX/$KISS_LIBDIR" \
+        find "$pkg_dir/$pkg/usr/lib" \
             -name \*.la \
             -exec rm -f {} + \
             2>/dev/null ||:
 
         # Endless source of conflicts.
-        rm -f "$pkg_dir/$pkg/$KISS_PREFIX/$KISS_LIBDIR/charset.alias"
+        rm -f "$pkg_dir/$pkg/usr/lib/charset.alias"
 
         # Create the manifest file early and make it empty. This ensures that
         # the manifest is added to the manifest.
         : > "$pkg_dir/$pkg/$pkg_db/$pkg/manifest"
 
         # Same for etcsums if /etc exists in package.
-        [ -d "$pkg_dir/$pkg/$KISS_SYSCONFDIR" ] &&
+        [ -d "$pkg_dir/$pkg/etc" ] &&
             : > "$pkg_dir/$pkg/$pkg_db/$pkg/etcsums"
 
         pkg_strip    "$pkg"
@@ -976,7 +976,7 @@ pkg_install_files() {
 
         # Copy files and create directories (preserving permissions).
         case $line in
-            /"$KISS_SYSCONFDIR"/?*[!/])
+            /etc/?*[!/])
                 pkg_etc_file "$2" "${line#/}"
             ;;
 
@@ -1004,7 +1004,7 @@ pkg_remove_files() {
     # functions allows us to stop duplicating code.
     while read -r file; do
         case $file in
-            /"$KISS_SYSCONFDIR"/?*[!/])
+            /etc/?*[!/])
                 sum_sys=$(sh256 "$KISS_ROOT/$file") ||:
                 sum_old=$(grep -F "$sum_sys" "$tmp_dir/.etcsums") ||:
 
@@ -1505,27 +1505,6 @@ main() {
     # Globally disable globbing and enable exit-on-error.
     set -ef
 
-    sys_dir() {
-        # Export environment variable named in $1.
-        # Strip all trailing slashes from path held in $2.
-        export "KISS_$1=${2%"${2##*[!/]}"}"
-    }
-
-    # Set the default values of system directories.
-    sys_dir PREFIX         "${KISS_PREFIX-/usr}"
-    sys_dir LIBDIR         "${KISS_LIBDIR:-lib}"
-    sys_dir LIBEXECDIR     "${KISS_LIBEXECDIR:-libexec}"
-    sys_dir BINDIR         "${KISS_BINDIR:-bin}"
-    sys_dir SBINDIR        "${KISS_SBINDIR:-sbin}"
-    sys_dir SYSCONFDIR     "${KISS_SYSCONFDIR:-etc}"
-    sys_dir INCLUDEDIR     "${KISS_INCLUDEDIR:-include}"
-    sys_dir LOCALSTATEDIR  "${KISS_LOCALSTATEDIR:-var}"
-    sys_dir SHAREDSTATEDIR "${KISS_SHAREDSTATEDIR:-com}"
-    sys_dir DATADIR        "${KISS_DATADIR:-share}"
-    sys_dir INFODIR        "${KISS_INFODIR:-"$KISS_DATADIR/info"}"
-    sys_dir MANDIR         "${KISS_MANDIR:-"$KISS_DATADIR/man"}"
-    sys_dir ROOT           "$KISS_ROOT"
-
     # Allow the user to disable colors in output via an environment variable.
     # Check this once so as to not slow down printing.
     [ "$KISS_COLOR" = 0 ] || {
@@ -1569,6 +1548,9 @@ main() {
 
     # Define some paths which we will then use throughout the script.
     sys_db=$KISS_ROOT/${pkg_db:=var/db/kiss/installed}
+
+    # Ensure that the KISS_ROOT doesn't end with a '/'.
+    KISS_ROOT=${KISS_ROOT%"${KISS_ROOT##*[!/]}"}
 
     # This allows for automatic setup of a KISS chroot and will
     # do nothing on a normal system.
