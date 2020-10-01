@@ -304,15 +304,15 @@ pkg_extract() {
             ;;
 
             git+*)
-                # Split the source into URL + OBJECT (branch or commit).
-                url=${src##git+} com=${url##*[@#]} com=${com#${url%[#@]*}}
+                url=${src##git+}
+                com=${url##*[@#]}
+                com=${com#"${url%[#@]*}"}
 
-                # Shallow clone branches, commits or default branch.
                 log "$1" "cloning ${url%[#@]*}"; {
                     git init
                     git remote add origin "${url%[#@]*}"
-                    git fetch --tags --depth=1 origin "$com" || git fetch --tags
-                    git checkout "${com:-FETCH_HEAD}"
+                    git fetch -t --depth 1 origin "$com" || git fetch -t
+                    git -c advice.detachedHead=0 checkout "${com:-FETCH_HEAD}"
                 } || die "$1" "failed to clone $src"
             ;;
 
