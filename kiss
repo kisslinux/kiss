@@ -644,7 +644,7 @@ pkg_build() {
             # False positive.
             # shellcheck disable=2030
             (
-                KISS_FORCE=1
+                export KISS_FORCE=1
                 args i "$tar_file"
             )
 
@@ -732,8 +732,8 @@ pkg_build() {
             log "$pkg" "marked for install"
 
             # False positive.
-            # shellcheck disable=2030
-            KISS_FORCE=1
+            # shellcheck disable=2030,2031
+            export KISS_FORCE=1
             args i "$pkg"
         )
     done
@@ -1080,9 +1080,9 @@ pkg_remove() {
     [ "$KISS_FORCE" = 1 ] || (
         cd "$sys_db"
         set +f
-        grep -lFx "$1" -- */depends
+        ! grep -lFx "$1" -- */depends
 
-    ) && die "$1" "can't remove package, others depend on it"
+    ) || die "$1" "can't remove package, others depend on it"
 
     # Block being able to abort the script with 'Ctrl+C' during removal.
     # Removes all risk of the user aborting a package removal leaving an
