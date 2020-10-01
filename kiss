@@ -234,11 +234,15 @@ pkg_cache() {
     read -r version release 2>/dev/null < "$repo_dir/version"
 
     set +f
-    set -f -- "$bin_dir/$1#$version-$release.tar."*
+    set -f -- "$bin_dir/$1"[#@]"$version-$release.tar."*
 
+    # Prefer '@' to '#' in tarball names.
+    [ -f "$2" ] && shift
+
+    printf 'unpacking %s\n' "$1"
     tar_file=$1
 
-    [ -f "$tar_file" ]
+    [ -f "$1" ]
 }
 
 pkg_sources() {
@@ -588,7 +592,7 @@ pkg_tar() (
         lz)   lzip  -z    ;;
         xz)   xz    -zT 0 ;;
         zst)  zstd  -z    ;;
-    esac > "$bin_dir/$1#$version-$release.tar.${KISS_COMPRESS:-gz}"
+    esac > "$bin_dir/$1@$version-$release.tar.${KISS_COMPRESS:-gz}"
 
     run_user_hook post-package "$1"
 )
