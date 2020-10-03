@@ -416,6 +416,10 @@ pkg_depends() {
         [ -f "$repo_dir/depends" ] &&
             while read -r dep _ || [ "$dep" ]; do
                 case $dep-$2 in
+                    "$1-$2")
+                        log "warning: '$1' depends on itself"
+                    ;;
+
                     [!#]*-filter)
                         pkg_depends "$dep" "$2"
                     ;;
