@@ -415,6 +415,11 @@ pkg_depends() {
         # Recurse through the dependencies of the child packages.
         [ -f "$repo_dir/depends" ] &&
             while read -r dep _ || [ "$dep" ]; do
+                _deps_seen="$_deps_seen $dep"
+
+                contains "$_deps_seen" "$1 $dep $1 $dep $1 $dep" &&
+                    die "circular dependency between '$1' and '$dep'"
+
                 case $dep-$2 in
                     "$1-$2")
                         log "warning: '$1' depends on itself"
