@@ -62,24 +62,6 @@ EOF
     id -u "${user:=root}" >/dev/null 2>&1 || user=root
 }
 
-find_replace() {
-    while IFS= read -r _line; do
-        case $_line in
-            "$1")
-                printf '%s\n' "$2"
-            ;;
-
-            *)
-                printf '%s\n' "$_line"
-            ;;
-        esac
-    done < "$3" |
-
-    sort -r > "$tmp_dir/.sed"
-
-    mv -f "$tmp_dir/.sed" "$3"
-}
-
 run_user_hook() {
     set -- "${1:-null}" "${2:-null}" "${3:-null}"
 
@@ -571,6 +553,25 @@ pkg_manifest() (
     sed '/^\.\/$/d;ss.ss' > "${2:-"$pkg_dir"}/$1/$pkg_db/$1/manifest"
 )
 
+pkg_manifest_replace() {
+    # Replace a line with another in manifest files.
+    while IFS= read -r _line; do
+        case $_line in
+            "$1")
+                printf '%s\n' "$2"
+            ;;
+
+            *)
+                printf '%s\n' "$_line"
+            ;;
+        esac
+    done < "$sys_db/$3/manifest" |
+
+    sort -r > "$tmp_dir/.sed"
+
+    mv -f "$tmp_dir/.sed" "$sys_db/$3/manifest"
+}
+
 pkg_manifest_verify() {
     # Ensure that everything listed in the manifest exists in the tarball.
     while read -r line; do
@@ -932,7 +933,6 @@ pkg_swap() {
     # pkg_name + /path/to/file -> pkg_name>path>to>file
     alt=$(
         printf %s "$1$2" |
-
         sed 's|/|>|g'
     )
 
@@ -942,31 +942,20 @@ pkg_swap() {
         die "alternative '$1 $2' doesn't exist"
 
     elif [ -f "$2" ]; then
-        # Figure out which package owns the file we are going to swap for
-        # another package's. Print the full path to the manifest file which
-        # contains the match to our search.
+        # Figure out which package owns the file we are going to swap.
         pkg_owner -lFx "$2" ||
             die "file '$2' exists on filesystem but isn't owned"
 
-        # Convert the current owner to an alternative and rewrite its
-        # manifest file to reflect this.
         cp -Pf "$KISS_ROOT/$2" "$pkg_owner>${alt#*>}"
 
-        find_replace \
-            "$2" \
-            "${PWD#"$KISS_ROOT"}/$pkg_owner>${alt#*>}" \
-            "../installed/$pkg_owner/manifest"
+        pkg_manifest_replace \
+            "$2" "/$cho_db/$pkg_owner>${alt#*>}" "$pkg_owner"
     fi
 
-    # Convert the desired alternative to a real file and rewrite the manifest
-    # file to reflect this. The reverse of above.
     mv -f "$alt" "$KISS_ROOT/$2"
 
-    # Update the matching line in the manifest.
-    find_replace \
-        "${PWD#"$KISS_ROOT"}/$alt" \
-        "$2" \
-        "../installed/$1/manifest"
+    pkg_manifest_replace \
+        "/$cho_db/$alt" "$2" "$1"
 
     printf '%s is now provided by %s (was %s)\n' "$2" "$1" "$pkg_owner"
 }
@@ -1581,6 +1570,7 @@ main() {
 
     # Define some paths which we will then use throughout the script.
     sys_db=$KISS_ROOT/${pkg_db:=var/db/kiss/installed}
+    cho_db=${pkg_db%%/installed}/choices
 
     # Ensure that the KISS_ROOT doesn't end with a '/'.
     KISS_ROOT=${KISS_ROOT%"${KISS_ROOT##*[!/]}"}
