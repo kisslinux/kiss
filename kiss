@@ -1156,7 +1156,7 @@ pkg_install() {
 
             tar_file=$1
             pkg=${1##*/}
-            pkg=${pkg%#*}
+            pkg=${pkg%[#@]*}
         ;;
 
         *)
