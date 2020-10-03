@@ -1333,7 +1333,11 @@ sys_update() {
     }
 
     pkg_update=1
-    pkg_build "$@"
+    pkg_order "$@"
+
+    # Intentional, globbing disabled.
+    # shellcheck disable=2086
+    pkg_build $order
 }
 
 pkg_clean() {
