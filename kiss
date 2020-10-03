@@ -401,8 +401,16 @@ pkg_depends() {
             while read -r dep _ || [ "$dep" ]; do
                 case $dep in
                     [!#]*)
-                        pkg_list "$dep" >/dev/null 2>&1 ||
-                            pkg_depends "$dep"
+                        case $2 in
+                            filter)
+                                pkg_depends "$dep" "$2"
+                            ;;
+
+                            *)
+                                pkg_list "$dep" >/dev/null 2>&1 ||
+                                    pkg_depends "$dep"
+                            ;;
+                        esac
                     ;;
                 esac
             done < "$repo_dir/depends"
@@ -411,6 +419,20 @@ pkg_depends() {
         # add the package which depends on them.
         [ "$2" = explicit ] || deps="$deps $1"
     }
+}
+
+pkg_order() {
+    # Sort a list of packages based on dependence.
+    for _pkg do
+        pkg_depends "$_pkg" filter
+    done
+
+    for _pkg in $deps; do
+        contains "$*" "$_pkg" &&
+            order="$order $_pkg" redro="$_pkg $redro"
+    done
+
+    deps=
 }
 
 pkg_strip() {
@@ -1425,7 +1447,9 @@ args() {
         ;;
 
         i|install)
-            for pkg do
+            pkg_order "$@"
+
+            for pkg in $order; do
                 pkg_install "$pkg"
             done
         ;;
@@ -1443,7 +1467,9 @@ args() {
         ;;
 
         r|remove)
-            for pkg do
+            pkg_order "$@"
+
+            for pkg in $redro; do
                 pkg_remove "$pkg"
             done
         ;;
