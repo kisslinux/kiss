@@ -154,7 +154,7 @@ pkg_owner() {
     [ "$3" ] ||
         set -- "$1" "$2" "$sys_db"/*/manifest
 
-    pkg_owner=$(grep "$@")
+    pkg_owner=$("$grep" "$@")
     pkg_owner=${pkg_owner%/*}
     pkg_owner=${pkg_owner##*/}
 
@@ -228,7 +228,7 @@ pkg_list() {
 
 pkg_cache() {
     # Find the tarball of a package using a glob. Use the first found match
-    # of '<pkg_name>#<pkg_version><pkg_release>.tar.*'.
+    # of '<pkg_name>[#@]<pkg_version><pkg_release>.tar.*'.
     pkg_find "$1"
 
     read -r version release 2>/dev/null < "$repo_dir/version"
@@ -239,7 +239,6 @@ pkg_cache() {
     # Prefer '@' to '#' in tarball names.
     [ -f "$2" ] && shift
 
-    printf 'unpacking %s\n' "$1"
     tar_file=$1
 
     [ -f "$1" ]
@@ -855,7 +854,7 @@ pkg_conflicts() {
     [ "$#" != 0 ] || return 0
 
     # Store the list of found conflicts in a file for reuse.
-    grep -Fxf "$tmp_dir/.manifest" -- "$@" 2>/dev/null \
+    "$grep" -Fxf "$tmp_dir/.manifest" -- "$@" 2>/dev/null \
         > "$tmp_dir/.conflicts" ||:
 
     if [ "$KISS_CHOICE" != 0  ] && [ -s "$tmp_dir/.conflicts" ]; then
@@ -1010,7 +1009,7 @@ pkg_remove_files() {
         case $file in
             /etc/?*[!/])
                 sum_sys=$(sh256 "$KISS_ROOT/$file") ||:
-                sum_old=$(grep -F "$sum_sys" "$tmp_dir/.etcsums") ||:
+                sum_old=$("$grep" -F "$sum_sys" "$tmp_dir/.etcsums") ||:
 
                 [ "$sum_sys" = "$sum_old" ] || {
                     printf 'Skipping %s (modified)\n' "$file"
@@ -1080,7 +1079,7 @@ pkg_remove() {
     [ "$KISS_FORCE" = 1 ] || (
         cd "$sys_db"
         set +f
-        ! grep -lFx "$1" -- */depends
+        ! "$grep" -lFx "$1" -- */depends
 
     ) || die "$1" "can't remove package, others depend on it"
 
@@ -1176,8 +1175,8 @@ pkg_install() {
     log "$pkg" "installing package"
     pkg_install_files -z "$tar_dir/$pkg"
 
-    grep -vFxf "$sys_db/$pkg/manifest" "$tmp_dir/.manifest" 2>/dev/null |
-        pkg_remove_files
+    "$grep" -vFxf "$sys_db/$pkg/manifest" "$tmp_dir/.manifest" \
+        2>/dev/null | pkg_remove_files
 
     log "$pkg" "verifying installation"
     pkg_install_files -e "$tar_dir/$pkg"
@@ -1541,6 +1540,9 @@ main() {
         command -v eu-readelf   ||
         command -v llvm-readelf
     )"} || elf_cmd=ldd
+
+    # Allow users to override default grep.
+    grep=${KISS_GREP:=grep}
 
     # Store the date and time of script invocation to be used as the name of
     # the log files the package manager creates uring builds.
