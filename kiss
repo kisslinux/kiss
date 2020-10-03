@@ -150,7 +150,7 @@ pkg_lint() {
     cd "$repo_dir"
 
     read -r _ release 2>/dev/null < version ||
-        die "version file not found"
+        die "$1" "version file not found"
 
     [ "$release" ] ||
         die "$1" "release field not found in version file"
