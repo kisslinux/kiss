@@ -381,18 +381,14 @@ pkg_depends() {
         # Recurse through the dependencies of the child packages.
         [ -f "$repo_dir/depends" ] &&
             while read -r dep _ || [ "$dep" ]; do
-                case $dep in
-                    [!#]*)
-                        case $2 in
-                            filter)
-                                pkg_depends "$dep" "$2"
-                            ;;
+                case $dep-$2 in
+                    [!#]*-filter)
+                        pkg_depends "$dep" "$2"
+                    ;;
 
-                            *)
-                                pkg_list "$dep" >/dev/null 2>&1 ||
-                                    pkg_depends "$dep"
-                            ;;
-                        esac
+                    [!#]*)
+                        pkg_list "$dep" >/dev/null 2>&1 ||
+                            pkg_depends "$dep"
                     ;;
                 esac
             done < "$repo_dir/depends"
