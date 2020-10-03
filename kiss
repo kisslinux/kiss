@@ -62,6 +62,40 @@ EOF
     id -u "${user:=root}" >/dev/null 2>&1 || user=root
 }
 
+get_octal_perms() {
+    # Get a file's permissions in octal. Parse 'ls -ld' output which
+    # has standardized output. The -rwxrwxrwx output is converted to
+    # octal in pure posix shell.
+    rwx=$(ls -ld "$1") oct='' b='' o=0
+
+    # 1-9 loop with the second digit being the value of the field.
+    for c in 14 22 31 44 52 61 74 82 91; do
+        rwx=${rwx#?}
+
+        case $rwx in
+            [rwx]*)
+                o=$((o + ${c#[1-9]}))
+            ;;
+
+            [st]*)
+                o=$((o + 1))
+                b=$((b + 4 / (${c%[1-9]} / 3)))
+            ;;
+
+            [ST]*)
+                b=$((b + 1))
+            ;;
+        esac
+
+        case ${c%[1-9]} in
+            [369])
+                oct=$oct$o
+                o=0
+            ;;
+        esac
+    done
+}
+
 run_user_hook() {
     set -- "${1:-null}" "${2:-null}" "${3:-null}"
 
@@ -962,47 +996,34 @@ pkg_install_files() {
     # going down the tree.
     sort "$2/$pkg_db/${2##*/}/manifest" |
 
-    while read -r line; do
-        [ -d "$KISS_ROOT/$line" ] || test "$1" "$KISS_ROOT/$line" &&
+    while IFS=/ read -r _ line; do
+        [ -d "$KISS_ROOT/$line" ] && [ ! -h "$KISS_ROOT/$line" ] &&
             continue
 
-        rwx=$(ls -ld "$2/$line") oct='' b='' o=0
+        test "$1" "$KISS_ROOT/$line" &&
+            continue
 
-        # Convert the output of 'ls' (rwxrwx---) to octal. This is a
-        # 1-9 loop with the second digit being the value of the field.
-        for c in 14 22 31 44 52 61 74 82 91; do
-            rwx=${rwx#?}
+        new=
 
-            case $rwx in
-                [rwx]*): "$((o+=${c#?}))" ;;
-                 [st]*): "$((o+=1))" "$((b+=4 / (${c%?}/3)))" ;;
-                 [ST]*): "$((b+=1))" ;;
-            esac
-
-            case $((${c%?} % 3)) in
-                0) oct=$oct$o o=0
-            esac
-        done
-
-        # Copy files and create directories (preserving permissions).
         case $line in
-            /etc/?*[!/])
-                pkg_etc_file "$2" "${line#/}"
-            ;;
-
             */)
+                get_octal_perms "$2/$line"
                 mkdir -m "$oct" "$KISS_ROOT/$line"
+                continue
             ;;
 
-            *)
-                cp -fP "$2/$line" "$KISS_ROOT/$line"
-
-                # This prepends $b which represents sticky bit,
-                # setuid, setfgid, etc.
-                [ -h "$KISS_ROOT/$line" ] ||
-                    chmod "$b$oct" "$KISS_ROOT/$line"
+            /etc/?*[!/])
+                pkg_etc_file "$2" "${line#/}" ||
+                    continue
             ;;
         esac
+
+        cp -fP "$2/$line" "$KISS_ROOT/$line${new}"
+
+        [ -h "$KISS_ROOT/$line" ] || {
+            get_octal_perms "$2/$line"
+            chmod "$b$oct" "$KISS_ROOT/$line${new}"
+        }
     done ||:
 
     pkg_etc_cnt=0
@@ -1046,7 +1067,7 @@ pkg_etc_file() {
     pkg_etc_cnt=$((pkg_etc_cnt + 1))
 
     sum_new=$(sh256 "$1/$2")                                2>/dev/null ||:
-    sum_sys=$(cd "$KISS_ROOT/"; sh256 "$2")                 2>/dev/null ||:
+    sum_sys=$(sh256 "$KISS_ROOT/$2")                        2>/dev/null ||:
     sum_old=$(awk "NR == $pkg_etc_cnt" "$tmp_dir/.etcsums") 2>/dev/null ||:
 
     # Use a case statement to easily compare three strings at
@@ -1054,7 +1075,7 @@ pkg_etc_file() {
     case ${sum_old:-null}${sum_sys:-null}${sum_new} in
         # old = Y, sys = X, new = Y
         "${sum_new}${sum_sys}${sum_old}")
-            return 0
+            return 1
         ;;
 
         # old = X, sys = X, new = X
@@ -1072,8 +1093,6 @@ pkg_etc_file() {
             new=.new
         ;;
     esac
-
-    cp -fP "$1/$2" "$KISS_ROOT/${2}${new}"
 }
 
 pkg_remove() {
@@ -1560,8 +1579,7 @@ main() {
     # the log files the package manager creates uring builds.
     date=$(date +%Y-%m-%d-%H:%M:%S)
 
-    # Make note of the user's current ID to do root checks later on.
-    # This is used enough to warrant a place here.
+    # Make note of the current user.
     uid=$(id -u)
 
     # Define some paths which we will then use throughout the script.
