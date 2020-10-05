@@ -897,7 +897,7 @@ pkg_conflicts() {
                 printf '%s\n' "${PWD#"$KISS_ROOT"}/${file##*/}"
             ;;
         esac
-    done < "$tar_dir/$1/$pkg_db/$1/manifest" > "$tmp_dir/.manifest"
+    done < "$tar_dir/$1/$pkg_db/$1/manifest" > "$tmp_dir/.conflict-manifest"
 
     set +f
     set -f "$sys_db"/*/manifest
@@ -916,7 +916,7 @@ pkg_conflicts() {
     [ "$#" != 0 ] || return 0
 
     # Store the list of found conflicts in a file for reuse.
-    grep -Fxf "$tmp_dir/.manifest" -- "$@" 2>/dev/null \
+    grep -Fxf "$tmp_dir/.conflict-manifest" -- "$@" 2>/dev/null \
         > "$tmp_dir/.conflicts" ||:
 
     if [ "$KISS_CHOICE" != 0  ] && [ -s "$tmp_dir/.conflicts" ]; then
