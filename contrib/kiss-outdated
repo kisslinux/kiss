@@ -239,10 +239,8 @@ main() {
             continue
         }
 
-        [ "$ver" = git ] && {
-            printf '%-30s git\n' "$pkg" >&2
+        [ "$ver" = git ] &&
             continue
-        }
 
         repology_version "$pkg" || {
             printf '%-30s network error\n' "$pkg" >&2
