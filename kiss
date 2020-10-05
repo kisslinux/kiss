@@ -977,7 +977,7 @@ pkg_swap() {
     if [ -d "$alt" ] || [ -d "$2" ]; then
         die "source or target is directory"
 
-    elif [ ! -e "$alt" ]; then
+    elif [ ! -h "$alt" ] && [ ! -e "$alt" ]; then
         die "alternative '$1 $2' doesn't exist"
 
     elif [ -e "$2" ]; then
