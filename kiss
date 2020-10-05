@@ -969,18 +969,18 @@ pkg_swap() {
     # Swap between package alternatives.
     pkg_list "$1" >/dev/null
 
-    # pkg_name + /path/to/file -> pkg_name>path>to>file
-    alt=$(
-        printf %s "$1$2" |
-        sed 's|/|>|g'
-    )
+    # pkg_name/path/to/file -> pkg_name>path>to>file
+    alt=$(printf %s "$1$2" | sed 's|/|>|g')
 
     cd "$sys_db/../choices"
 
-    if [ ! -f "$alt" ] && [ ! -h "$alt" ]; then
+    if [ -d "$alt" ] || [ -d "$2" ]; then
+        die "source or target is directory"
+
+    elif [ ! -e "$alt" ]; then
         die "alternative '$1 $2' doesn't exist"
 
-    elif [ -f "$2" ]; then
+    elif [ -e "$2" ]; then
         # Figure out which package owns the file we are going to swap.
         pkg_owner -lFx "$2" ||
             die "file '$2' exists on filesystem but isn't owned"
