@@ -799,6 +799,16 @@ pkg_build() {
         )
     done
 
+    if [ "$pkg_update" ]; then
+        return
+
+    elif [ "$#" -gt 1 ] && prompt "Install built packages? [$*]"; then
+        args i "$@"
+
+    else
+        log "Run 'kiss i $*' to install the package(s)"
+    fi
+
     log "successfully built all packages"
 }
 
