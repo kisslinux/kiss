@@ -253,7 +253,7 @@ pkg_cache() {
     set -f -- "$bin_dir/$1"[#@]"$version-$release.tar."*
 
     # Prefer '@' to '#' in tarball names.
-    [ -f "$2" ] && shift
+    [ ! -f "$2" ] || shift
 
     tar_file=$1
 
