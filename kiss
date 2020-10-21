@@ -799,6 +799,10 @@ pkg_build() {
         )
     done
 
+    # Turn the explicit packages into a 'list'. 
+    # shellcheck disable=2046,2086
+    set -- $explicit
+
     if [ "$pkg_update" ]; then
         return
 
