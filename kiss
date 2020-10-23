@@ -278,13 +278,14 @@ pkg_sources() {
         elif [ -z "${src##git+*}" ]; then
             printf 'found git      %s\n' "${src##git+}"
 
-        elif [ -f "${src##*/}" ]; then
+        elif [ -f "./${dest:-.}/${src##*/}" ]; then
             printf 'found cached   %s\n' "${src##*/}"
 
         elif [ -z "${src##*://*}" ]; then
             printf 'downloading %s\n' "$src"
+            mkdir -p "$PWD/$dest"
 
-            curl "$src" -fLo "${src##*/}" || {
+            curl "$src" -fLo "./${dest:-.}/${src##*/}" || {
                 rm -f "${src##*/}"
                 die "$1" "failed to download $src"
             }
@@ -393,6 +394,10 @@ pkg_extract() {
                 # Local file (absolute).
                 elif [ -f "/$src" ]; then
                     cp -f "/$src" .
+
+                # Remote file + dest.
+                elif [ -f "$src_dir/$1/$dest/${src##*/}" ]; then
+                    cp -f "$src_dir/$1/$dest/${src##*/}" .
 
                 # Remote file.
                 elif [ -f "$src_dir/$1/${src##*/}" ]; then
@@ -821,14 +826,14 @@ pkg_checksums() {
 
     [ -f "$repo_dir/sources" ] || return 0
 
-    while read -r src _ || [ "$src" ]; do
+    while read -r src dest || [ "$src" ]; do
         # Skip comments, blank lines and git sources.
         if [ -z "${src##\#*}" ] || [ -z "${src##git+*}" ]; then
             continue
 
         # Remote source.
         elif [ -z "${src##*://*}" ]; then
-            sh256 "$src_dir/$1/${src##*/}"
+            sh256 "$src_dir/$1/${dest:-.}/${src##*/}"
 
         # Skip directories.
         elif [ -d "$repo_dir/$src" ] || [ -d "/$src" ]; then
