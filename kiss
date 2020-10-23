@@ -279,7 +279,7 @@ pkg_sources() {
             printf 'found git      %s\n' "${src##git+}"
 
         elif [ -f "./${dest:-.}/${src##*/}" ]; then
-            printf 'found cached   %s\n' "${src##*/}"
+            printf 'found cached   %s\n' "${dest:+"$dest/"}${src##*/}"
 
         elif [ -z "${src##*://*}" ]; then
             printf 'downloading %s\n' "$src"
