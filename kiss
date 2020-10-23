@@ -333,7 +333,7 @@ pkg_extract() {
             ;;
 
             *://*.tar|*://*.tar.??|*://*.tar.???|*://*.tar.????|*://*.t?z)
-                decompress "$src_dir/$1/${src##*/}" \
+                decompress "$src_dir/$1/${dest:-.}/${src##*/}" \
                     > "$tmp_dir/.tar"
 
                 tar xf "$tmp_dir/.tar" ||
@@ -374,7 +374,7 @@ pkg_extract() {
             ;;
 
             *://*.zip)
-                unzip "$src_dir/$1/${src##*/}" ||
+                unzip "$src_dir/$1/${dest:-.}/${src##*/}" ||
                     die "$1" "failed to extract ${src##*/}"
             ;;
 
@@ -395,13 +395,9 @@ pkg_extract() {
                 elif [ -f "/$src" ]; then
                     cp -f "/$src" .
 
-                # Remote file + dest.
-                elif [ -f "$src_dir/$1/$dest/${src##*/}" ]; then
-                    cp -f "$src_dir/$1/$dest/${src##*/}" .
-
                 # Remote file.
-                elif [ -f "$src_dir/$1/${src##*/}" ]; then
-                    cp -f "$src_dir/$1/${src##*/}" .
+                elif [ -f "$src_dir/$1/${dest:-.}/${src##*/}" ]; then
+                    cp -f "$src_dir/$1/${dest:-.}/${src##*/}" .
 
                 else
                     die "$1" "file $src not found"
