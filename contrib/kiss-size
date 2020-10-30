@@ -12,7 +12,11 @@ get_size() {
         *)     hum=$(($1))  ;;
     esac
 
-    printf '%s\t%s\n' "$hum" "$2"
+    if [ -z "$KISS_RAW" ]; then
+        printf '%s\t%s\n' "$hum" "$2"
+    else
+        printf '%s\t%s\t%s\n' "$hum" "$2" "$1"
+    fi
 }
 
 # Use the current directory as the package name if no package is given.

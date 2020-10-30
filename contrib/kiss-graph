@@ -1,0 +1,8 @@
+#!/bin/sh -ef
+# list all packages by size
+export KISS_RAW=1
+kiss list | xargs -I{} -n 1 sh -c 'echo $(kiss size {} 2>&1 >/dev/null | cut -f 1,3) {}' | sort -k 2 -nr |
+while read -r hSize size pkg version rVersion; do
+    printf "%s\t%s\n" $hSize $pkg
+done
+
