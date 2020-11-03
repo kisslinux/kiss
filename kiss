@@ -271,6 +271,8 @@ pkg_sources() {
     mkdir -p "$src_dir/$1"
     cd "$src_dir/$1"
 
+    read -r version release < "$repo_dir/version"
+    sed "s/\$VERSION/$version/g; s/\$ARCH/${ARCH:-$(uname -m)}/g" "$repo_dir/sources" |
     while read -r src dest || [ "$src" ]; do
         if [ -z "${src##\#*}" ]; then
             continue
@@ -299,7 +301,7 @@ pkg_sources() {
         else
             die "$1" "no local file '$src'"
         fi
-    done < "$repo_dir/sources"
+    done
 }
 
 pkg_extract() {
@@ -311,6 +313,8 @@ pkg_extract() {
 
     log "$1" "extracting sources"
 
+    read -r version release < "$repo_dir/version"
+    sed "s/\$VERSION/$version/g; s/\$ARCH/${ARCH:-$(uname -m)}/g" "$repo_dir/sources" |
     while read -r src dest || [ "$src" ]; do
         mkdir -p "$mak_dir/$1/$dest" && cd "$mak_dir/$1/$dest"
 
@@ -404,7 +408,7 @@ pkg_extract() {
                 fi
             ;;
         esac
-    done < "$repo_dir/sources"
+    done
 }
 
 pkg_depends() {
