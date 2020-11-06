@@ -261,7 +261,7 @@ pkg_extract() {
             # GNU tar's '--strip-components 1'.
             *://*.tar|*://*.tar.??|*://*.tar.???|*://*.tar.????|*://*.t?z)
                 # Decompress the archive to a temporary .tar archive.
-                decompress "$src_dir/$1/${src##*/}" > .ktar
+                decompress "$src_dir/$1/${dest:-.}/${src##*/}" > .ktar
 
                 # Extract the tar archive to the current directory.
                 tar xf .ktar || die "$1" "Couldn't extract ${src##*/}"
@@ -310,7 +310,7 @@ pkg_extract() {
 
             # Zip archives.
             *://*.zip)
-                unzip "$src_dir/$1/${src##*/}" ||
+                unzip "$src_dir/$1/${dest:-.}/${src##*/}" ||
                     die "$1" "Couldn't extract ${src##*/}"
             ;;
 
