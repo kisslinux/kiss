@@ -19,8 +19,6 @@ done < "$db/$pkg/manifest"
 
 cd "$KISS_ROOT/"
 
-dest="$OLDPWD/$pkg#$ver-$rel.tar.${KISS_COMPRESS:-gz}"
-
 tar cf - "$@" | case ${KISS_COMPRESS:-gz} in
     bz2)  bzip2 -z ;;
     gz)   gzip -6  ;;
@@ -28,6 +26,6 @@ tar cf - "$@" | case ${KISS_COMPRESS:-gz} in
     lz)   lzip -z  ;;
     xz)   xz -zT 0 ;;
     zst)  zstd -z  ;;
-esac > "$dest"
+esac > "$OLDPWD/$pkg#$ver-$rel.tar.${KISS_COMPRESS:-gz}"
 
-printf 'created %s\n' "$dest"
+printf 'created %s\n' "$OLDPWD/$pkg#$ver-$rel.tar.${KISS_COMPRESS:-gz}"

@@ -11,9 +11,18 @@ log() {
         "$lcol" "${3:-->}" "${lclr}${2:+$lcol2}" "$1" "$lclr" "$2" >&2
 }
 
+war() {
+    log "$1" "$2" "${3:-WARNING}"
+}
+
 die() {
     log "$1" "$2" "${3:-ERROR}"
     exit 1
+}
+
+contains() {
+    # Check if a "string list" contains a word.
+    case " $1 " in *" $2 "*) return 0; esac; return 1
 }
 
 prompt() {
@@ -28,7 +37,7 @@ as_root() {
     [ "$uid" = 0 ] || log "Using '${su:=su}' (to become ${user:=root})"
 
     case ${su##*/} in
-        doas | sudo | sls)
+        doas|sudo|sls)
             "$su" -u "$user" -- env "$@"
         ;;
 
@@ -37,120 +46,58 @@ as_root() {
         ;;
 
         *)
-            die "invalid KISS_SU value '$su' (valid: doas, sudo, sls, su)"
+            die "Invalid KISS_SU value: $su (valid: doas, sudo, sls, su)"
         ;;
     esac
-}
-
-contains() {
-    _sep=${3:- }
-
-    case "${_sep}${1}${_sep}" in
-        *"${_sep}${2}${_sep}"*)
-            return 0
-        ;;
-    esac
-
-    return 1
 }
 
 file_owner() {
-    read -r _ _ user _ <<EOF
-$(ls -ld "$1")
-EOF
+    # shellcheck disable=2046
+    set -- $(ls -ld "$1")
 
-    id -u "${user:=root}" >/dev/null 2>&1 || user=root
+    user=${3:-root}
+
+    id -u "$user" >/dev/null 2>&1 || user=root
 }
 
-get_octal_perms() {
-    # Get a file's permissions in octal. Parse 'ls -ld' output which
-    # has standardized output. The -rwxrwxrwx output is converted to
-    # octal in pure posix shell.
-    rwx=$(ls -ld "$1") oct='' b='' o=0
-
-    # 1-9 loop with the second digit being the value of the field.
-    for c in 14 22 31 44 52 61 74 82 91; do
-        rwx=${rwx#?}
-
-        case $rwx in
-            [rwx]*)
-                o=$((o + ${c#[1-9]}))
-            ;;
-
-            [st]*)
-                o=$((o + 1))
-                b=$((b + 4 / (${c%[1-9]} / 3)))
-            ;;
-
-            [ST]*)
-                b=$((b + 1))
-            ;;
-        esac
-
-        case ${c%[1-9]} in
-            [369])
-                oct=$oct$o
-                o=0
-            ;;
-        esac
-    done
-}
-
-run_user_hook() {
-    set -- "${1:-null}" "${2:-null}" "${3:-null}"
-
+run_hook() {
+    # Provide a default post-build hook to remove files and directories
+    # for things we don't support out of the box. One can simply define
+    # their own hook to override this behavior.
     case ${KISS_HOOK:--}$1 in
-        # Provide a default post-build hook to remove files and directories
-        # for things we don't support out of the box. One can simply define
-        # their own hook to override this behavior.
         -post-build)
-            rm -rf \
-                "$3/usr/share/gettext" \
-                "$3/usr/share/polkit-1" \
-                "$3/usr/share/locale" \
-                "$3/usr/share/info"
+            rm -rf "$3/usr/share/gettext" \
+                   "$3/usr/share/polkit-1" \
+                   "$3/usr/share/locale" \
+                   "$3/usr/share/info"
         ;;
 
         [!-]*)
-            TYPE=$1 PKG=$2 DEST=$3 . "$KISS_HOOK"
+            TYPE=${1:-null} PKG=${2:-null} DEST=${3:-null} . "$KISS_HOOK"
         ;;
     esac
 }
 
-run_repo_hook() {
-    # Execute hooks which have the executable permission set, cat hooks which
-    # don't. Allows packages which only need to display a message to avoid
-    # executing any code.
-    _hook=${3:-"$sys_db/$2/$1"}
-
-    [ -f "$_hook" ] ||
-        return 0
-
-    log "$2" "running $1 hook"
-
-    if [ -x "$_hook" ]; then
-        "$_hook"
-
-    else
-        cat "$_hook"
-    fi
-}
-
 decompress() {
-    case ${1##*.} in
-        bz2)      bzip2 -dc ;;
-        lzma)     lzma  -dc ;;
-        lz)       lzip  -dc ;;
-        tar)      cat       ;;
-        tgz | gz) gzip  -dc ;;
-        txz | xz) xz    -dc ;;
-        zst)      zstd  -dc ;;
+    case $1 in
+        *.bz2)      bzip2 -d  ;;
+        *.lzma)     lzma -dc  ;;
+        *.lz)       lzip -dc  ;;
+        *.tar)      cat       ;;
+        *.tgz|*.gz) gzip -d   ;;
+        *.xz|*.txz) xz -dcT 0 ;;
+        *.zst)      zstd -dc  ;;
     esac < "$1"
 }
 
 sh256() {
     # There's no standard utility to generate sha256 checksums.
-    # This unifies various tools using the first available.
+    # This is a simple wrapper around sha256sum, sha256, shasum,
+    # openssl, digest, ... which will use whatever is available.
+    #
+    # All utilities must match 'sha256sum' output.
+    #
+    # Example: '<checksum>  <file>'
     [ -e "$1" ] || return 0
 
     hash=$(
@@ -164,140 +111,117 @@ sh256() {
     printf '%s\n' "${hash%% *}"
 }
 
-pkg_owner() {
-    set +f
-
-    [ "$3" ] ||
-        set -- "$1" "$2" "$sys_db"/*/manifest
-
-    pkg_owner=$(grep "$@")
-    pkg_owner=${pkg_owner%/*}
-    pkg_owner=${pkg_owner##*/}
-
-    set -f
-
-    [ "$pkg_owner" ]
-}
-
 pkg_lint() {
-    pkg_find "$1"
-    cd "$repo_dir"
+    log "$1" "Checking repository files"
 
-    read -r _ release 2>/dev/null < version ||
-        die "$1" "version file not found"
+    cd "$(pkg_find "$1")"
+    read -r _ release 2>/dev/null < version || die "Version file not found"
 
-    [ "$release" ] ||
-        die "$1" "release field not found in version file"
-
-    [ -x build ] ||
-        die "$1" "build file not found or not executable"
-
-    [ -f sources ] ||
-        log "$1" "sources file not found" WARN
+    [ "$release" ] || die "$1" "Release field not found in version file"
+    [ -x build ]   || die "$1" "Build file not found or not executable"
+    [ -f sources ] || war "$1" "Sources file not found"
 }
 
 pkg_find() {
     # Figure out which repository a package belongs to by searching for
     # directories matching the package name in $KISS_PATH/*.
-    _query=$1
-    _paths=${2:-"$KISS_PATH:$sys_db"}
-    _print=$3
-    _type=${4:--d}
+    query=$1 all=$2 what=$3 IFS=:; set --
 
-    IFS=:
-    set --
-
-    # Globbing is disabled, splitting is intentional.
-    for _path in $_paths; do
-        set +f
-
-        # Globbing enabled for search.
-        for _path2 in "$_path"/${_query%%/*}; do
-            test "$_type" "$_path2" &&
-                set -f -- "$@" "$_path2"
+    # Both counts of word-splitting are intentional here. Firstly to split
+    # the repositories and secondly to allow for the query to be a glob.
+    # shellcheck disable=2086
+    for path in $KISS_PATH "${what:-$sys_db}"; do set +f
+        for path2 in "$path/"$query; do
+            test "${what:--d}" "$path2" && set -f -- "$@" "$path2"
         done
     done
 
     unset IFS
-    repo_dir=$1
 
-    [ "$1" ] || {
-        log "Package '$_query' not in any repository" '' ERROR
-        return 1
-    }
+    # A package may also not be found due to a repository not being readable
+    # by the current user. Either way, we need to die here.
+    [ "$1" ] || die "Package '$query' not in any repository"
 
-    [ -z "$_print" ] ||
-        printf '%s\n' "$@"
+    # Show all search results if called from 'kiss search', else print only
+    # the first match.
+    [ "$all" ] && printf '%s\n' "$@" || printf '%s\n' "$1"
 }
 
 pkg_list() {
-    [ -d "$sys_db/$1" ] || {
-        log "$1" "not installed" ERROR
-        return 1
-    }
+    # List installed packages. As the format is files and directories, this
+    # just involves a simple for loop and file read.
+    cd "$sys_db" 2>/dev/null
 
-    read -r _ver 2>/dev/null < "$sys_db/$1/version" ||
-        _ver=null
+    # Optional arguments can be passed to check for specific packages. If no
+    # arguments are passed, list all.
+    [ "$1" ] || { set +f; set -f -- *; }
 
-    printf '%s\n' "$1 $_ver"
+    # Loop over each package and print its name and version.
+    for pkg do
+        [ -d "$pkg" ] || {
+            log "$pkg" "not installed"
+            return 1
+        }
+
+        read -r version 2>/dev/null < "$pkg/version" || version=null
+        printf '%s\n' "$pkg $version"
+    done
 }
 
 pkg_cache() {
     # Find the tarball of a package using a glob. Use the first found match
-    # of '<pkg_name>[#@]<pkg_version><pkg_release>.tar.*'.
-    pkg_find "$1"
+    # of '<pkg_name>#<pkg_version><pkg_release>.tar.*'.
+    read -r version release 2>/dev/null < "$(pkg_find "$1")/version"
 
-    read -r version release 2>/dev/null < "$repo_dir/version"
-
-    set +f
-    set -f -- "$bin_dir/$1"[#@]"$version-$release.tar."*
-
-    # Prefer '@' to '#' in tarball names.
-    [ ! -f "$2" ] || shift
-
+    set +f; set -f -- "$bin_dir/$1#$version-$release.tar."*
     tar_file=$1
 
-    [ -f "$1" ]
+    [ -f "$tar_file" ]
 }
 
 pkg_sources() {
     # Download any remote package sources. The existence of local files is
     # also checked.
-    pkg_find "$1"
+    repo_dir=$(pkg_find "$1")
 
+    # Support packages without sources. Simply do nothing.
     [ -f "$repo_dir/sources" ] || return 0
 
-    log "$1" "fetching sources"
-    mkdir -p "$src_dir/$1"
-    cd "$src_dir/$1"
+    log "$1" "Downloading sources"
+
+    # Store each downloaded source in a directory named after the package it
+    # belongs to. This avoid conflicts between two packages having a source
+    # of the same name.
+    mkdir -p "$src_dir/$1" && cd "$src_dir/$1"
 
     while read -r src dest || [ "$src" ]; do
-        if [ -z "${src##\#*}" ]; then
-            continue
+        # Remote git repository or comment.
+        if [ -z "${src##\#*}" ] || [ -z "${src##git+*}" ]; then
+            :
 
-        elif [ -z "${src##git+*}" ]; then
-            printf 'found git      %s\n' "${src##git+}"
+        # Remote source (cached).
+        elif [ -f "${src##*/}" ]; then
+            log "$1" "Found cached source '${src##*/}'"
 
-        elif [ -f "./${dest:-.}/${src##*/}" ]; then
-            printf 'found cached   %s\n' "${dest:+"$dest/"}${src##*/}"
-
+        # Remote source.
         elif [ -z "${src##*://*}" ]; then
-            printf 'downloading %s\n' "$src"
-            mkdir -p "$PWD/$dest"
+            log "$1" "Downloading $src"
 
-            curl "$src" -fLo "./${dest:-.}/${src##*/}" || {
+            curl "$src" -fLo "${src##*/}" || {
                 rm -f "${src##*/}"
-                die "$1" "failed to download $src"
+                die "$1" "Failed to download $src"
             }
 
+        # Local source (relative).
         elif [ -e "$repo_dir/$src" ]; then
-            printf 'found relative %s\n' "$src"
+            log "$1" "Found local relative source '$src'"
 
+        # Local source (absolute).
         elif [ -e "/$src" ]; then
-            printf 'found absolute %s\n' "$src"
+            log "$1" "Found local absolute source '$src'"
 
         else
-            die "$1" "no local file '$src'"
+            die "$1" "No local file '$src'"
         fi
     done < "$repo_dir/sources"
 }
@@ -305,48 +229,52 @@ pkg_sources() {
 pkg_extract() {
     # Extract all source archives to the build directory and copy over any
     # local repository files.
-    pkg_find "$1"
+    repo_dir=$(pkg_find "$1")
 
+    # Support packages without sources. Simply do nothing.
     [ -f "$repo_dir/sources" ] || return 0
 
-    log "$1" "extracting sources"
+    log "$1" "Extracting sources"
 
     while read -r src dest || [ "$src" ]; do
         mkdir -p "$mak_dir/$1/$dest" && cd "$mak_dir/$1/$dest"
 
-        case $src in
-            \#* | '')
-                # Comments and blank lines.
-            ;;
-
+        case $src in \#*|'') ;;
+            # Git repository.
             git+*)
-                url=${src##git+}
-                com=${url##*[@#]}
-                com=${com#"${url%[#@]*}"}
+                # Split the source into URL + OBJECT (branch or commit).
+                url=${src##git+} com=${url##*[@#]} com=${com#${url%[#@]*}}
 
-                log "$1" "cloning ${url%[#@]*}"; {
+                # This magic will shallow clone branches, commits or the
+                # regular repository. It correctly handles cases where a
+                # shallow clone is not possible.
+                log "$1" "Cloning ${url%[#@]*}"; {
                     git init
                     git remote add origin "${url%[#@]*}"
-                    git fetch -t --depth 1 origin "$com" || git fetch -t
-                    git -c advice.detachedHead=0 checkout "${com:-FETCH_HEAD}"
-                } || die "$1" "failed to clone $src"
+                    git fetch --depth=1 origin "$com" || git fetch
+                    git checkout "${com:-FETCH_HEAD}"
+                } || die "$1" "Failed to clone $src"
             ;;
 
+            # Tarballs of any kind. This is a shell equivalent of
+            # GNU tar's '--strip-components 1'.
             *://*.tar|*://*.tar.??|*://*.tar.???|*://*.tar.????|*://*.t?z)
-                decompress "$src_dir/$1/${dest:-.}/${src##*/}" \
-                    > "$tmp_dir/.tar"
+                # Decompress the archive to a temporary .tar archive.
+                decompress "$src_dir/$1/${src##*/}" > .ktar
 
-                tar xf "$tmp_dir/.tar" ||
-                    die "$1" "failed to extract ${src##*/}"
+                # Extract the tar archive to the current directory.
+                tar xf .ktar || die "$1" "Couldn't extract ${src##*/}"
 
                 # Iterate over all directories in the first level of the
-                # tarball's manifest. This does the equivalent to GNU tar's
-                # '--strip-components 1' in a portable way.
-                tar tf "$tmp_dir/.tar" | while IFS=/ read -r dir _; do
-                    # Handles tarballs with './' as top-level directory.
+                # tarball's manifest. This is our equivalent of GNU tar's
+                # '--strip-components 1'.
+                tar tf .ktar | while IFS=/ read -r dir _; do
+                    # Some tarballs contain './' as the top-level directory,
+                    # we need to skip these occurances.
                     [ -d "${dir#.}" ] || continue
 
-                    # Avoid naming conflicts.
+                    # Move the directory to prevent naming conflicts between
+                    # the child and parent
                     mv -f "$dir" "$pid-$dir"
 
                     # First attempt to move all files up a directory level,
@@ -357,6 +285,9 @@ pkg_extract() {
                     # We can't use '-exec {} +' with any arguments between
                     # the '{}' and '+' as this is not POSIX. We must also
                     # use '$0' and '$@' to reference all arguments.
+                    #
+                    # Using only '$@' causes a single file from each
+                    # invocation to be left out of the list. Weird, right?
                     {
                         find "$pid-$dir/." ! -name . -prune \
                             -exec sh -c 'mv -f "$0" "$@" .' {} + ||
@@ -365,17 +296,21 @@ pkg_extract() {
                             -exec sh -c 'cp -fRp "$0" "$@" .' {} +
                     } 2>/dev/null
 
-                    # Clean up after ourselves.
+                    # Remove the directory now that all files have been
+                    # transferred out of it. This can't be a simple 'rmdir'
+                    # as we may leave files in here due to above.
                     rm -rf "$pid-$dir"
                 done
 
-                # Clean up after ourselves.
-                rm -f "$tmp_dir/.tar"
+                # Clean up after ourselves and remove the temporary tar
+                # archive we've created. Not needed at all really.
+                rm -f .ktar
             ;;
 
+            # Zip archives.
             *://*.zip)
-                unzip "$src_dir/$1/${dest:-.}/${src##*/}" ||
-                    die "$1" "failed to extract ${src##*/}"
+                unzip "$src_dir/$1/${src##*/}" ||
+                    die "$1" "Couldn't extract ${src##*/}"
             ;;
 
             *)
@@ -396,11 +331,11 @@ pkg_extract() {
                     cp -f "/$src" .
 
                 # Remote file.
-                elif [ -f "$src_dir/$1/${dest:-.}/${src##*/}" ]; then
-                    cp -f "$src_dir/$1/${dest:-.}/${src##*/}" .
+                elif [ -f "$src_dir/$1/${src##*/}" ]; then
+                    cp -f "$src_dir/$1/${src##*/}" .
 
                 else
-                    die "$1" "file $src not found"
+                    die "$1" "Local file $src not found"
                 fi
             ;;
         esac
@@ -411,47 +346,36 @@ pkg_depends() {
     # Resolve all dependencies and generate an ordered list. The deepest
     # dependencies are listed first and then the parents in reverse order.
     contains "$deps" "$1" || {
-        pkg_find "$1" 2>/dev/null ||:
+        # Filter out non-explicit, aleady installed dependencies.
+        [ "$3" ] && [ -z "$2" ] && (pkg_list "$1" >/dev/null) && return
 
         # Recurse through the dependencies of the child packages.
-        [ -f "$repo_dir/depends" ] &&
-            while read -r dep _ || [ "$dep" ]; do
-                _deps_seen="$_deps_seen $dep"
-
-                contains "$_deps_seen" "$1 $dep $1 $dep $1 $dep" &&
-                    die "circular dependency between '$1' and '$dep'"
-
-                case $dep-$2 in
-                    "$1-$2")
-                        log "warning: '$1' depends on itself"
-                    ;;
-
-                    [!#]*-filter)
-                        pkg_depends "$dep" "$2"
-                    ;;
-
-                    [!#]*)
-                        pkg_list "$dep" >/dev/null 2>&1 ||
-                            pkg_depends "$dep"
-                    ;;
-                esac
-            done < "$repo_dir/depends"
+        while read -r dep _ || [ "$dep" ]; do
+            [ "${dep##\#*}" ] && pkg_depends "$dep" '' "$3"
+        done 2>/dev/null < "$(pkg_find "$1")/depends" ||:
 
         # After child dependencies are added to the list,
         # add the package which depends on them.
-        [ "$2" = explicit ] || deps="$deps $1"
+        [ "$2" = explicit ] || deps="$deps $1 "
     }
 }
 
 pkg_order() {
-    # Sort a list of packages based on dependence.
-    for _pkg do
-        pkg_depends "$_pkg" filter
-    done
+    # Order a list of packages based on dependence and take into account
+    # pre-built tarballs if this is to be called from 'kiss i'.
+    order=; redro=; deps=
 
-    for _pkg in $deps; do
-        contains "$*" "$_pkg" &&
-            order="$order $_pkg" redro="$_pkg $redro"
+    for pkg do case $pkg in
+        /*.tar.*) deps="$deps $pkg " ;;
+        *.tar.*)  deps="$deps $ppwd/$pkg " ;;
+        *)        pkg_depends "$pkg" raw
+    esac done
+
+    # Filter the list, only keeping explicit packages. The purpose of these
+    # two loops is to order the argument list based on dependence.
+    for pkg in $deps; do
+        contains "$*" "$pkg" || contains "$*" "${pkg##"$ppwd/"}" &&
+            order="$order $pkg " redro=" $pkg $redro"
     done
 
     deps=
@@ -462,7 +386,7 @@ pkg_strip() {
     # well as on the tarballs we ship for installation.
     [ -f "$mak_dir/$pkg/nostrip" ] || [ "$KISS_STRIP" = 0 ] && return
 
-    log "$1" "stripping binaries and libraries"
+    log "$1" "Stripping binaries and libraries"
 
     # Strip only files matching the below ELF types. This uses 'od' to print
     # the first 18 bytes of the file. This is the location of the ELF header
@@ -484,9 +408,8 @@ pkg_strip() {
     find "$pkg_dir/$1" -type f | while read -r file; do
         case $(od -A o -t c -N 18 "$file") in
             # REL (object files (.o), static libraries (.a)).
-            *177*E*L*F*0000020\ 001\ * | *\!*\<*a*r*c*h*\>*)
+            *177*E*L*F*0000020\ 001\ *|*\!*\<*a*r*c*h*\>*)
                 strip -g -R .comment -R .note "$file"
-                printf 'stripped debug .%s\n' "${file##"$pkg_dir/$1"}"
             ;;
 
             # EXEC (binaries), DYN (shared libraries).
@@ -495,136 +418,101 @@ pkg_strip() {
             # symbol entries which makes this safe to do.
             *177*E*L*F*0000020\ 00[23]\ *)
                 strip -s -R .comment -R .note "$file"
-                printf 'stripped all   .%s\n' "${file##"$pkg_dir/$1"}"
             ;;
         esac
     done 2>/dev/null ||:
 }
 
-pkg_fix_deps() {
+pkg_fixdeps() {
     # Dynamically look for missing runtime dependencies by checking each
     # binary and library with 'ldd'. This catches any extra libraries and or
     # dependencies pulled in by the package's build suite.
-    log "$1" "looking for dependencies (using ${elf_cmd##*/})"
+    log "$1" "Checking for missing dependencies"
 
+    pkg_name=$1
+
+    # Go to the built package directory to simplify path building.
     cd "$pkg_dir/$1/$pkg_db/$1"
 
-    set +f
-    set -f -- "$sys_db/"*/manifest
+    # Generate a list of all installed manifests.
+    set +f; set -f -- "$sys_db/"*/manifest
 
+    # Create the depends file if it doesn't exist to have something to
+    # compare against (even if empty). We will remove this blank file
+    # later if needed.
     : >> depends
 
+    # Get a list of binaries and libraries, false files will be found,
+    # however it's faster to get 'ldd' to check them anyway than to filter
+    # them out.
     find "$pkg_dir/${PWD##*/}/" -type f 2>/dev/null |
 
     while read -r file; do
-        case $elf_cmd in
-            *readelf)
-                "$elf_cmd" -d "$file"
-            ;;
+        # Run 'ldd' on the file and parse each line. The code then checks to
+        # see which packages own the linked libraries and it prints the result.
+        ldd "$file" 2>/dev/null | while read -r _ _ dep _; do
+            # Resolve path symlinks to find the real location to the library.
+            cd -P "${dep%/*}" 2>/dev/null || continue
 
-            *)
-                ldd -- "$file"
-            ;;
-        esac 2>/dev/null |
+            # Skip files owned by libc and POSIX.
+            case ${dep##*/} in
+                "" | ld-* | libpthread.so* | lib[cm].so* | libdl.so* |\
+                librt.so* | libtrace.so*   | libxnet.so*)
+                    continue
+            esac
 
-        while read -r line; do
-            case $line in
-                *NEEDED*\[*\] | *'=>'*)
-                    # readelf: 0x0000 (NEEDED) Shared library: [libjson-c.so.5]
-                    line=${line##*[}
-                    line=${line%%]*}
+            # Figure out which package owns the file.
+            dep=$(grep -lFx "${PWD#"$KISS_ROOT"}/${dep##*/}" "$@")
+            dep=${dep%/*} dep=${dep##*/}
 
-                    # ldd:     libjson-c.so.5 => /lib/libjson-c.so.5 ...
-                    line=${line##*=> }
-                    line=${line%% *}
+            case $dep in
+                # Skip listing these packages as dependencies.
+                # The pkg_name portions are to workaround incorrect detections
+                # from -bin or -esr packages.
+                ""|gcc|llvm|"${pkg_name%%-bin}"|\
+                "${pkg_name%%-esr}"|"${pkg_name%%-esr-bin}") ;;
 
-                    # Skip files owned by libc and POSIX.
-                    case ${line##*/} in
-                        ld-*           |\
-                        lib[cm].so*    |\
-                        libdl.so*      |\
-                        libpthread.so* |\
-                        librt.so*      |\
-                        libtrace.so*   |\
-                        libxnet.so*    |\
-                        ldd)
-                            continue
-                        ;;
-
-                        *)
-                            # Skip file if owned by current package
-                            pkg_owner -l "/${line#/}\$" "$PWD/manifest" &&
-                                continue
-
-                            pkg_owner -l "/${line#/}\$" "$@" &&
-                                printf '%s\n' "$pkg_owner"
-                        ;;
-                    esac
-                ;;
+                *) printf '%s\n' "$dep"
             esac
         done ||:
-    done |
+    done | sort -uk1,1 depends - > "$mak_dir/d"
 
-    sort -uk1,1 depends - > "$tmp_dir/.fixdeps"
+    # Display a 'diff' of the new dependencies against the old ones.
+    diff -U 3 depends - < "$mak_dir/d" ||:
 
-    diff -U 3 depends - < "$tmp_dir/.fixdeps" ||:
+    # Swap out the old depends file for the new one which contains
+    # an amended dependency list.
+    mv -f "$mak_dir/d" depends
 
-    mv -f "$tmp_dir/.fixdeps" depends
-
-    if [ -s depends ]; then
-        pkg_manifest "${PWD##*/}"
-    else
-        rm -f depends
-    fi
+    # Remove the package's depends file if it's empty. (The package has
+    # no dependencies, automatically detected or otherwise).
+    [ -s depends ] || rm -f depends
 }
 
 pkg_manifest() (
+    # Generate the package's manifest file. This is a list of each file
+    # and directory inside the package. The file is used when uninstalling
+    # packages, checking for package conflicts and for general debugging.
+    log "$1" "Generating manifest"
+
     # This function runs as a sub-shell to avoid having to 'cd' back to the
     # prior directory before being able to continue.
-    cd "${2:-"$pkg_dir"}/$1"
+    cd "${2:-$pkg_dir}/$1"
 
     # find: Print all files and directories and append '/' to directories.
+    # sort: Sort the output in *reverse*. Directories appear *after* their
+    #       contents.
     # sed:  Remove the first character in each line (./dir -> /dir) and
     #       remove all lines which only contain '.'.
-    find . -type d -exec printf '%s/\n' {} + -o -print |
-
-    sort -r |
-
-    sed '/^\.\/$/d;ss.ss' > "${2:-"$pkg_dir"}/$1/$pkg_db/$1/manifest"
+    find . -type d -exec printf '%s/\n' {} + -o -print | sort -r |
+        sed '/^\.\/$/d;ss.ss' > "${2:-$pkg_dir}/$1/$pkg_db/$1/manifest"
 )
 
-pkg_manifest_replace() {
-    # Replace a line with another in manifest files.
-    while IFS= read -r _line; do
-        case $_line in
-            "$1")
-                printf '%s\n' "$2"
-            ;;
-
-            *)
-                printf '%s\n' "$_line"
-            ;;
-        esac
-    done < "$sys_db/$3/manifest" |
-
-    sort -r > "$tmp_dir/.sed"
-
-    mv -f "$tmp_dir/.sed" "$sys_db/$3/manifest"
-}
-
-pkg_manifest_verify() {
-    # Ensure that everything listed in the manifest exists in the tarball.
-    while read -r line; do
-        [ -h "./$line" ] ||
-        [ -e "./$line" ] ||
-            man_err="$man_err$line, "
-    done < "$1"
-
-    [ -z "$man_err" ] ||
-        die "$pkg" "files in manifest missing from tarball: ${man_err%, }"
-}
-
 pkg_etcsums() (
+    # Generate checksums for each configuration file in the package's /etc/
+    # directory for use in "smart" handling of these files.
+    log "$1" "Generating etcsums"
+
     # This function runs as a sub-shell to avoid having to 'cd' back to the
     # prior directory before being able to continue.
     [ -d "$pkg_dir/$1/etc" ] || return 0
@@ -639,27 +527,36 @@ pkg_etcsums() (
 )
 
 pkg_tar() (
-    pkg_find "$1"
+    # Create a tarball from the built package's files. This tarball also
+    # contains the package's database entry.
+    log "$1" "Creating tarball"
 
-    read -r version release < "$repo_dir/version"
+    # Read the version information to name the package.
+    read -r version release < "$(pkg_find "$1")/version"
 
-    # Avoid tar -C (not portable).
+    # Use 'cd' to avoid needing tar's '-C' flag which may not be portable
+    # across implementations.
     cd "$pkg_dir/$1"
 
     # Create a tarball from the contents of the built package.
-    tar cf - . | case ${KISS_COMPRESS:-gz} in
-        bz2)  bzip2 -z    ;;
-        gz)   gzip  -6    ;;
-        lzma) lzma  -z    ;;
-        lz)   lzip  -z    ;;
-        xz)   xz    -zT 0 ;;
-        zst)  zstd  -z    ;;
-    esac > "$bin_dir/$1@$version-$release.tar.${KISS_COMPRESS:-gz}"
+    tar cf - . | case ${KISS_COMPRESS:=gz} in
+        bz2)  bzip2 -z ;;
+        gz)   gzip -6  ;;
+        lzma) lzma -z  ;;
+        lz)   lzip -z  ;;
+        xz)   xz -zT 0 ;;
+        zst)  zstd -z  ;;
+    esac > "$bin_dir/$1#$version-$release.tar.${KISS_COMPRESS:=gz}"
 
-    run_user_hook post-package "$1"
+    log "$1" "Successfully created tarball"
+    run_hook post-package "$1"
 )
 
 pkg_build() {
+    # Build packages and turn them into packaged tarballs.
+
+    log "Resolving dependencies"
+
     # Mark packages passed on the command-line separately from those
     # detected as dependencies. We need to treat explicitly passed packages
     # differently from those pulled in as dependencies.
@@ -668,47 +565,42 @@ pkg_build() {
     # Any duplicates are also filtered out.
     for pkg do
         contains "$explicit" "$pkg" || {
-            pkg_depends "$pkg" explicit
-            explicit="$explicit $pkg"
+            pkg_depends "$pkg" explicit filter
+            explicit="$explicit $pkg "
         }
     done
 
-    # If not an update, ignore the cache and build everything given
-    # on the command-line. If this is an update, use the cache.
+    # If this is an update, don't always build explicitly passsed packages
+    # and instead install pre-built binaries if they exist.
     [ "$pkg_update" ] || explicit_build=$explicit
 
     # If an explicit package is a dependency of another explicit package,
     # remove it from the explicit list as it needs to be installed as a
     # dependency.
     for pkg do
-        contains "$deps" "$pkg" ||
-            explicit2="$explicit2 $pkg"
+        contains "$deps" "$pkg" || explicit2=" $explicit2 $pkg "
     done
     explicit=$explicit2
 
-    # Intentional, globbing disabled.
+    # See [1] at top of script.
     # shellcheck disable=2046,2086
     set -- $deps $explicit
 
-    [ "$#" -gt 1 ] || [ "$pkg_update" = 1 ] &&
-        prompt "Building $*"
+    log "Building: $*"
+
+    # Only ask for confirmation if more than one package needs to be built.
+    [ "$#" -gt 1 ] || [ "$pkg_update" ] && prompt
 
     for pkg do pkg_lint "$pkg"; done
 
-    log "checking for pre-built dependencies"
+    log "Checking for pre-built dependencies"
 
     # Install any pre-built dependencies if they exist in the binary
     # directory and are up to date.
     for pkg do
         ! contains "$explicit_build" "$pkg" && pkg_cache "$pkg" && {
-            log "$pkg" "installing binary from cache"
-
-            # False positive.
-            # shellcheck disable=2030
-            (
-                export KISS_FORCE=1
-                args i "$tar_file"
-            )
+            log "$pkg" "Found pre-built binary, installing"
+            (KISS_FORCE=1 args i "$tar_file")
 
             # Remove the now installed package from the build list.
             shift
@@ -716,16 +608,16 @@ pkg_build() {
     done
 
     for pkg do pkg_sources "$pkg"; done
-    for pkg do pkg_verify  "$pkg"; done
+    pkg_verify "$@"
 
     # Finally build and create tarballs for all passed packages and
     # dependencies.
     for pkg do
-        log "$pkg" "building package ($((in+=1))/$#)"
+        log "$pkg" "Building package ($((in+=1))/$#)"
 
-        run_user_hook pre-extract "$pkg" "$pkg_dir/$pkg"
+        run_hook pre-extract "$pkg" "$pkg_dir/$pkg"
         pkg_extract "$pkg"
-        pkg_find "$pkg"
+        repo_dir=$(pkg_find "$pkg")
 
         # Install built packages to a directory under the package name to
         # avoid collisions with other packages.
@@ -735,72 +627,63 @@ pkg_build() {
         # Log the version so we can pass it to the package build file.
         read -r build_version _ < "$repo_dir/version"
 
-        log "$pkg" "starting build"
-        run_user_hook pre-build "$pkg" "$pkg_dir/$pkg"
+        log "$pkg" "Starting build"
+        run_hook pre-build "$pkg" "$pkg_dir/$pkg"
 
         # Call the build script, log the output to the terminal and to a file.
         # There's no PIPEFAIL in POSIX shelll so we must resort to tricks like
         # killing the script ourselves.
-        {
-            "$repo_dir/build" "$pkg_dir/$pkg" "$build_version" 2>&1 || {
-                log "$pkg" "build failed"
-                log "$pkg" "log stored to $log_dir/$pkg-$pid-${date##*-}"
-                run_user_hook build-fail "$pkg" "$pkg_dir/$pkg"
-                pkg_clean
-                kill 0
-            }
-        } | tee "$log_dir/$pkg-$pid-${date##*-}"
+        { "$repo_dir/build" "$pkg_dir/$pkg" "$build_version" 2>&1 || {
+            log "$pkg" "Build failed"
+            log "$pkg" "Log stored to $log_dir/$pkg-$time-$pid"
+            run_hook build-fail "$pkg" "$pkg_dir/$pkg"
+            pkg_clean
+            kill 0
+        } } | tee "$log_dir/$pkg-$time-$pid"
 
         # Delete the log file if the build succeeded to prevent the directory
         # from filling very quickly with useless logs.
-        [ "$KISS_KEEPLOG" = 1 ] || rm -f "$log_dir/$pkg-$pid-${date##*-}"
+        [ "$KISS_KEEPLOG" = 1 ] || rm -f "$log_dir/$pkg-$time-$pid"
 
         # Copy the repository files to the package directory. This acts as the
         # database entry.
         cp -LRf "$repo_dir" "$pkg_dir/$pkg/$pkg_db/"
 
-        run_user_hook post-build "$pkg" "$pkg_dir/$pkg"
+        log "$pkg" "Successfully built package"
+        run_hook post-build "$pkg" "$pkg_dir/$pkg"
 
         # Remove all .la files from the packages. They're unneeded and cause
         # issues when a package stops providing one. This recently caused an
         # issue with harfbuzz (See: 05096e5a4dc6db5d202342f538d067d87ae7135e).
-        find "$pkg_dir/$pkg/usr/lib" \
-            -name \*.la \
-            -exec rm -f {} + \
-            2>/dev/null ||:
+        find "$pkg_dir/$pkg/usr/lib" -name \*.la -exec rm -f {} + 2>/dev/null ||:
 
-        # Endless source of conflicts.
+        # Remove this unneeded file from all packages as it is an endless
+        # source of conflicts. This is used with info pages we we do not support.
         rm -f "$pkg_dir/$pkg/usr/lib/charset.alias"
 
         # Create the manifest file early and make it empty. This ensures that
         # the manifest is added to the manifest.
         : > "$pkg_dir/$pkg/$pkg_db/$pkg/manifest"
 
-        # Same for etcsums if /etc exists in package.
-        [ -d "$pkg_dir/$pkg/etc" ] &&
-            : > "$pkg_dir/$pkg/$pkg_db/$pkg/etcsums"
+        # If the package contains '/etc', add a file called 'etcsums' to the
+        # manifest. See comment directly above.
+        [ -d "$pkg_dir/$pkg/etc" ] && : > "$pkg_dir/$pkg/$pkg_db/$pkg/etcsums"
 
         pkg_strip    "$pkg"
+        pkg_fixdeps  "$pkg"
         pkg_manifest "$pkg"
-        pkg_fix_deps "$pkg"
         pkg_etcsums  "$pkg"
         pkg_tar      "$pkg"
 
-        log "$pkg" "successfully built package"
+        # Install only dependencies of passed packages. If this is an update,
+        # install the built package regardless.
+        contains "$explicit" "$pkg" && [ -z "$pkg_update" ] && continue
 
-        # Install built package if not marked explicit or this
-        # is a system update. This runs in a subshell.
-        ! contains "$explicit" "$pkg" || [ "$pkg_update" ] && (
-            log "$pkg" "marked for install"
-
-            # False positive.
-            # shellcheck disable=2030,2031
-            export KISS_FORCE=1
-            args i "$pkg"
-        )
+        log "$pkg" "Needed as a dependency or has an update, installing"
+        (KISS_FORCE=1 args i "$pkg")
     done
 
-    # Turn the explicit packages into a 'list'. 
+    # Turn the explicit packages into a 'list'. See [1] at top of script.
     # shellcheck disable=2046,2086
     set -- $explicit
 
@@ -813,27 +696,27 @@ pkg_build() {
     else
         log "Run 'kiss i $*' to install the package(s)"
     fi
-
-    log "successfully built all packages"
 }
 
 pkg_checksums() {
-    pkg_find "$1"
+    # Generate checksums for packages.
+    repo_dir=$(pkg_find "$1")
 
+    # Support packages without sources. Simply do nothing.
     [ -f "$repo_dir/sources" ] || return 0
 
-    while read -r src dest || [ "$src" ]; do
+    while read -r src _ || [ "$src" ]; do
         # Skip comments, blank lines and git sources.
         if [ -z "${src##\#*}" ] || [ -z "${src##git+*}" ]; then
-            continue
+            :
 
         # Remote source.
         elif [ -z "${src##*://*}" ]; then
-            sh256 "$src_dir/$1/${dest:-.}/${src##*/}"
+            sh256 "$src_dir/$1/${src##*/}"
 
         # Skip directories.
         elif [ -d "$repo_dir/$src" ] || [ -d "/$src" ]; then
-            continue
+            :
 
         # Local file (relative).
         elif [ -f "$repo_dir/$src" ]; then
@@ -843,139 +726,151 @@ pkg_checksums() {
         elif [ -f "/$src" ]; then
             sh256 "/$src"
         fi
-    done < "$repo_dir/sources" || die "$1" "failed to generate checksums"
-}
-
-pkg_checksum_save() {
-    # Generate and save checksums to file.
-    pkg_find "$1"
-
-    [ -f "$repo_dir/sources" ] ||
-        return 0
-
-    sums=$(pkg_checksums "$1")
-
-    [ "$sums" ] || {
-        log "$1" "nothing to do"
-        return 0
-    }
-
-    # False positive ('>> file' with no command).
-    # shellcheck disable=2188
-    printf '%s\n' "$sums" |
-
-    if 2>/dev/null >> "$repo_dir/checksums"; then
-        tee "$repo_dir/checksums"
-
-    else
-        file_owner "$repo_dir"
-        log "$1" "need permissions to generate checksums"
-        as_root tee "$repo_dir/checksums"
-    fi
-
-    log "$1" "generated checksums"
+    done < "$repo_dir/sources" || die "$1" "Failed to generate checksums"
 }
 
 pkg_verify() {
     # Verify all package checksums. This is achieved by generating a new set
     # of checksums and then comparing those with the old set.
-    pkg_find "$pkg"
+    verify_cmd="NR==FNR{a[\$1];next}/^git  .*/{next}!((\$1)in a){exit 1}"
 
-    [ -f "$repo_dir/sources" ] ||
-        return 0
+    for pkg do
+        repo_dir=$(pkg_find "$pkg")
 
-    sum_sys=$(pkg_checksums "$pkg")
+        [ -f "$repo_dir/sources" ] || continue
 
-    [ "$sum_sys" ] ||
-        return 0
+        verify_sum=$(pkg_checksums "$pkg")
 
-    [ -f "$repo_dir/checksums" ] ||
-        die "$pkg" "checksums file missing"
+        [ "$verify_sum" ] || continue
+        [ -f "$repo_dir/checksums" ] || die "$pkg" "checksums file missing"
 
-    sum_pkg=$(cut -b 1-64 < "$repo_dir/checksums")
+        # Check that the first column (separated by whitespace) match in both
+        # checksum files. If any part of either file differs, mismatch. Abort.
+        printf '%s\n' "$verify_sum" |
 
-    [ "$sum_sys" = "$sum_pkg" ] ||
-        die "$pkg" "checksum mismatch"
+        awk "$verify_cmd" - "$repo_dir/checksums" || {
+            log "$pkg" "Checksum mismatch"
+
+            # Instead of dying above, log it to the terminal. Also define a
+            # variable so we *can* die after all checksum files have been
+            # checked.
+            mismatch="$mismatch$pkg "
+        }
+    done
+
+    [ -z "$mismatch" ] || die "Checksum mismatch with: ${mismatch% }"
+
+    log "Verified all checksums"
 }
 
 pkg_conflicts() {
+    # Check to see if a package conflicts with another.
+    log "$1" "Checking for package conflicts"
+
     # Filter the tarball's manifest and select only files. Resolve all
     # symlinks in file paths as well.
     while read -r file; do
         file=$KISS_ROOT/${file#/}
 
-        case $file in
-            *[!/])
-                cd -P "${file%/*}" 2>/dev/null ||
-                    PWD=${file%/*}
+        # Skip all directories.
+        case $file in */) continue; esac
 
-                printf '%s\n' "${PWD#"$KISS_ROOT"}/${file##*/}"
-            ;;
-        esac
-    done < "$tar_dir/$1/$pkg_db/$1/manifest" > "$tmp_dir/.conflict-manifest"
+        # Attempt to resolve symlinks by using 'cd'.
+        # If this fails, fallback to the file's parent
+        # directory.
+        cd -P "${file%/*}" 2>/dev/null || PWD=${file%/*}
 
+        # Print the file with all symlinks in its path
+        # resolved to their real locations.
+        printf '%s\n' "${PWD#"$KISS_ROOT"}/${file##*/}"
+    done < "$tar_dir/$1/$pkg_db/$1/manifest" > "$mak_dir/$pid-m"
+
+    p_name=$1
     set +f
     set -f "$sys_db"/*/manifest
 
     # Generate a list of all installed package manifests and remove the
-    # current package from the list.
+    # current package from the list. This is the simplest method of
+    # dropping an item from the argument list. The one downside is that
+    # it cannot live in a function due to scoping of arguments.
     for manifest do
         shift
 
-        [ "$sys_db/$pkg/manifest" = "$manifest" ] &&
-            continue
+        [ "$sys_db/$p_name/manifest" = "$manifest" ] && continue
 
         set -- "$@" "$manifest"
     done
 
+    # Return here if there is nothing to check conflicts against.
     [ "$#" != 0 ] || return 0
 
-    # Store the list of found conflicts in a file for reuse.
-    grep -Fxf "$tmp_dir/.conflict-manifest" -- "$@" 2>/dev/null \
-        > "$tmp_dir/.conflicts" ||:
+    # Store the list of found conflicts in a file as we'll be using the
+    # information multiple times. Storing things in the cache dir allows
+    # us to be lazy as they'll be automatically removed on script end.
+    grep -Fxf "$mak_dir/$pid-m" -- "$@" 2>/dev/null > "$mak_dir/$pid-c" ||:
 
-    if [ "$KISS_CHOICE" != 0  ] && [ -s "$tmp_dir/.conflicts" ]; then
-        # Choices are dynamically created and destroyed.
+    # Enable alternatives automatically if it is safe to do so.
+    # This checks to see that the package that is about to be installed
+    # doesn't overwrite anything it shouldn't in '/var/db/kiss/installed'.
+    grep -q ":/var/db/kiss/installed/" "$mak_dir/$pid-c" || choice_auto=1
+
+    if [ "$KISS_CHOICE" != 0  ] &&
+       [ "$choice_auto"  = 1  ] &&
+       [ -s "$mak_dir/$pid-c" ]; then
+        # This is a novel way of offering an "alternatives" system.
+        # It is entirely dynamic and all "choices" are created and
+        # destroyed on the fly.
         #
-        # All file conflicts are installed to the choices directory
-        # rather than their original destination. The package's
-        # manifest is updated to reflect this.
+        # When a conflict is found between two packages, the file
+        # is moved to a directory called "choices" and its name
+        # changed to store its parent package and its intended
+        # location.
         #
-        # Swapping between choices just moves the locations of two
-        # files around. The file in the system is copied to the
-        # choices directory and the choice is moved to the system
-        # (overwriting the remaining prior copy)
+        # The package's manifest is then updated to reflect this
+        # new location.
+        #
+        # The 'kiss alternatives' command parses this directory and
+        # offers you the CHOICE of *swapping* entries in this
+        # directory for those on the filesystem.
+        #
+        # The alternatives command does the same thing we do here,
+        # it rewrites manifests and moves files around to make
+        # this work.
+        #
+        # Pretty nifty huh?
         while IFS=: read -r _ con; do
-            pkg_owner -lFx "$con" ||:
-            printf 'alternative %s (currently %s)\n' "$con" "${pkg_owner:-?}"
+            printf '%s\n' "Found conflict $con"
 
             # Create the "choices" directory inside of the tarball.
             # This directory will store the conflicting file.
-            mkdir -p "$tar_dir/$pkg/${cho_dir:=var/db/kiss/choices}"
+            mkdir -p "$tar_dir/$p_name/${cho_dir:=var/db/kiss/choices}"
 
             # Construct the file name of the "db" entry of the
             # conflicting file. (pkg_name>usr>bin>ls)
-            con_name=$(printf %s "$pkg$con" | sed 's|/|>|g')
+            con_name=$(printf %s "$con" | sed 's|/|>|g')
 
             # Move the conflicting file to the choices directory
             # and name it according to the format above.
-            mv -f "$tar_dir/$pkg/$con" \
-                  "$tar_dir/$pkg/$cho_dir/$con_name" 2>/dev/null || {
+            mv -f "$tar_dir/$p_name/$con" \
+                  "$tar_dir/$p_name/$cho_dir/$p_name$con_name" 2>/dev/null || {
                 log "File must be in ${con%/*} and not a symlink to it"
-                log "This can occur when a binary is installed to"
+                log "This usually occurs when a binary is installed to"
                 log "/sbin instead of /usr/bin (example)"
-                log "Before this file can be used as an alternative,"
-                log "this must be fixed in $pkg. Contact the maintainer"
-                die "by finding their details via kiss-maintainer" "" "!>"
+                log "Before this package can be used as an alternative,"
+                log "this must be fixed in $p_name. Contact the maintainer"
+                die "by finding their details via 'kiss-maintainer'" "" "!>"
             }
-        done < "$tmp_dir/.conflicts"
+        done < "$mak_dir/$pid-c"
 
-        # Update manifest file.
-        pkg_manifest "$pkg" "$tar_dir" 2>/dev/null
+        log "$p_name" "Converted all conflicts to choices (kiss a)"
 
-    elif [ -s "$tmp_dir/.conflicts" ]; then
-        log "Package '$pkg' conflicts with another package" "" "!>"
-        log "Run 'KISS_CHOICE=1 kiss i $pkg' to add conflicts" "" "!>"
+        # Rewrite the package's manifest to update its location
+        # to its new spot (and name) in the choices directory.
+        pkg_manifest "$p_name" "$tar_dir" 2>/dev/null
+
+    elif [ -s "$mak_dir/$pid-c" ]; then
+        log "Package '$p_name' conflicts with another package" "" "!>"
+        log "Run 'KISS_CHOICE=1 kiss i $p_name' to add conflicts" "" "!>"
         die "as alternatives." "" "!>"
     fi
 }
@@ -984,34 +879,62 @@ pkg_swap() {
     # Swap between package alternatives.
     pkg_list "$1" >/dev/null
 
-    # pkg_name/path/to/file -> pkg_name>path>to>file
     alt=$(printf %s "$1$2" | sed 's|/|>|g')
-
     cd "$sys_db/../choices"
 
-    if [ -d "$alt" ] || [ -d "$2" ]; then
-        die "source or target is directory"
+    [ -f "$alt" ] || [ -h "$alt" ] ||
+        die "Alternative '$1 $2' doesn't exist"
 
-    elif [ ! -h "$alt" ] && [ ! -e "$alt" ]; then
-        die "alternative '$1 $2' doesn't exist"
+    if [ -f "$2" ]; then
+        # Figure out which package owns the file we are going to swap for
+        # another package's. Print the full path to the manifest file which
+        # contains the match to our search.
+        pkg_owns=$(set +f; grep -lFx "$2" "$sys_db/"*/manifest) ||:
 
-    elif [ -e "$2" ]; then
-        # Figure out which package owns the file we are going to swap.
-        pkg_owner -lFx "$2" ||
-            die "file '$2' exists on filesystem but isn't owned"
+        # Extract the package name from the path above.
+        pkg_owns=${pkg_owns%/*}
+        pkg_owns=${pkg_owns##*/}
 
-        cp -Pf "$KISS_ROOT/$2" "$pkg_owner>${alt#*>}"
+        # Ensure that the file we're going to swap is actually owned by a
+        # package. If it is not, we have to die here.
+        [ "$pkg_owns" ] || die "File '$2' exists on filesystem but isn't owned"
 
-        pkg_manifest_replace \
-            "$2" "/$cho_db/$pkg_owner>${alt#*>}" "$pkg_owner"
+        log "Swapping '$2' from '$pkg_owns' to '$1'"
+
+        # Convert the current owner to an alternative and rewrite its manifest
+        # file to reflect this.
+        cp -Pf "$KISS_ROOT/$2" "$pkg_owns>${alt#*>}"
+
+        # Replace the matching line in the manifest with the desired replacement.
+        # This used to be a 'sed' call which turned out to be a little
+        # error-prone in some cases. This new method is a tad slower but ensures
+        # we never wipe the file due to a command error.
+        while read -r line; do
+            case $line in
+                "$2") printf '%s\n' "${PWD#"$KISS_ROOT"}/$pkg_owns>${alt#*>}" ;;
+                   *) printf '%s\n' "$line" ;;
+            esac
+        done < "../installed/$pkg_owns/manifest" | sort -r > "$mak_dir/.$1"
+
+        mv -f "$mak_dir/.$1" "../installed/$pkg_owns/manifest"
     fi
 
+    # Convert the desired alternative to a real file and rewrite the manifest
+    # file to reflect this. The reverse of above.
     mv -f "$alt" "$KISS_ROOT/$2"
 
-    pkg_manifest_replace \
-        "/$cho_db/$alt" "$2" "$1"
+    # Replace the matching line in the manifest with the desired replacement.
+    # This used to be a 'sed' call which turned out to be a little error-prone
+    # in some cases. This new method is a tad slower but ensures we never wipe
+    # the file due to a command error.
+    while read -r line; do
+        case $line in
+            "${PWD#"$KISS_ROOT"}/$alt") printf '%s\n' "$2" ;;
+                                     *) printf '%s\n' "$line" ;;
+        esac
+    done < "../installed/$1/manifest" | sort -r > "$mak_dir/.$1"
 
-    printf '%s is now provided by %s (was %s)\n' "$2" "$1" "$pkg_owner"
+    mv -f "$mak_dir/.$1" "../installed/$1/manifest"
 }
 
 pkg_install_files() {
@@ -1020,37 +943,51 @@ pkg_install_files() {
     # going down the tree.
     sort "$2/$pkg_db/${2##*/}/manifest" |
 
-    while IFS=/ read -r _ line; do
-        [ -d "$KISS_ROOT/$line" ] && [ ! -h "$KISS_ROOT/$line" ] &&
-            continue
+    while read -r line; do
+        # Grab the octal permissions so that directory creation
+        # preserves permissions.
+        # See: [2] at top of script.
+        rwx=$(ls -ld "$2/$line") oct='' b='' o=0
 
-        test "$1" "$KISS_ROOT/$line" &&
-            continue
+        # Convert the output of 'ls' (rwxrwx---) to octal. This is simply
+        # a 1-9 loop with the second digit being the value of the field.
+        for c in 14 22 31 44 52 61 74 82 91; do
+            rwx=${rwx#?}
 
-        new=
+            case $rwx in
+                [rwx]*): "$((o+=${c#?}))" ;;
+                 [st]*): "$((o+=1))" "$((b+=4 / (${c%?}/3)))" ;;
+                 [ST]*): "$((b+=1))" ;;
+            esac
 
-        case $line in
+            [ "$((${c%?} % 3))" = 0 ] && oct=$oct$o o=0
+        done
+
+        # Copy files and create directories (preserving permissions),
+        # skipping anything located in /etc/.
+        #
+        # The 'test' will run with '-e' for no-overwrite and '-z'
+        # for overwrite.
+        case $line in /etc/*) ;;
             */)
-                get_octal_perms "$2/$line"
-                mkdir -m "$oct" "$KISS_ROOT/$line"
-                continue
+                # Skip directories if they already exist in the file system.
+                # (Think /usr/bin, /usr/lib, etc).
+                [ -d "$KISS_ROOT/$line" ] || mkdir -m "$oct" "$KISS_ROOT/$line"
             ;;
 
-            /etc/?*[!/])
-                pkg_etc_file "$2" "${line#/}" ||
-                    continue
-            ;;
+            *)
+                # Skip directories as they're likely symlinks in this case.
+                # Pure directories in manifests have a suffix of '/'.
+                [ -d "$KISS_ROOT/$line" ] || test "$1" "$KISS_ROOT/$line" || {
+                    cp -fP "$2/$line" "$KISS_ROOT/$line"
+
+                    # Skip changing permissions of symlinks. This prevents
+                    # errors when the symlink exists prior to the target.
+                    [ -h "$KISS_ROOT/$line" ] ||
+                        chmod "$b$oct" "$KISS_ROOT/$line"
+                }
         esac
-
-        cp -fP "$2/$line" "$KISS_ROOT/$line${new}"
-
-        [ -h "$KISS_ROOT/$line" ] || {
-            get_octal_perms "$2/$line"
-            chmod "$b$oct" "$KISS_ROOT/$line${new}"
-        }
     done ||:
-
-    pkg_etc_cnt=0
 }
 
 pkg_remove_files() {
@@ -1058,17 +995,15 @@ pkg_remove_files() {
     # installation and package removal. Combining the removals in these two
     # functions allows us to stop duplicating code.
     while read -r file; do
-        case $file in
-            /etc/?*[!/])
-                sum_sys=$(sh256 "$KISS_ROOT/$file") ||:
-                sum_old=$(grep -F "$sum_sys" "$tmp_dir/.etcsums") ||:
+        case $file in /etc/?*[!/])
+            sum_sys=$(sh256 "$KISS_ROOT/$file")
+            sum_old=$(grep -F "$sum_sys" "$mak_dir/c")
 
-                [ "$sum_sys" = "$sum_old" ] || {
-                    printf 'Skipping %s (modified)\n' "$file"
-                    continue
-                }
-            ;;
-        esac 2>/dev/null
+            [ "$sum_sys" = "$sum_old" ] || {
+                printf 'Skipping %s (modified)\n' "$file"
+                continue
+            }
+        esac 2>/dev/null ||:
 
         file=$KISS_ROOT/$file
 
@@ -1087,175 +1022,250 @@ pkg_remove_files() {
     done ||:
 }
 
-pkg_etc_file() {
-    pkg_etc_cnt=$((pkg_etc_cnt + 1))
+pkg_etc() (
+    [ -d "$tar_dir/$pkg_name/etc" ] || return 0
 
-    sum_new=$(sh256 "$1/$2")                                2>/dev/null ||:
-    sum_sys=$(sh256 "$KISS_ROOT/$2")                        2>/dev/null ||:
-    sum_old=$(awk "NR == $pkg_etc_cnt" "$tmp_dir/.etcsums") 2>/dev/null ||:
+    cd "$tar_dir/$pkg_name"
 
-    # Use a case statement to easily compare three strings at
-    # the same time. Pretty nifty.
-    case ${sum_old:-null}${sum_sys:-null}${sum_new} in
-        # old = Y, sys = X, new = Y
-        "${sum_new}${sum_sys}${sum_old}")
-            return 1
-        ;;
+    # Create all directories beforehand.
+    find etc -type d | while read -r dir; do
+        mkdir -p "$KISS_ROOT/$dir"
+    done
 
-        # old = X, sys = X, new = X
-        # old = X, sys = Y, new = Y
-        # old = X, sys = X, new = Y
-        "${sum_old}${sum_old}${sum_old}"|\
-        "${sum_old:-null}${sum_sys}${sum_sys}"|\
-        "${sum_sys}${sum_old}"*)
-            new=
-        ;;
+    # Handle files in /etc/ based on a 3-way checksum check.
+    find etc -type f | sort | while read -r file; do
+        i=$((i + 1))
 
-        # All other cases.
-        *)
-            printf 'Saving /%s as /%s.new\n' "$2" "$2"
-            new=.new
-        ;;
-    esac
-}
+        { sum_new=$(sh256 "$file")
+          sum_sys=$(cd "$KISS_ROOT/"; sh256 "$file")
+          sum_old=$(awk "NR == $i" "$mak_dir/c"); } 2>/dev/null ||:
+
+        log "$pkg_name" "Doing 3-way handshake for $file"
+        printf '%s\n' "Previous: ${sum_old:-null}"
+        printf '%s\n' "System:   ${sum_sys:-null}"
+        printf '%s\n' "New:      ${sum_new:-null}"
+
+        # Use a case statement to easily compare three strings at
+        # the same time. Pretty nifty.
+        case ${sum_old:-null}${sum_sys:-null}${sum_new} in
+            # old = Y, sys = X, new = Y
+            "${sum_new}${sum_sys}${sum_old}")
+                log "Skipping $file"
+                continue
+            ;;
+
+            # old = X, sys = X, new = X
+            # old = X, sys = Y, new = Y
+            # old = X, sys = X, new = Y
+            "${sum_old}${sum_old}${sum_old}"|\
+            "${sum_old:-null}${sum_sys}${sum_sys}"|\
+            "${sum_sys}${sum_old}"*)
+                log "Installing $file"
+                new=
+            ;;
+
+            # All other cases.
+            *)
+                war "$pkg_name" "saving /$file as /$file.new"
+                new=.new
+            ;;
+        esac
+
+        cp -fPp "$file" "$KISS_ROOT/${file}${new}"
+        chown root:root "$KISS_ROOT/${file}${new}" 2>/dev/null
+    done ||:
+)
 
 pkg_remove() {
     # Remove a package and all of its files. The '/etc' directory is handled
     # differently and configuration files are *not* overwritten.
-    pkg_list "$1" >/dev/null
+    pkg_list "$1" >/dev/null || return
 
-    # False positive.
-    # shellcheck disable=2031
-    [ "$KISS_FORCE" = 1 ] || (
-        cd "$sys_db"
-        set +f
-        ! grep -lFx "$1" -- */depends
+    # Make sure that nothing depends on this package.
+    [ "$KISS_FORCE" = 1 ] || {
+        log "$1" "Checking for reverse dependencies"
 
-    ) || die "$1" "can't remove package, others depend on it"
+        (cd "$sys_db"; set +f; grep -lFx "$1" -- */depends) &&
+            die "$1" "Can't remove package, others depend on it"
+    }
 
     # Block being able to abort the script with 'Ctrl+C' during removal.
     # Removes all risk of the user aborting a package removal leaving an
     # incomplete package installed.
     trap '' INT
 
-    run_repo_hook pre-remove "$1"
-    run_user_hook pre-remove "$1" "$sys_db/$pkg"
+    if [ -x "$sys_db/$1/pre-remove" ]; then
+        log "$1" "Running pre-remove script"
+        "$sys_db/$1/pre-remove" ||:
+    fi
 
     # Make a backup of the etcsums file (if it exists).
-    cp -f "$sys_db/$1/etcsums" "$tmp_dir/.etcsums" 2>/dev/null ||:
+    cp -f "$sys_db/$1/etcsums" "$mak_dir/c" 2>/dev/null ||:
 
-    log "$1" "removing package"
+    log "$1" "Removing package"
     pkg_remove_files < "$sys_db/$1/manifest"
 
     # Reset 'trap' to its original value. Removal is done so
     # we no longer need to block 'Ctrl+C'.
     trap pkg_clean EXIT INT
 
-    log "$1" "removed successfully"
+    log "$1" "Removed successfully"
 }
 
 pkg_install() {
     # Install a built package tarball.
     #
-    # 1. Install package overwriting any existing files.
-    # 2. Diff old manifest against new one and remove any files which exist in
-    #    the old instance of the package but not the new one.
-    # 3. Install package again, verifying all files and repairing any damage
-    #    done by #2.
+    # Package installation works similarly to the method used by Slackware in
+    # some of their tooling. It's not the obvious solution to the problem,
+    # however it is the best solution at this given time.
+    #
+    # When an installation is an update to an existing package, instead of
+    # removing the old version first we do something different.
+    #
+    # The new version is installed overwriting any files which it has in
+    # common with the previously installed version of the package.
+    #
+    # A "diff" is then generated between the old and new versions and contains
+    # any files existing in the old version but not the new version.
+    #
+    # The package manager then goes and removes these files which leaves us
+    # with the new package version in the file system and all traces of the
+    # old version gone.
+    #
+    # For good measure the package manager will then install the new package
+    # an additional time. This is to ensure that the above diff didn't contain
+    # anything incorrect.
+    #
+    # This is the better method as it is "seamless". An update to busybox won't
+    # create a window in which there is no access to all of its utilities to
+    # give an example.
 
-    # Handle tarball vs cache lookup (pkg_cache).
-    case $1 in
-        *.tar.*)
-            [ -f "$1" ] ||
-                die "tarball '$1' does not exist"
+    # Install can also take the full path to a tarball. We don't need to check
+    # the repository if this is the case.
+    if [ -f "$1" ] && [ -z "${1%%*.tar.*}" ]; then
+        tar_file=$1 pkg_name=${1##*/} pkg_name=${pkg_name%#*}
 
-            tar_file=$1
-            pkg=${1##*/}
-            pkg=${pkg%[#@]*}
-        ;;
+    elif pkg_cache "$1" 2>/dev/null; then
+        pkg_name=$1
 
-        *)
-            pkg_find "$1"
-            pkg_cache "$1" 2>/dev/null ||
-                die "package '$1' has not yet been built"
-        ;;
-    esac
+    else
+        case $1 in
+            *.tar.*) die "Tarball '$1' does not exist" ;;
+            *)       die "Package '$1' has not yet been built"
+        esac
+    fi
 
-    mkdir -p "$tar_dir/$pkg"
-    cd       "$tar_dir/$pkg"
+    mkdir -p "$tar_dir/$pkg_name"
+    cd       "$tar_dir/$pkg_name"
 
+    # The tarball is extracted to a temporary directory where its contents are
+    # then "installed" to the filesystem. Running this step as soon as possible
+    # allows us to also check the validity of the tarball and bail out early
+    # if needed.
     decompress "$tar_file" | tar xf -
 
-    [ -f "./$pkg_db/$pkg/manifest" ] ||
-        die "invalid tarball '$tar_file'"
+    # Naively assume that the existence of a manifest file is all that
+    # determines a valid KISS package from an invalid one. This should be a
+    # fine assumption to make in 99.99% of cases.
+    [ -f "./$pkg_db/$pkg_name/manifest" ] || die "Not a valid KISS package"
 
-    # False positive.
-    # shellcheck disable=2031
+    # Ensure that the tarball's manifest is correct by checking that each file
+    # and directory inside of it actually exists.
     [ "$KISS_FORCE" = 1 ] || {
-        pkg_manifest_verify "$pkg_db/$pkg/manifest"
+        log "$pkg_name" "Checking that manifest is valid"
+        while read -r line; do
+            [ -h "./$line" ] || [ -e "./$line" ] ||
+                die "File $line missing from tarball but mentioned in manifest"
+        done < "$pkg_db/$pkg_name/manifest"
 
-        [ -f "$pkg_db/$pkg/depends" ] && {
+        log "$pkg_name" "Checking that all dependencies are installed"
+        [ -f "$tar_dir/$pkg_name/$pkg_db/$pkg_name/depends" ] &&
             while read -r dep dep_type || [ "$dep" ]; do
-                case "$dep ${dep_type:-null}" in
-                    [!#]*\ null)
-                        pkg_list "$dep" >/dev/null 2>&1 ||
-                            dep_err="$dep_err$dep, "
-                    ;;
-                esac
-            done < "$pkg_db/$pkg/depends"
+                [ "${dep##\#*}" ] || continue
+                [ "$dep_type" ]   || pkg_list "$dep" >/dev/null ||
+                    install_dep="$install_dep'$dep', "
+            done < "$tar_dir/$pkg_name/$pkg_db/$pkg_name/depends"
 
-            [ -z "$dep_err" ] ||
-                die "$pkg" "missing ${dep_err%, }"
-        }
+        [ "$install_dep" ] && die "$1" "Package requires ${install_dep%, }"
     }
 
-    run_user_hook pre-install "$pkg" "$tar_dir/$pkg"
+    run_hook pre-install "$pkg_name" "$tar_dir/$pkg_name"
+    pkg_conflicts "$pkg_name"
 
-    log "$pkg" "transforming package conflicts into alternatives"
-    pkg_conflicts "$pkg"
+    log "$pkg_name" "Installing package"
 
-    # Block Ctrl+C during installation.
+    # Block being able to abort the script with Ctrl+C during installation.
+    # Removes all risk of the user aborting a package installation leaving
+    # an incomplete package installed.
     trap '' INT
 
     # If the package is already installed (and this is an upgrade) make a
     # backup of the manifest and etcsums files.
-    cp -f "$sys_db/$pkg/manifest" "$tmp_dir/.manifest" 2>/dev/null ||:
-    cp -f "$sys_db/$pkg/etcsums"  "$tmp_dir/.etcsums"  2>/dev/null ||:
+    cp -f "$sys_db/$pkg_name/manifest" "$mak_dir/m" 2>/dev/null ||:
+    cp -f "$sys_db/$pkg_name/etcsums"  "$mak_dir/c" 2>/dev/null ||:
 
-    log "$pkg" "installing package"
-    pkg_install_files -z "$tar_dir/$pkg"
+    # Install the package's files by iterating over its manifest.
+    pkg_install_files -z "$tar_dir/$pkg_name"
 
-    grep -vFxf "$sys_db/$pkg/manifest" "$tmp_dir/.manifest" \
-        2>/dev/null | pkg_remove_files
+    # Handle /etc/ files in a special way (via a 3-way checksum) to determine
+    # how these files should be installed. Do we overwrite the existing file?
+    # Do we install it as $file.new to avoid deleting user configuration? etc.
+    #
+    # This is more or less similar to Arch Linux's Pacman with the user manually
+    # handling the .new files when and if they appear.
+    pkg_etc
 
-    log "$pkg" "verifying installation"
-    pkg_install_files -e "$tar_dir/$pkg"
+    # This is the aforementioned step removing any files from the old version of
+    # the package if the installation is an update. Each file type has to be
+    # specially handled to ensure no system breakage occurs.
+    #
+    # Files in /etc/ are skipped entirely as they'll be handled via a 3-way
+    # checksum system due to the nature of their existence.
+    grep -vFxf "$sys_db/$pkg_name/manifest" "$mak_dir/m" 2>/dev/null |
+    pkg_remove_files
 
+    # Install the package's files a second time to fix any mess caused by the
+    # above removal of the previous version of the package.
+    log "$pkg_name" "Verifying installation"
+    pkg_install_files -e "$tar_dir/$pkg_name"
+
+    # Reset 'trap' to its original value. Installation is done so we no longer
+    # need to block 'Ctrl+C'.
     trap pkg_clean EXIT INT
 
-    run_repo_hook post-install "$pkg"
-    run_user_hook post-install "$pkg" "$sys_db/$pkg"
+    if [ -x "$sys_db/$pkg_name/post-install" ]; then
+        log "$pkg_name" "Running post-install hook"
 
-    log "$pkg" "installed successfully"
+        hook_output=$("$sys_db/$pkg_name/post-install" 2>&1)
+
+        [ -z "$hook_output" ] || {
+            log "$pkg_name" "Running post-install hook" 2>&1
+            printf '%s\n' "$hook_output"
+        } |
+
+        # 'tee' is used as we would still like to display 'stderr'
+        tee -a "$log_dir/post-install-$time-$pid" >/dev/null
+    fi
+
+    run_hook post-install "$pkg_name" "$sys_db/$pkg_name"
+
+    log "$pkg_name" "Installed successfully"
 }
 
-sys_update() {
+pkg_updates() {
     # Check all installed packages for updates. So long as the installed
     # version and the version in the repositories differ, it's considered
     # an update.
-    log "updating repositories"
+    log "Updating repositories"
 
     # Create a list of all repositories.
-    # Intentional behavior.
-    # shellcheck disable=2031,2046,2086
-    {
-        IFS=:
-        set -- $KISS_PATH
-        unset IFS
-    }
+    # See [1] at top of script.
+    # shellcheck disable=2046,2086
+    { IFS=:; set -- $KISS_PATH; unset IFS; }
 
     # Update each repository in '$KISS_PATH'.
     for repo do
+        # Go to the root of the repository (if it exists).
         cd "$repo"
 
         case $(git remote 2>/dev/null) in
@@ -1265,12 +1275,15 @@ sys_update() {
             ;;
 
             *)
+                # Go to the repository's root directory.
                 cd "$(git rev-parse --show-toplevel)"
-                git_root=$(git rev-parse --show-superproject-working-tree)
-                cd "${git_root:-.}"
 
-                contains "$repos" "$PWD" : || {
-                    repos="$repos:$PWD"
+                # Go to the real root directory if this is a submodule.
+                git_root=$(git rev-parse --show-superproject-working-tree)
+                cd "${git_root:-"$PWD"}"
+
+                contains "$repos" "$PWD" || {
+                    repos="$repos $PWD "
 
                     # Display a tick if signing is enabled for this repository.
                     case $(git config merge.verifySignatures) in
@@ -1283,8 +1296,7 @@ sys_update() {
                         git submodule update --remote --init -f
 
                     else
-                        [ "$uid" = 0 ] ||
-                            log "$PWD" "need permissions to update"
+                        [ "$uid" = 0 ] || log "$PWD" "Need root to update"
 
                         # Find out the owner of the repository and spawn
                         # git as this user below.
@@ -1298,80 +1310,91 @@ sys_update() {
                             # We're in a repository which is owned by a 3rd
                             # user. Not root or the current user.
                             [ "$user" = root ] ||
-                                log "dropping to $user for pull"
+                                log "Dropping to $user for pull"
 
                             # Nesting is deep and line is long.
                             git_cmd="
                         git pull && git submodule update --remote --init -f
                             "
 
-                            # 'su' requires that command be quoted.
-                            case $su in *su)
-                                git_cmd="'$git_cmd'"
-                            esac
+                            # 'sudo' and 'doas' properly parse command-line
+                            # arguments and split them in the common way. 'su'
+                            # on the other hand requires that each argument be
+                            # properly quoted as the command passed to it must
+                            # be a string... This sets quotes where needed.
+                            case $su in *su) git_cmd="'$git_cmd'"; esac
 
-                            as_root sh -c "$git_cmd"
+                            # Spawn a subshell to run multiple commands as
+                            # root at once. This makes things easier on users
+                            # who aren't using persist/timestamps for auth
+                            # caching.
+                            user=$user as_root sh -c "$git_cmd"
                         )
                     fi
                 }
             ;;
         esac
 
-        run_repo_hook update "$PWD" update
+        [ ! -x update ] || {
+            log "$PWD" "Running update hook"
+            ./update
+        }
     done
 
-    log "checking for new package versions"
+    log "Checking for new package versions"
 
     set +f --
 
-    for _pkg in "$sys_db/"*; do
-        pkg_find "${_pkg##*/}"
+    for pkg in "$sys_db/"*; do
+        read -r db_ver db_rel < "$pkg/version"
+        read -r re_ver re_rel < "$(pkg_find "${pkg##*/}")/version"
 
-        read -r db_ver db_rel < "$_pkg/version"
-        read -r re_ver re_rel < "$repo_dir/version"
-
+        # Compare installed packages to repository packages.
         [ "$db_ver-$db_rel" = "$re_ver-$re_rel" ] || {
-            printf '%s %s-%s -> %s-%s\n' \
-                "${_pkg##*/}" \
-                "$db_ver" "$db_rel" \
-                "$re_ver" "$re_rel"
-
-            set -- "$@" "${_pkg##*/}"
+            printf '%s\n' "${pkg##*/} $db_ver-$db_rel ==> $re_ver-$re_rel"
+            set -- "$@" "${pkg##*/}"
         }
     done
 
     set -f
 
     contains "$*" kiss && {
-        log "detected package manager update"
-        prompt "the package manager will be updated first"
+        log "Detected package manager update"
+        log "The package manager will be updated first"
+
+        prompt
 
         pkg_build kiss
         args i kiss
 
-        log "updated the package manager"
-        log "re-run 'kiss u' to update your system"
+        log "Updated the package manager"
+        log "Re-run 'kiss update' to update your system"
 
         exit 0
     }
 
     [ "$1" ] || {
-        log "system up-to-date"
+        log "Everything is up to date"
         return
     }
 
-    pkg_update=1
-    pkg_order "$@"
+    log "Packages to update: $*"
 
-    # Intentional, globbing disabled.
-    # shellcheck disable=2086
-    pkg_build $order
+    # Build all packages requiring an update.
+    # See [1] at top of script.
+    # shellcheck disable=2046,2086
+    {
+        pkg_update=1
+        pkg_order "$@"
+        pkg_build $order
+    }
+
+    log "Updated all packages"
 }
 
 pkg_clean() {
     # Clean up on exit or error. This removes everything related to the build.
-    [ "$KISS_DEBUG" = 1 ] ||
-        rm -rf "$tmp_dir"
+    [ "$KISS_DEBUG" = 1 ] || rm -rf "$mak_dir" "$pkg_dir" "$tar_dir"
 }
 
 args() {
@@ -1381,144 +1404,115 @@ args() {
     action=$1
     shift "$(($# != 0))"
 
-    case $action in
-        b|build|c|checksum|d|download|i|install|r|remove)
-            [ "$1" ] || {
-                # Intentional.
-                # shellcheck disable=2031
-                export KISS_PATH=${PWD%/*}:$KISS_PATH
-                set -- "${PWD##*/}"
-            }
+    # Unless this is a search, sanitize the user's input. The call to
+    # 'pkg_find()' supports basic globbing, ensure input doesn't expand
+    # to anything except for when this behavior is needed.
+    #
+    # This handles the globbing characters '*', '!', '[' and ']' as per:
+    # https://pubs.opengroup.org/onlinepubs/009695399/utilities/xcu_chap02.html
+    [ "${action##[as]*}" ] && case "$*" in *\**|*\!*|*\[*|*\]*)
+        die "Arguments contain invalid characters: '!*[]' ($*)"
+    esac
 
-            for arg do
-                case $arg in
-                    *'*'*|*'!'*|*'['*|*']'*|*' '*|*'	'*)
-                        die "argument '$arg' contains '!*[] \t'"
-                    ;;
-                esac
-            done
-        ;;
+    # CRUX style usage using the current directory as the name of the package
+    # to be operated on. This needs to sit before the 'as_root()' calls as
+    # they reset the current working directory during their invocations.
+    [ "$1" ] || case $action in b|build|c|checksum|d|download|i|install|r|remove)
+        export KISS_PATH=${PWD%/*}:$KISS_PATH
+        set -- "${PWD##*/}"
     esac
 
     # Rerun the script as root with a fixed environment if needed. We sadly
     # can't run singular functions as root so this is needed.
-    #
-    # False positive.
-    # shellcheck disable=2031
-    case $action in
-        a|alternatives|i|install|r|remove)
-            [ -z "$1" ] || [ -w "$KISS_ROOT/" ] || [ "$uid" = 0 ] || {
-                as_root \
-                    HOME="$HOME" \
+    case $action in a|alternatives|i|install|r|remove)
+        [ -z "$1" ] || [ -w "$KISS_ROOT/" ] || [ "$uid" = 0 ] || {
+            as_root HOME="$HOME" \
                     XDG_CACHE_HOME="$XDG_CACHE_HOME" \
+                    KISS_PATH="$KISS_PATH" \
+                    KISS_FORCE="$KISS_FORCE" \
+                    KISS_ROOT="$KISS_ROOT" \
                     KISS_CHOICE="$KISS_CHOICE" \
                     KISS_COLOR="$KISS_COLOR" \
-                    KISS_FORCE="$KISS_FORCE" \
-                    KISS_PATH="$KISS_PATH" \
-                    KISS_PID="$KISS_PID" \
-                    KISS_ROOT="$KISS_ROOT" \
                     KISS_TMPDIR="$KISS_TMPDIR" \
+                    KISS_PID="$KISS_PID" \
                     "$0" "$action" "$@"
 
-                return
-            }
-        ;;
+            return
+        }
     esac
 
     # Actions can be abbreviated to their first letter. This saves keystrokes
     # once you memorize the commands.
     case $action in
         a|alternatives)
-            case $1 in
-                -)
-                    while read -r pkg path; do
-                        pkg_swap "$pkg" "$path"
-                    done
-                ;;
+            if [ "$1" = - ]; then
+                while read -r pkg path; do
+                    pkg_swap "$pkg" "$path"
+                done
 
-                '')
-                    set +f
+            elif [ "$1" ]; then
+                pkg_swap "$@"
 
-                    # Go over each alternative and format the file
-                    # name for listing. (pkg_name>usr>bin>ls)
-                    for pkg in "$sys_db/../choices"/*; do
-                        printf '%s\n' "${pkg##*/}"
-                    done |
-
-                    sed 's|>| /|; s|>|/|g; /\*/d'
-                ;;
-
-                *)
-                    pkg_swap "$1" "$2"
-                ;;
-            esac
-        ;;
-
-        b|build)
-            pkg_build "${@:?No packages installed}"
+            else
+                # Go over each alternative and format the file
+                # name for listing. (pkg_name>usr>bin>ls)
+                set +f; for pkg in "$sys_db/../choices"/*; do
+                    printf '%s\n' "${pkg##*/}"
+                done | sed 's|>| /|; s|>|/|g; /\*/d'
+            fi
         ;;
 
         c|checksum)
+            for pkg do pkg_lint    "$pkg"; done
+            for pkg do pkg_sources "$pkg" c; done
             for pkg do
-                pkg_lint "$pkg"
-            done
+                repo_dir=$(pkg_find "$pkg")
 
-            for pkg do
-                pkg_sources "$pkg"
-            done
+                [ -f "$repo_dir/sources" ] || {
+                    log "$pkg" "No sources file, skipping checksums"
+                    continue
+                }
 
-            for pkg do
-                pkg_checksum_save "$pkg"
+                sums=$(pkg_checksums "$pkg")
+
+                [ "$sums" ] || {
+                    log "$pkg" "No sources needing checksums"
+                    continue
+                }
+
+                # False positive ('>> file' with no command).
+                # shellcheck disable=2188
+                printf '%s\n' "$sums" |
+
+                if 2>/dev/null >> "$repo_dir/checksums"; then
+                    tee "$repo_dir/checksums"
+
+                else
+                    log "$pkg" "Need permissions to generate checksums"
+                    file_owner "$repo_dir"
+
+                    user=$user as_root tee "$repo_dir/checksums"
+                fi
+
+                log "$pkg" "Generated checksums"
             done
         ;;
 
-        d|download)
-            for pkg do
-                pkg_sources "$pkg"
-            done
-        ;;
-
-        i|install)
+        i|install|r|remove)
             pkg_order "$@"
 
-            for pkg in $order; do
-                pkg_install "$pkg"
-            done
+            case $action in
+                i*) for pkg in $order; do pkg_install "$pkg"; done ;;
+                r*) for pkg in $redro; do pkg_remove  "$pkg"; done
+            esac
         ;;
 
-        l|list)
-            [ "$1" ] || {
-                cd "$sys_db"
-                set +f
-                set -f -- *
-            }
-
-            for pkg do
-                pkg_list "$pkg"
-            done
-        ;;
-
-        r|remove)
-            pkg_order "$@"
-
-            for pkg in $redro; do
-                pkg_remove "$pkg"
-            done
-        ;;
-
-        s|search)
-            for pkg do
-                pkg_find "$pkg" '' all
-            done
-        ;;
-
-        u|update)
-            sys_update
-        ;;
-
-        v|version)
-            printf '6.0.0\n'
-        ;;
+        b|build)    pkg_build "${@:?No packages installed}" ;;
+        d|download) for pkg do pkg_sources "$pkg"; done ;;
+        l|list)     pkg_list "$@" ;;
+        u|update)   pkg_updates ;;
+        s|search)   for pkg do pkg_find "$pkg" all; done ;;
+        v|version)  printf '5.1.0\n' ;;
 
         '')
             log 'kiss [a|b|c|d|i|l|r|s|u|v] [pkg]...'
@@ -1537,29 +1531,45 @@ args() {
         ;;
 
         help-ext)
-            log 'extensions (kiss-* in PATH)'
+            log 'Installed extensions (kiss-* in PATH)'
 
-            pkg_find kiss-\* "$PATH" all -x |
+            # shellcheck disable=2046
+            # see [1] at top of script.
+            set -- $(KISS_PATH=$PATH pkg_find kiss-\* all -x)
 
-            while read -r file; do
-                name=${file#*/kiss-}
-
-                contains "$list" "$name" || {
-                    list="$list $name"
-
-                    printf '%-15s ' "$name"
-                    sed -n 's/^# *//;2p' "$file"
-                }
+            # To align descriptions figure out which extension has the longest
+            # name by doing a simple 'name > max ? name : max' on the basename
+            # of the path with 'kiss-' stripped as well.
+            #
+            # This also removes any duplicates found in '$PATH', picking the
+            # first match.
+            for path do p=${path#*/kiss-}
+                case " $seen " in
+                    *" $p "*) shift ;;
+                    *) seen=" $seen $p " max=$((${#p} > max ? ${#p}+1 : max))
+                esac
             done
+
+            # Print each extension, grab its description from the second line
+            # in the file and align the output based on the above max.
+            for path do
+                printf "%b->%b %-${max}s " "$lcol" "$lclr" "${path#*/kiss-}"
+                sed -n 's/^# *//;2p' "$path"
+            done >&2
         ;;
 
         *)
-            pkg_find "kiss-$action*" "$PATH" '' -x 2>/dev/null ||
+            util=$(KISS_PATH=$PATH pkg_find "kiss-$action*" "" -x 2>/dev/null) ||
                 die "'kiss $action' is not a valid command"
 
-            "$repo_dir" "$@"
+            "$util" "$@"
         ;;
     esac
+
+    if [ -s "$log_dir/post-install-$time-$pid" ]; then
+        cat "$log_dir/post-install-$time-$pid"
+        log "Post-install log stored to $log_dir/post-install-$time-$pid"
+    fi
 }
 
 main() {
@@ -1568,17 +1578,18 @@ main() {
 
     # Allow the user to disable colors in output via an environment variable.
     # Check this once so as to not slow down printing.
-    [ "$KISS_COLOR" = 0 ] || {
-        lcol='\033[1;33m'
-        lcol2='\033[1;34m'
-        lclr='\033[m'
-    }
+    [ "$KISS_COLOR" = 0 ] || lcol='\033[1;33m' lcol2='\033[1;34m' lclr='\033[m'
+
+    # Store the original working directory to ensure that relative paths
+    # passed by the user on the command-line properly resolve to locations
+    # in the filesystem.
+    ppwd=$PWD
 
     # The PID of the current shell process is used to isolate directories
     # to each specific KISS instance. This allows multiple package manager
     # instances to be run at once. Store the value in another variable so
     # that it doesn't change beneath us.
-    pid=${KISS_PID:-"$$"}
+    pid=${KISS_PID:-$$}
 
     # Catch errors and ensure that build files and directories are cleaned
     # up before we die. This occurs on 'Ctrl+C' as well as success and error.
@@ -1586,47 +1597,36 @@ main() {
 
     # Figure out which 'sudo' command to use based on the user's choice or what
     # is available on the system.
-    su=${KISS_SU:-"$(
-        command -v sudo ||
-        command -v doas ||
-        command -v sls
-    )"} || su=su
-
-    # Figure out which utility is available to dump elf information.
-    elf_cmd=${KISS_ELF:="$(
-        command -v readelf      ||
-        command -v eu-readelf   ||
-        command -v llvm-readelf
-    )"} || elf_cmd=ldd
+    su=${KISS_SU:-"$(command -v sudo || command -v doas || command -v sls)"} ||:
 
     # Store the date and time of script invocation to be used as the name of
     # the log files the package manager creates uring builds.
-    date=$(date +%Y-%m-%d-%H:%M:%S)
+    time=$(date +%Y-%m-%d-%H:%M)
 
-    # Make note of the current user.
+    # Make note of the user's current ID to do root checks later on.
+    # This is used enough to warrant a place here.
     uid=$(id -u)
+
+    # Make sure that the KISS_ROOT doesn't end with a '/'. This might break
+    # some operations if left unchecked.
+    KISS_ROOT=${KISS_ROOT%/} KISS_ROOT=${KISS_ROOT%/} KISS_ROOT=${KISS_ROOT%/}
 
     # Define some paths which we will then use throughout the script.
     sys_db=$KISS_ROOT/${pkg_db:=var/db/kiss/installed}
-    cho_db=${pkg_db%%/installed}/choices
-
-    # Ensure that the KISS_ROOT doesn't end with a '/'.
-    KISS_ROOT=${KISS_ROOT%"${KISS_ROOT##*[!/]}"}
 
     # This allows for automatic setup of a KISS chroot and will
     # do nothing on a normal system.
     mkdir -p "$KISS_ROOT/" 2>/dev/null ||:
 
-    # Create cache directories and define variables.
-    mkdir -p \
-        "${cac_dir:="${XDG_CACHE_HOME:-"${HOME:?HOME is null}/.cache"}/kiss"}" \
-            "${src_dir:="$cac_dir/sources"}" \
-            "${log_dir:="$cac_dir/logs/${date%-*}"}" \
-            "${bin_dir:="$cac_dir/bin"}" \
-        "${tmp_dir:="${KISS_TMPDIR:="$cac_dir/proc"}/$pid"}" \
-            "${mak_dir:="$tmp_dir/build"}" \
-            "${pkg_dir:="$tmp_dir/pkg"}" \
-            "${tar_dir:="$tmp_dir/extract"}"
+    # Create the required temporary directories and set the variables which
+    # point to them.
+    mkdir -p "${cac_dir:=${XDG_CACHE_HOME:-$HOME/.cache}/kiss}" \
+             "${mak_dir:=${KISS_TMPDIR:=$cac_dir}/build-$pid}" \
+             "${pkg_dir:=${KISS_TMPDIR:=$cac_dir}/pkg-$pid}" \
+             "${tar_dir:=${KISS_TMPDIR:=$cac_dir}/extract-$pid}" \
+             "${src_dir:=$cac_dir/sources}" \
+             "${log_dir:=$cac_dir/logs}" \
+             "${bin_dir:=$cac_dir/bin}"
 
     args "$@"
 }
