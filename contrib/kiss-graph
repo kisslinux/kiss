@@ -14,5 +14,5 @@ for pkg do
         *GB) num=$((num * 1024 * 1024)) ;;
     esac
 
-    printf '%10s  %s\n' "$num" "$pkg" 
+    printf '%10s  %s\n' "$num" "$pkg"
 done
