@@ -60,6 +60,21 @@ file_owner() {
     id -u "$user" >/dev/null 2>&1 || user=root
 }
 
+pkg_owner() {
+    set +f
+
+    [ "$3" ] ||
+        set -- "$1" "$2" "$sys_db"/*/manifest
+
+    pkg_owner=$(grep "$@")
+    pkg_owner=${pkg_owner%/*}
+    pkg_owner=${pkg_owner##*/}
+
+    set -f
+
+    [ "$pkg_owner" ]
+}
+
 run_hook() {
     # Provide a default post-build hook to remove files and directories
     # for things we don't support out of the box. One can simply define
@@ -428,70 +443,81 @@ pkg_strip() {
     done 2>/dev/null ||:
 }
 
-pkg_fixdeps() {
+pkg_fix_deps() {
     # Dynamically look for missing runtime dependencies by checking each
     # binary and library with 'ldd'. This catches any extra libraries and or
     # dependencies pulled in by the package's build suite.
-    log "$1" "Checking for missing dependencies"
+    log "$1" "looking for dependencies (using ${elf_cmd##*/})"
 
-    pkg_name=$1
-
-    # Go to the built package directory to simplify path building.
     cd "$pkg_dir/$1/$pkg_db/$1"
 
-    # Generate a list of all installed manifests.
-    set +f; set -f -- "$sys_db/"*/manifest
+    set +f
+    set -f -- "$sys_db/"*/manifest
 
-    # Create the depends file if it doesn't exist to have something to
-    # compare against (even if empty). We will remove this blank file
-    # later if needed.
     : >> depends
 
-    # Get a list of binaries and libraries, false files will be found,
-    # however it's faster to get 'ldd' to check them anyway than to filter
-    # them out.
     find "$pkg_dir/${PWD##*/}/" -type f 2>/dev/null |
 
     while read -r file; do
-        # Run 'ldd' on the file and parse each line. The code then checks to
-        # see which packages own the linked libraries and it prints the result.
-        ldd "$file" 2>/dev/null | while read -r _ _ dep _; do
-            # Resolve path symlinks to find the real location to the library.
-            cd -P "${dep%/*}" 2>/dev/null || continue
+        case $elf_cmd in
+            *readelf)
+                "$elf_cmd" -d "$file"
+            ;;
 
-            # Skip files owned by libc and POSIX.
-            case ${dep##*/} in
-                "" | ld-* | libpthread.so* | lib[cm].so* | libdl.so* |\
-                librt.so* | libtrace.so*   | libxnet.so*)
-                    continue
-            esac
+            *)
+                ldd -- "$file"
+            ;;
+        esac 2>/dev/null |
 
-            # Figure out which package owns the file.
-            dep=$(grep -lFx "${PWD#"$KISS_ROOT"}/${dep##*/}" "$@")
-            dep=${dep%/*} dep=${dep##*/}
+        while read -r line; do
+            case $line in
+                *NEEDED*\[*\] | *'=>'*)
+                    # readelf: 0x0000 (NEEDED) Shared library: [libjson-c.so.5]
+                    line=${line##*[}
+                    line=${line%%]*}
 
-            case $dep in
-                # Skip listing these packages as dependencies.
-                # The pkg_name portions are to workaround incorrect detections
-                # from -bin or -esr packages.
-                ""|gcc|llvm|"${pkg_name%%-bin}"|\
-                "${pkg_name%%-esr}"|"${pkg_name%%-esr-bin}") ;;
+                    # ldd:     libjson-c.so.5 => /lib/libjson-c.so.5 ...
+                    line=${line##*=> }
+                    line=${line%% *}
 
-                *) printf '%s\n' "$dep"
+                    # Skip files owned by libc and POSIX.
+                    case ${line##*/} in
+                        ld-*           |\
+                        lib[cm].so*    |\
+                        libdl.so*      |\
+                        libpthread.so* |\
+                        librt.so*      |\
+                        libtrace.so*   |\
+                        libxnet.so*    |\
+                        ldd)
+                            continue
+                        ;;
+
+                        *)
+                            # Skip file if owned by current package
+                            pkg_owner -l "/${line#/}\$" "$PWD/manifest" &&
+                                continue
+
+                            pkg_owner -l "/${line#/}\$" "$@" &&
+                                printf '%s\n' "$pkg_owner"
+                        ;;
+                    esac
+                ;;
             esac
         done ||:
-    done | sort -uk1,1 depends - > "$mak_dir/d"
+    done |
 
-    # Display a 'diff' of the new dependencies against the old ones.
-    diff -U 3 depends - < "$mak_dir/d" ||:
+    sort -uk1,1 depends - > "$mak_dir/.fixdeps"
 
-    # Swap out the old depends file for the new one which contains
-    # an amended dependency list.
-    mv -f "$mak_dir/d" depends
+    diff -U 3 depends - < "$mak_dir/.fixdeps" ||:
 
-    # Remove the package's depends file if it's empty. (The package has
-    # no dependencies, automatically detected or otherwise).
-    [ -s depends ] || rm -f depends
+    mv -f "$mak_dir/.fixdeps" depends
+
+    if [ -s depends ]; then
+        pkg_manifest "${PWD##*/}"
+    else
+        rm -f depends
+    fi
 }
 
 pkg_manifest() (
@@ -675,7 +701,7 @@ pkg_build() {
         [ -d "$pkg_dir/$pkg/etc" ] && : > "$pkg_dir/$pkg/$pkg_db/$pkg/etcsums"
 
         pkg_strip    "$pkg"
-        pkg_fixdeps  "$pkg"
+        pkg_fix_deps "$pkg"
         pkg_manifest "$pkg"
         pkg_etcsums  "$pkg"
         pkg_tar      "$pkg"
@@ -1603,6 +1629,13 @@ main() {
     # Figure out which 'sudo' command to use based on the user's choice or what
     # is available on the system.
     su=${KISS_SU:-"$(command -v sudo || command -v doas || command -v sls)"} ||:
+
+    # Figure out which utility is available to dump elf information.
+    elf_cmd=${KISS_ELF:="$(
+        command -v readelf      ||
+        command -v eu-readelf   ||
+        command -v llvm-readelf
+    )"} || elf_cmd=ldd
 
     # Store the date and time of script invocation to be used as the name of
     # the log files the package manager creates uring builds.
