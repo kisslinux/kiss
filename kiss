@@ -1425,7 +1425,7 @@ pkg_updates() {
 
 pkg_clean() {
     # Clean up on exit or error. This removes everything related to the build.
-    [ "$KISS_DEBUG" = 1 ] || rm -rf "$mak_dir" "$pkg_dir" "$tar_dir"
+    [ "$KISS_DEBUG" = 1 ] || rm -rf "$tmp_dir"
 }
 
 args() {
