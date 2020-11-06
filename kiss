@@ -507,11 +507,11 @@ pkg_fix_deps() {
         done ||:
     done |
 
-    sort -uk1,1 depends - > "$mak_dir/.fixdeps"
+    sort -uk1,1 depends - > "$tmp_dir/.fixdeps"
 
-    diff -U 3 depends - < "$mak_dir/.fixdeps" ||:
+    diff -U 3 depends - < "$tmp_dir/.fixdeps" ||:
 
-    mv -f "$mak_dir/.fixdeps" depends
+    mv -f "$tmp_dir/.fixdeps" depends
 
     if [ -s depends ]; then
         pkg_manifest "${PWD##*/}"
@@ -701,8 +701,8 @@ pkg_build() {
         [ -d "$pkg_dir/$pkg/etc" ] && : > "$pkg_dir/$pkg/$pkg_db/$pkg/etcsums"
 
         pkg_strip    "$pkg"
-        pkg_fix_deps "$pkg"
         pkg_manifest "$pkg"
+        pkg_fix_deps "$pkg"
         pkg_etcsums  "$pkg"
         pkg_tar      "$pkg"
 
@@ -1658,13 +1658,14 @@ main() {
     # Create the required temporary directories and set the variables which
     # point to them.
     mkdir -p \
-        "${cac_dir:=${XDG_CACHE_HOME:-${HOME:?HOME is NULL}/.cache}/kiss}" \
-         "${mak_dir:=${KISS_TMPDIR:=$cac_dir}/build-$pid}" \
-         "${pkg_dir:=${KISS_TMPDIR:=$cac_dir}/pkg-$pid}" \
-         "${tar_dir:=${KISS_TMPDIR:=$cac_dir}/extract-$pid}" \
-         "${src_dir:=$cac_dir/sources}" \
-         "${log_dir:=$cac_dir/logs}" \
-         "${bin_dir:=$cac_dir/bin}"
+        "${cac_dir:="${XDG_CACHE_HOME:-"${HOME:?HOME is null}/.cache"}/kiss"}" \
+            "${src_dir:="$cac_dir/sources"}" \
+            "${log_dir:="$cac_dir/logs/${date%-*}"}" \
+            "${bin_dir:="$cac_dir/bin"}" \
+        "${tmp_dir:="${KISS_TMPDIR:="$cac_dir/proc"}/$pid"}" \
+            "${mak_dir:="$tmp_dir/build"}" \
+            "${pkg_dir:="$tmp_dir/pkg"}" \
+            "${tar_dir:="$tmp_dir/extract"}"
 
     args "$@"
 }
