@@ -200,15 +200,16 @@ pkg_sources() {
             :
 
         # Remote source (cached).
-        elif [ -f "${src##*/}" ]; then
+        elif [ -f "./${dest:-.}/${src##*/}" ]; then
             log "$1" "Found cached source '${src##*/}'"
 
         # Remote source.
         elif [ -z "${src##*://*}" ]; then
             log "$1" "Downloading $src"
+            mkdir -p "$PWD/$dest"
 
-            curl "$src" -fLo "${src##*/}" || {
-                rm -f "${src##*/}"
+            curl "$src" -fLo "./${dest:-.}/${src##*/}" || {
+                rm -f "./${dest:-.}/${src##*/}"
                 die "$1" "Failed to download $src"
             }
 
@@ -331,8 +332,8 @@ pkg_extract() {
                     cp -f "/$src" .
 
                 # Remote file.
-                elif [ -f "$src_dir/$1/${src##*/}" ]; then
-                    cp -f "$src_dir/$1/${src##*/}" .
+                elif [ -f "$src_dir/$1/${dest:-.}/${src##*/}" ]; then
+                    cp -f "$src_dir/$1/${dest:-.}/${src##*/}" .
 
                 else
                     die "$1" "Local file $src not found"
@@ -705,14 +706,14 @@ pkg_checksums() {
     # Support packages without sources. Simply do nothing.
     [ -f "$repo_dir/sources" ] || return 0
 
-    while read -r src _ || [ "$src" ]; do
+    while read -r src dest || [ "$src" ]; do
         # Skip comments, blank lines and git sources.
         if [ -z "${src##\#*}" ] || [ -z "${src##git+*}" ]; then
             :
 
         # Remote source.
         elif [ -z "${src##*://*}" ]; then
-            sh256 "$src_dir/$1/${src##*/}"
+            sh256 "$src_dir/$1/${dest:-.}/${src##*/}"
 
         # Skip directories.
         elif [ -d "$repo_dir/$src" ] || [ -d "/$src" ]; then
