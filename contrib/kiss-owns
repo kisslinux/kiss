@@ -1,19 +1,31 @@
 #!/bin/sh -e
 # Check which package owns a file
 
-# Strip 'KISS_ROOT' from the file path if passed and
-# follow symlinks.
-file=$(readlink -f "$KISS_ROOT/${1##$KISS_ROOT}")
+# Follow symlinks to any paths.
+case $1 in
+    /*)
+        cd -P "$KISS_ROOT/${1%/*}"
+    ;;
 
-[ -f "$file" ] || {
+    */*)
+        cd -P "${1%/*}"
+    ;;
+
+    *)
+        cd -P .
+    ;;
+esac
+
+[ -f "$PWD/${1##*/}" ] || {
     printf 'usage: kiss-owns [/path/to/file]\n' >&2
     exit 1
 }
 
 # Print the full path to the manifest file which contains
 # the match to our search.
-pkg_owns=$(grep -lFx "${file##$KISS_ROOT}" \
-                     "$KISS_ROOT/var/db/kiss/installed/"*/manifest)
+pkg_owns=$(grep -lFx \
+    "$PWD/${1##*/}" \
+    "$KISS_ROOT/var/db/kiss/installed/"*/manifest)
 
 
 # Extract the package name from the path above.
