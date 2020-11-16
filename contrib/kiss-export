@@ -19,7 +19,7 @@ done < "$db/$pkg/manifest"
 
 cd "$KISS_ROOT/"
 
-dest="$OLDPWD/$pkg#$ver-$rel.tar.${KISS_COMPRESS:-gz}"
+dest="$OLDPWD/$pkg@$ver-$rel.tar.${KISS_COMPRESS:-gz}"
 
 tar cf - "$@" | case ${KISS_COMPRESS:-gz} in
     bz2)  bzip2 -z ;;
