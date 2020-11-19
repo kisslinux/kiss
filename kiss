@@ -1064,11 +1064,11 @@ pkg_etc() (
     done
 
     # Handle files in /etc/ based on a 3-way checksum check.
-    find etc -type f | sort | while read -r file; do
+    find etc ! -type d | sort | while read -r file; do
         i=$((i + 1))
 
         { sum_new=$(sh256 "$file")
-          sum_sys=$(cd "$KISS_ROOT/"; sh256 "$file")
+          sum_sys=$(sh256 "$KISS_ROOT/$file")
           sum_old=$(awk "NR == $i" "$mak_dir/c"); } 2>/dev/null ||:
 
         log "$pkg_name" "Doing 3-way handshake for $file"
