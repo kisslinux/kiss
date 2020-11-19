@@ -552,7 +552,7 @@ pkg_etcsums() (
 
     # This can't be a simple 'find -exec' as 'sh256' is a shell function
     # and not a real command of any kind. This is the shell equivalent.
-    find etc -type f | sort | while read -r line; do
+    find etc ! -type d | sort | while read -r line; do
         sh256 "$line"
     done > "$pkg_dir/$1/$pkg_db/$1/etcsums"
 )
