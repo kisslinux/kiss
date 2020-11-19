@@ -1,7 +1,12 @@
 #!/bin/sh -e
 # Lists the owners of all files with conflicts
 
-kiss a | sort -u -k2 | while read -r _ path; do
-    echo "$(kiss owns "$path")" "$path"
+kiss a | while read -r _ path; do
+    if owner=$(kiss owns "$path" 2>/dev/null) && [ "$owner" ]; then
+        printf '%s %s\n' "$owner" "$path"
+
+    else
+        printf 'warning: %s has no owner\n' "$path" >&2
+    fi
 done
 
