@@ -3,15 +3,18 @@
 
 cd "$KISS_ROOT/var/db/kiss/installed"
 
-for pkg in *; do
-    i=1
+kiss s * | while read -r path; do
+    pkg=${path##*/}
 
-    kiss s "$pkg" | while read -r line; do
-        case $i-$line in ("1-$PWD/$pkg")
-            printf '%s\n' "$pkg"
-            continue
-        esac
+    case $seen in *" $pkg "*)
+        continue
+    esac
 
-        i=$((i + 1))
-    done
+    case $path in "$PWD/$pkg")
+        printf '%s\n' "$pkg"
+    esac
+
+    seen="$seen $pkg "
 done
+
+
