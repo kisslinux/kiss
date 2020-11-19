@@ -1,0 +1,7 @@
+#!/bin/sh -e
+# Lists the owners of all files with conflicts
+
+kiss a | sort -u -k2 | while read -r _ path; do
+    echo "$(kiss owns "$path")" "$path"
+done
+
