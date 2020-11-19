@@ -9,13 +9,13 @@ dir=$(kiss search "$pkg" 2>/dev/null) || {
     exit 1
 }
 
-# Globbing is disabled and word splitting is intentional. 
+# Globbing is disabled and word splitting is intentional.
 # shellcheck disable=2086
 set -- $dir
 
 [ "$num" -ge "$#" ] && {
     printf 'index exceeds maximum\n'
-    exit 1 
+    exit 1
 }
 
 shift "$num"
@@ -26,5 +26,5 @@ shift "$num"
 }
 
 printf 'found  package in %s\n' "$1"
-cp -rf "$1" .
+cp -Lrf "$1" .
 printf 'forked package to %s\n' "$PWD/$pkg"
