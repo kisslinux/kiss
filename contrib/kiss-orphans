@@ -1,16 +1,43 @@
-#!/bin/sh -e
+#!/usr/bin/awk -f
 # List orphaned packages
 
-cd "$KISS_ROOT/var/db/kiss/installed/"
+BEGIN {
+    # Base installation packages which should never be considered
+    # orphaned.
+    base = "baseinit baselayout gcc e2fsprogs musl " \
+           "make busybox bzip2 grub kiss git"
 
-for pkg in *; do
-    case $pkg in
-        # Exemptions for orphans which aren't really
-        # orphans. Exclude them from the list.
-        baseinit|baselayout|gcc|e2fsprogs|musl|\
-        make|busybox|bzip2|grub|kiss|git)
+    kissdb = ENVIRON["KISS_ROOT"] "/var/db/kiss"
+
+    # Read installed packages.
+    cmd = "cd '" kissdb "/installed'; printf '%s\\n' *"
+    while (cmd | getline pkg == 1) {
+        # Create empty array element.
+        installed[pkg]
+        orphans[pkg]
+    }
+
+    # Read dependency files of all installed packages.
+    for (pkg in installed) {
+        dep_file = kissdb "/installed/" pkg "/depends"
+
+        while (getline < dep_file == 1) {
+            # Normal dependency.
+            if ($0 in installed)
+                delete orphans[$0]
+
+            # Build-time dependency.
+            else if ($1 in installed && $1 in orphans)
+                orphans[$1] = " " $2
+        }
+        close(dep_file)
+    }
+
+    for (pkg in orphans) {
+        # Exclude base installation packages.
+        if (index(" " base " ", " " pkg " "))
             continue
-    esac
 
-    grep -q "^$pkg$" ./*/depends || printf '%s\n' "$pkg"
-done
+        print pkg orphans[pkg]
+    }
+}
