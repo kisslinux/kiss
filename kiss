@@ -535,7 +535,11 @@ pkg_manifest() (
     #       contents.
     # sed:  Remove the first character in each line (./dir -> /dir) and
     #       remove all lines which only contain '.'.
-    find . -type d -exec printf '%s/\n' {} + -o -print | sort -r |
+    {
+        find . -type d -exec printf '%s/\n' {} +
+        find . ! -type d -print
+
+    } | sort -r |
         sed '/^\.\/$/d;ss.ss' > "${2:-$pkg_dir}/$1/$pkg_db/$1/manifest"
 )
 
