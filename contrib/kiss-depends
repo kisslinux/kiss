@@ -3,11 +3,17 @@
 
 pkg=${1:-"${PWD##*/}"}
 
-kiss list "$pkg" >/dev/null || {
+kiss list "$pkg" >/dev/null || kiss search "$pkg" >/dev/null || {
     printf 'usage: kiss-depends [pkg]\n' >&2
     exit 1
 }
 
-while read -r dep mak || [ "$dep" ]; do
-    printf '%s%s\n' "$dep" "${mak:+ "$mak"}"
-done 2>/dev/null < "$KISS_ROOT/var/db/kiss/installed/$pkg/depends" 
+depends() {
+    while read -r dep mak || [ "$dep" ]; do
+        printf '%s%s\n' "$dep" "${mak:+ "$mak"}"
+    done 2>/dev/null < "$1/depends"
+}
+
+# word-splitting is intentional here
+# shellcheck disable=2046
+depends "$KISS_ROOT/var/db/kiss/installed/$pkg/depends" || depends $(kiss search "$pkg")
