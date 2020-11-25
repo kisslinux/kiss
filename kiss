@@ -113,17 +113,19 @@ sh256() {
     # All utilities must match 'sha256sum' output.
     #
     # Example: '<checksum>  <file>'
-    [ -f "$1" ] || return 0
 
-    hash=$(
-        sha256sum               "$1" ||
-        sha256 -r               "$1" ||
-        openssl dgst -sha256 -r "$1" ||
-        shasum -a 256           "$1" ||
-        digest -a sha256        "$1"
-    )
+    # Skip non-files and broken symlinks.
+    if { [ -h "$1" ] && [ -e "$1" ] } || [ -f "$1" ]; then
+        hash=$(
+            sha256sum               "$1" ||
+            sha256 -r               "$1" ||
+            openssl dgst -sha256 -r "$1" ||
+            shasum -a 256           "$1" ||
+            digest -a sha256        "$1"
+        )
 
-    printf '%s\n' "${hash%% *}"
+        printf '%s\n' "${hash%% *}"
+    fi
 }
 
 pkg_lint() {
