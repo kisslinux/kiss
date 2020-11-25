@@ -3,7 +3,7 @@
 
 cd "$KISS_ROOT/var/db/kiss/installed"
 
-kiss s * | while read -r path; do
+kiss s ./* | while IFS=/ read -r _ path; do
     pkg=${path##*/}
 
     case $seen in *" $pkg "*)
