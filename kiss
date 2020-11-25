@@ -113,7 +113,7 @@ sh256() {
     # All utilities must match 'sha256sum' output.
     #
     # Example: '<checksum>  <file>'
-    [ -e "$1" ] || return 0
+    [ -f "$1" ] || return 0
 
     hash=$(
         sha256sum               "$1" ||
@@ -121,7 +121,7 @@ sh256() {
         openssl dgst -sha256 -r "$1" ||
         shasum -a 256           "$1" ||
         digest -a sha256        "$1"
-    ) 2>/dev/null
+    )
 
     printf '%s\n' "${hash%% *}"
 }
