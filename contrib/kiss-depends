@@ -11,9 +11,9 @@ kiss list "$pkg" >/dev/null || kiss search "$pkg" >/dev/null || {
 depends() {
     while read -r dep mak || [ "$dep" ]; do
         printf '%s%s\n' "$dep" "${mak:+ "$mak"}"
-    done 2>/dev/null < "$1"
+    done 2>/dev/null < "$1/depends"
 }
 
 # word-splitting is intentional here
 # shellcheck disable=2046
-depends "$KISS_ROOT/var/db/kiss/installed/$pkg/depends" || depends $(kiss search "$pkg")/depends
+depends "$KISS_ROOT/var/db/kiss/installed/$pkg" || depends $(kiss search "$pkg")
