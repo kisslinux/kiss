@@ -7,8 +7,13 @@
 # Created by Dylan Araps.
 
 log() {
-    printf '%b%s %b%s%b %s\n' \
-        "$lcol" "${3:-->}" "${lclr}${2:+$lcol2}" "$1" "$lclr" "$2" >&2
+    if [ -t 1 ] ; then
+        printf '%b%s %b%s%b %s\n' \
+            "$lcol" "${3:-->}" "${lclr}${2:+$lcol2}" "$1" "$lclr" "$2" >&2
+    else
+        printf '%s %s %s\n' \
+            "${3:-->}" "$1" "$2"
+    fi
 }
 
 war() {
@@ -1590,10 +1595,17 @@ args() {
 
             # Print each extension, grab its description from the second line
             # in the file and align the output based on the above max.
-            for path do
-                printf "%b->%b %-${max}s " "$lcol" "$lclr" "${path#*/kiss-}"
-                sed -n 's/^# *//;2p' "$path"
-            done >&2
+            if [ -t 1 ] ; then
+                for path do
+                    printf "%b->%b %-${max}s " "$lcol" "$lclr" "${path#*/kiss-}"
+                    sed -n 's/^# *//;2p' "$path"
+                done >&2
+            else
+                for path do
+                    printf "%s %-${max}s " "->" "${path#*/kiss-}"
+                    sed -n 's/^# *//;2p' "$path"
+                done
+            fi
         ;;
 
         *)
