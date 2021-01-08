@@ -10,7 +10,7 @@ BEGIN {
     kissdb = ENVIRON["KISS_ROOT"] "/var/db/kiss"
 
     # Read installed packages.
-    cmd = "cd '" kissdb "/installed'; printf '%s\\n' *"
+    cmd = sprintf("cd '%s/installed'; printf '%%s\\n' *", kissdb)
     while (cmd | getline pkg == 1) {
         # Create empty array element.
         installed[pkg]
