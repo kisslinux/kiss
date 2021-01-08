@@ -27,7 +27,7 @@ BEGIN {
                 delete orphans[$0]
 
             # Build-time dependency.
-            else if ($1 in installed && $1 in orphans)
+            else if ($1 in orphans)
                 orphans[$1] = " " $2
         }
         close(dep_file)
