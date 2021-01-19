@@ -147,9 +147,11 @@ pkg_find() {
     # the repositories and secondly to allow for the query to be a glob.
     # shellcheck disable=2086
     for path in $KISS_PATH "${what:-$sys_db}"; do set +f
-        for path2 in "$path/"$query; do
-            test "${what:--d}" "$path2" && set -f -- "$@" "$path2"
-        done
+        [ "$path" != "" ] && {
+            for path2 in "$path/"$query; do
+                test "${what:--d}" "$path2" && set -f -- "$@" "$path2"
+            done
+        }
     done
 
     unset IFS
