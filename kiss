@@ -46,7 +46,7 @@ as_root() {
         ;;
 
         *)
-            die "Invalid KISS_SU value: $su (valid: doas, sudo, ssu, su)"
+            die "Invalid KISS_SU value: ${su##*/} (valid: doas, sudo, ssu, su)"
         ;;
     esac
 }
@@ -1360,7 +1360,7 @@ pkg_updates() {
                             # on the other hand requires that each argument be
                             # properly quoted as the command passed to it must
                             # be a string... This sets quotes where needed.
-                            case $su in su) git_cmd="'$git_cmd'"; esac
+                            case ${su##*/} in su) git_cmd="'$git_cmd'"; esac
 
                             # Spawn a subshell to run multiple commands as
                             # root at once. This makes things easier on users
