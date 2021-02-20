@@ -37,7 +37,7 @@ as_root() {
     [ "$uid" = 0 ] || log "Using '${su:=su}' (to become ${user:=root})"
 
     case ${su##*/} in
-        doas|sudo|sls)
+        doas|sudo|ssu)
             "$su" -u "$user" -- env "$@"
         ;;
 
@@ -46,7 +46,7 @@ as_root() {
         ;;
 
         *)
-            die "Invalid KISS_SU value: $su (valid: doas, sudo, sls, su)"
+            die "Invalid KISS_SU value: ${su##*/} (valid: doas, sudo, ssu, su)"
         ;;
     esac
 }
@@ -1360,7 +1360,7 @@ pkg_updates() {
                             # on the other hand requires that each argument be
                             # properly quoted as the command passed to it must
                             # be a string... This sets quotes where needed.
-                            case $su in *su) git_cmd="'$git_cmd'"; esac
+                            case ${su##*/} in su) git_cmd="'$git_cmd'"; esac
 
                             # Spawn a subshell to run multiple commands as
                             # root at once. This makes things easier on users
@@ -1635,7 +1635,7 @@ main() {
 
     # Figure out which 'sudo' command to use based on the user's choice or what
     # is available on the system.
-    su=${KISS_SU:-"$(command -v sudo || command -v doas || command -v sls)"} ||:
+    su=${KISS_SU:-"$(command -v sudo || command -v doas || command -v ssu)"} ||:
 
     # Figure out which utility is available to dump elf information.
     elf_cmd=${KISS_ELF:="$(
