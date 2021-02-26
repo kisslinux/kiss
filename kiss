@@ -1304,7 +1304,9 @@ pkg_updates() {
     # Update each repository in '$KISS_PATH'.
     for repo do
         # Go to the root of the repository (if it exists).
-        cd "$repo"
+        if ! cd "$repo" 2>/dev/null; then
+            log "Skipping "$repo", not a directory"; continue
+        fi
 
         case $(git remote 2>/dev/null) in
             "")
