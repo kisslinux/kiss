@@ -1637,7 +1637,7 @@ main() {
 
     # Figure out which 'sudo' command to use based on the user's choice or what
     # is available on the system.
-    su=${KISS_SU:-"$(command -v sudo || command -v doas || command -v ssu)"} ||:
+    su=${KISS_SU:-"$(command -v sudo || command -v doas || command -v ssu)"} || su=su
 
     # Figure out which utility is available to dump elf information.
     elf_cmd=${KISS_ELF:="$(
