@@ -1374,11 +1374,6 @@ pkg_updates() {
                 }
             ;;
         esac
-
-        [ ! -x update ] || {
-            log "$PWD" "Running update hook"
-            ./update
-        }
     done
 
     log "Checking for new package versions"
