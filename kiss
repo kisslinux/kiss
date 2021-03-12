@@ -1123,7 +1123,7 @@ pkg_remove() {
     [ "$KISS_FORCE" = 1 ] || {
         log "$1" "Checking for reverse dependencies"
 
-        (cd "$sys_db"; set +f; grep -lFx "$1" -- */depends) &&
+        (cd "$sys_db"; set +f; grep -lFx -- "$1" */depends) &&
             die "$1" "Can't remove package, others depend on it"
     }
 
