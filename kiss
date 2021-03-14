@@ -37,7 +37,7 @@ as_root() {
     [ "$uid" = 0 ] || log "Using '${su:=su}' (to become ${user:=root})"
 
     case ${su##*/} in
-        doas|sudo|sls)
+        doas|sudo|ssu)
             "$su" -u "$user" -- env "$@"
         ;;
 
@@ -46,7 +46,7 @@ as_root() {
         ;;
 
         *)
-            die "Invalid KISS_SU value: $su (valid: doas, sudo, sls, su)"
+            die "Invalid KISS_SU value: ${su##*/} (valid: doas, sudo, ssu, su)"
         ;;
     esac
 }
@@ -625,7 +625,7 @@ pkg_build() {
     log "Building: $*"
 
     # Only ask for confirmation if more than one package needs to be built.
-    [ "$#" -gt 1 ] || [ "$pkg_update" ] && prompt
+    [ "$#" -gt 1 ] || [ "$pkg_update" ] && { prompt || exit 0 ;}
 
     for pkg do pkg_lint "$pkg"; done
 
@@ -1304,7 +1304,9 @@ pkg_updates() {
     # Update each repository in '$KISS_PATH'.
     for repo do
         # Go to the root of the repository (if it exists).
-        cd "$repo"
+        if ! cd "$repo" 2>/dev/null; then
+            log "Skipping "$repo", not a directory"; continue
+        fi
 
         case $(git remote 2>/dev/null) in
             "")
@@ -1360,7 +1362,7 @@ pkg_updates() {
                             # on the other hand requires that each argument be
                             # properly quoted as the command passed to it must
                             # be a string... This sets quotes where needed.
-                            case $su in *su) git_cmd="'$git_cmd'"; esac
+                            case ${su##*/} in su) git_cmd="'$git_cmd'"; esac
 
                             # Spawn a subshell to run multiple commands as
                             # root at once. This makes things easier on users
@@ -1372,11 +1374,6 @@ pkg_updates() {
                 }
             ;;
         esac
-
-        [ ! -x update ] || {
-            log "$PWD" "Running update hook"
-            ./update
-        }
     done
 
     log "Checking for new package versions"
@@ -1400,7 +1397,7 @@ pkg_updates() {
         log "Detected package manager update"
         log "The package manager will be updated first"
 
-        prompt
+        prompt || exit 0
 
         pkg_build kiss
         args i kiss
@@ -1550,7 +1547,7 @@ args() {
         l|list)     pkg_list "$@" ;;
         u|update)   pkg_updates ;;
         s|search)   for pkg do pkg_find "$pkg" all; done ;;
-        v|version)  printf '5.2.3\n' ;;
+        v|version)  printf '5.2.4\n' ;;
 
         '')
             log 'kiss [a|b|c|d|i|l|r|s|u|v] [pkg]...'
@@ -1616,7 +1613,7 @@ main() {
 
     # Allow the user to disable colors in output via an environment variable.
     # Check this once so as to not slow down printing.
-    [ "$KISS_COLOR" = 0 ] || lcol='\033[1;33m' lcol2='\033[1;34m' lclr='\033[m'
+    [ "$KISS_COLOR" = 0 ] || ! [ -t 1 ] || lcol='\033[1;33m' lcol2='\033[1;34m' lclr='\033[m'
 
     # Store the original working directory to ensure that relative paths
     # passed by the user on the command-line properly resolve to locations
@@ -1635,7 +1632,7 @@ main() {
 
     # Figure out which 'sudo' command to use based on the user's choice or what
     # is available on the system.
-    su=${KISS_SU:-"$(command -v sudo || command -v doas || command -v sls)"} ||:
+    su=${KISS_SU:-"$(command -v sudo || command -v doas || command -v ssu)"} || su=su
 
     # Figure out which utility is available to dump elf information.
     elf_cmd=${KISS_ELF:="$(
