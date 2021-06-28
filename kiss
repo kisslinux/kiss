@@ -460,13 +460,15 @@ pkg_fix_deps() {
     find "$pkg_dir/${PWD##*/}/" -type f 2>/dev/null |
 
     while read -r file; do
+        ldd_buf=$(ldd -- "$file" 2>/dev/null) ||:
+
         case $elf_cmd in
             *readelf)
                 "$elf_cmd" -d "$file"
             ;;
 
             *)
-                ldd -- "$file"
+                printf '%s\n' "$ldd_buf"
             ;;
         esac 2>/dev/null |
 
@@ -474,11 +476,15 @@ pkg_fix_deps() {
             case $line in
                 *NEEDED*\[*\] | *'=>'*)
                     # readelf: 0x0000 (NEEDED) Shared library: [libjson-c.so.5]
-                    line=${line##*[}
-                    line=${line%%]*}
+                    line=${line##*\[}
+                    line=${line%%\]*}
 
-                    # ldd:     libjson-c.so.5 => /lib/libjson-c.so.5 ...
-                    line=${line##*=> }
+                    # Resolve library path.
+                    # ldd: libjson-c.so.5 => /lib/libjson-c.so.5 ...
+                    case $elf_cmd in
+                        *readelf) line=${ldd_buf#*"	$line => "} ;;
+                        *)        line=${line##*=> } ;;
+                    esac
                     line=${line%% *}
 
                     # Skip files owned by libc and POSIX.
