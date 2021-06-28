@@ -599,6 +599,7 @@ pkg_build() {
     # Build packages and turn them into packaged tarballs.
 
     log "Resolving dependencies"
+    argc=$#
 
     # Mark packages passed on the command-line separately from those
     # detected as dependencies. We need to treat explicitly passed packages
@@ -631,8 +632,8 @@ pkg_build() {
 
     log "Building: $*"
 
-    # Only ask for confirmation if more than one package needs to be built.
-    [ "$#" -gt 1 ] || [ "$pkg_update" ] && prompt
+    # Ask for confirmation if extra packages need to be built.
+    [ "$#" != "$argc" ] || [ "$pkg_update" ] && prompt
 
     for pkg do pkg_lint "$pkg"; done
 
