@@ -187,7 +187,8 @@ pkg_list() {
 pkg_cache() {
     # Find the tarball of a package using a glob. Use the first found match
     # of '<pkg_name>[#@]<pkg_version><pkg_release>.tar.*'.
-    read -r version release 2>/dev/null < "$(pkg_find "$1")/version"
+    read -r version release 2>/dev/null < "$(pkg_find "$1")/version" ||
+        die "$1" "Failed to read version"
 
     set +f
     set -f -- "$bin_dir/$1"[#@]"$version-$release.tar."*
@@ -574,7 +575,8 @@ pkg_tar() (
     log "$1" "Creating tarball"
 
     # Read the version information to name the package.
-    read -r version release < "$(pkg_find "$1")/version"
+    read -r version release < "$(pkg_find "$1")/version" ||
+        die "$1" "Failed to read version"
 
     # Use 'cd' to avoid needing tar's '-C' flag which may not be portable
     # across implementations.
@@ -668,7 +670,8 @@ pkg_build() {
         cd "$mak_dir/$pkg"
 
         # Log the version so we can pass it to the package build file.
-        read -r build_version _ < "$repo_dir/version"
+        read -r build_version _ < "$repo_dir/version" ||
+            die "$pkg" "Failed to read version"
 
         log "$pkg" "Starting build"
         run_hook pre-build "$pkg" "$pkg_dir/$pkg"
@@ -1391,8 +1394,11 @@ pkg_updates() {
     set +f --
 
     for pkg in "$sys_db/"*; do
-        read -r db_ver db_rel < "$pkg/version"
-        read -r re_ver re_rel < "$(pkg_find "${pkg##*/}")/version"
+        {
+            read -r db_ver db_rel < "$pkg/version"
+            read -r re_ver re_rel < "$(pkg_find "${pkg##*/}")/version"
+
+        } || die "$pkg" "Failed to read version"
 
         # Compare installed packages to repository packages.
         [ "$db_ver-$db_rel" = "$re_ver-$re_rel" ] || {
