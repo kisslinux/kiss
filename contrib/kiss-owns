@@ -4,7 +4,7 @@
 # Follow symlinks to any paths.
 case $1 in
     /*)
-        cd -P "$KISS_ROOT/${1%/*}"
+        cd -P "$KISS_ROOT${1%/*}"
     ;;
 
     */*)
