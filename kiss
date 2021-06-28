@@ -30,7 +30,8 @@ prompt() {
 
     log "Continue?: Press Enter to continue or Ctrl+C to abort here"
 
-    [ "$KISS_PROMPT" = 0 ] || read -r _
+    # korn-shell does not exit on interrupt of read.
+    [ "$KISS_PROMPT" = 0 ] || read -r _ || exit 1
 }
 
 as_root() {
