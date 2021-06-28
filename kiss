@@ -1073,21 +1073,28 @@ pkg_remove_files() {
             }
         esac 2>/dev/null ||:
 
-        file=$KISS_ROOT/$file
+        _file=${KISS_ROOT:+"$KISS_ROOT/"}${file%%/}
 
-        # Remove files.
-        if [ -f "$file" ] && [ ! -h "$file" ]; then
-            rm -f "$file"
+        # Queue all directory symlinks for later removal.
+        if [ -h "$_file" ] && [ -d "$_file" ]; then
+            case $file in /*/*/)
+                set -- "$@" "$_file"
+            esac
 
-        # Remove file symlinks.
-        elif [ -h "$file" ] && [ ! -d "$file" ]; then
-            rm -f "$file"
+        # Remove empty directories.
+        elif [ -d "$_file" ]; then
+            rmdir "$_file" 2>/dev/null ||:
 
-        # Remove directories if empty.
-        elif [ -d "$file" ] && [ ! -h "$file" ]; then
-            rmdir "$file" 2>/dev/null ||:
+        # Remove everything else.
+        else
+            rm -f "$_file"
         fi
     done ||:
+
+    # Remove all broken directory symlinks.
+    for sym do
+        [ -e "$sym" ] || rm -f "$sym"
+    done
 }
 
 pkg_etc() (
