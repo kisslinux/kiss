@@ -369,12 +369,34 @@ pkg_depends() {
     # dependencies are listed first and then the parents in reverse order.
     contains "$deps" "$1" || {
         # Filter out non-explicit, aleady installed dependencies.
-        [ "$3" ] && [ -z "$2" ] && (pkg_list "$1" >/dev/null) && return
+        [ "$3" ] && [ -z "$2" ] && (pkg_list "$1" >/dev/null 2>&1) && return
+
+        # Detect circular dependencies and bail out.
+        # Looks for multiple repeating patterns of (dep dep_parent) (5 is max).
+        case " $4 " in
+*" ${4##* } "*" $1 "\
+*" ${4##* } "*" $1 "\
+*" ${4##* } "*" $1 "\
+*" ${4##* } "*" $1 "\
+*" ${4##* } "*" $1 "\
+*)
+            die "Circular dependency detected $1 <> ${4##* }"
+        esac
+
+        _f=$(pkg_find "$1" 2>/dev/null)/depends ||:
 
         # Recurse through the dependencies of the child packages.
-        while read -r dep _ || [ "$dep" ]; do
-            [ "${dep##\#*}" ] && pkg_depends "$dep" '' "$3"
-        done 2>/dev/null < "$(pkg_find "$1")/depends" ||:
+        ! [ -e "$_f" ] || while read -r dep dep_type || [ "$dep" ]; do
+            # Skip comments.
+            [ "${dep##\#*}" ] || continue
+
+            # Skip make depends if unneeded.
+            case $dep_type in make)
+                ! pkg_cache "$1" || continue
+            esac
+
+            pkg_depends "$dep" '' "$3" "$4 $1"
+        done < "$_f" ||:
 
         # After child dependencies are added to the list,
         # add the package which depends on them.
@@ -721,12 +743,10 @@ pkg_build() {
         pkg_etcsums  "$pkg"
         pkg_tar      "$pkg"
 
-        # Install only dependencies of passed packages. If this is an update,
-        # install the built package regardless.
-        contains "$explicit" "$pkg" && [ -z "$pkg_update" ] && continue
-
-        log "$pkg" "Needed as a dependency or has an update, installing"
-        (KISS_FORCE=1 args i "$pkg")
+        if [ "$pkg_update" ] || ! contains "$explicit" "$pkg"; then
+            log "$pkg" "Needed as a dependency or has an update, installing"
+            (KISS_FORCE=1 args i "$pkg")
+        fi
     done
 
     # Turn the explicit packages into a 'list'. See [1] at top of script.
