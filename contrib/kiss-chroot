@@ -11,8 +11,12 @@ die() {
 }
 
 clean() {
-    log Unmounting /dev, /proc and /sys from chroot; {
+    log Unmounting host filesystems; {
         umount "$1/sys/firmware/efi/efivars" 2>/dev/null ||:
+        umount "$1/tmp" ||:
+        umount "$1/run" ||:
+        umount "$1/dev/pts" ||:
+        umount "$1/dev/shm" ||:
         umount "$1/dev"  ||:
         umount "$1/proc" ||:
         umount "$1/sys"  ||:
@@ -35,19 +39,33 @@ mounted() {
         [ "$target" = "$1" ] && return 0
     done < /proc/mounts
 
+    printf 'mounting %s\n' "$1" >&2
     return 1
 }
 
+set -- "${1%"${1##*[!/]}"}"
 [ -z "$1" ]        && die Need a path to the chroot
 [ -d "$1" ]        || die Given path does not exist
 [ "$(id -u)" = 0 ] || die Script needs to be run as root
 
 trap 'clean "$1"' EXIT INT
 
-log Mounting /dev, /proc and /sys from host; {
+log Mounting host filesystems; {
     mounted "$1/dev"  || mount -o bind /dev "$1/dev"  ||:
     mounted "$1/proc" || mount -t proc proc "$1/proc" ||:
     mounted "$1/sys"  || mount -t sysfs sys "$1/sys"  ||:
+
+    mounted "$1/dev/shm" ||
+        mount -t tmpfs shmfs "$1/dev/shm"  ||:
+
+    mounted "$1/dev/pts" ||
+        mount -o bind /dev/pts "$1/dev/pts"  ||:
+
+    mounted "$1/tmp" ||
+        mount -o mode=1777,nosuid,nodev -t tmpfs tmpfs "$1/tmp"  ||:
+
+    mounted "$1/run" ||
+        mount -t tmpfs tmpfs "$1/run"  ||:
 
     mounted "$1/sys/firmware/efi/efivars" ||
         mount -t efivarfs efivarfs "$1/sys/firmware/efi/efivars" 2>/dev/null ||:
