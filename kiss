@@ -645,7 +645,7 @@ pkg_build() {
     # If an explicit package is a dependency of another explicit package,
     # remove it from the explicit list as it needs to be installed as a
     # dependency.
-    for pkg in $explicit do
+    for pkg in $explicit; do
         contains "$deps" "$pkg" || set -- "$@" "$pkg"
     done
     explicit_cnt=$#
