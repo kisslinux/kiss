@@ -1643,6 +1643,39 @@ args() {
     fi
 }
 
+create_tmp_dirs() {
+    # Root directory.
+    KISS_ROOT=${KISS_ROOT%"${KISS_ROOT##*[!/]}"}
+
+    # This allows for automatic setup of a KISS chroot and will
+    # do nothing on a normal system.
+    mkdir -p "$KISS_ROOT/" 2>/dev/null ||:
+
+    # System package database.
+    sys_db=$KISS_ROOT/${pkg_db:=var/db/kiss/installed}
+
+    # Top-level cache directory.
+    cac_dir=${XDG_CACHE_HOME:-"${HOME%"${HOME##*[!/]}"}/.cache"}
+    cac_dir=${cac_dir%"${cac_dir##*[!/]}"}/kiss
+
+    # Persistent cache directories.
+    src_dir=$cac_dir/sources
+    log_dir=$cac_dir/logs/${time%-*}
+    bin_dir=$cac_dir/bin
+
+    # Top-level Temporary cache directory.
+    tmp_dir=${KISS_TMPDIR:="$cac_dir/proc"}
+    tmp_dir=${tmp_dir%"${tmp_dir##*[!/]}"}/kiss
+
+    # Temporary cache directories.
+    mak_dir=$tmp_dir/build
+    pkg_dir=$tmp_dir/pkg
+    tar_dir=$tmp_dir/extract
+
+    mkdir -p "$src_dir" "$log_dir" "$bin_dir" \
+             "$mak_dir" "$pkg_dir" "$tar_dir"
+}
+
 main() {
     # Globally disable globbing and enable exit-on-error.
     set -ef
@@ -1685,28 +1718,7 @@ main() {
     # This is used enough to warrant a place here.
     uid=$(id -u)
 
-    # Ensure that the KISS_ROOT doesn't end with a '/'.
-    KISS_ROOT=${KISS_ROOT%"${KISS_ROOT##*[!/]}"}
-
-    # Define some paths which we will then use throughout the script.
-    sys_db=$KISS_ROOT/${pkg_db:=var/db/kiss/installed}
-
-    # This allows for automatic setup of a KISS chroot and will
-    # do nothing on a normal system.
-    mkdir -p "$KISS_ROOT/" 2>/dev/null ||:
-
-    # Create the required temporary directories and set the variables which
-    # point to them.
-    mkdir -p \
-        "${cac_dir:="${XDG_CACHE_HOME:-"${HOME:?HOME is null}/.cache"}/kiss"}" \
-            "${src_dir:="$cac_dir/sources"}" \
-            "${log_dir:="$cac_dir/logs/${date%-*}"}" \
-            "${bin_dir:="$cac_dir/bin"}" \
-        "${tmp_dir:="${KISS_TMPDIR:="$cac_dir/proc"}/$pid"}" \
-            "${mak_dir:="$tmp_dir/build"}" \
-            "${pkg_dir:="$tmp_dir/pkg"}" \
-            "${tar_dir:="$tmp_dir/extract"}"
-
+    create_tmp_dirs
     args "$@"
 }
 
