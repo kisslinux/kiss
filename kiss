@@ -622,7 +622,6 @@ pkg_build() {
     # Build packages and turn them into packaged tarballs.
 
     log "Resolving dependencies"
-    argc=$#
 
     # Mark packages passed on the command-line separately from those
     # detected as dependencies. We need to treat explicitly passed packages
@@ -641,22 +640,24 @@ pkg_build() {
     # and instead install pre-built binaries if they exist.
     [ "$pkg_update" ] || explicit_build=$explicit
 
+    set --
+
     # If an explicit package is a dependency of another explicit package,
     # remove it from the explicit list as it needs to be installed as a
     # dependency.
-    for pkg do
-        contains "$deps" "$pkg" || explicit2=" $explicit2 $pkg "
+    for pkg in $explicit do
+        contains "$deps" "$pkg" || set -- "$@" "$pkg"
     done
-    explicit=$explicit2
+    explicit_cnt=$#
+
+    log "Building: explicit: $*${deps:+, implicit: ${deps## }}"
 
     # See [1] at top of script.
     # shellcheck disable=2046,2086
-    set -- $deps $explicit
-
-    log "Building: $*"
+    set -- $deps "$@"
 
     # Ask for confirmation if extra packages need to be built.
-    [ "$#" != "$argc" ] || [ "$pkg_update" ] && prompt
+    [ "$#" -ne "$explicit_cnt" ] || [ "$pkg_update" ] && prompt
 
     for pkg do pkg_lint "$pkg"; done
 
