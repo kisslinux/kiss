@@ -760,21 +760,15 @@ pkg_checksums() {
     # Generate checksums for packages.
     repo_dir=$(pkg_find "$1")
 
-    # Support packages without sources. Simply do nothing.
-    [ -f "$repo_dir/sources" ] || return 0
-
     while read -r src dest || [ "$src" ]; do
-        # Skip comments, blank lines and git sources.
-        if [ -z "${src##\#*}" ] || [ -z "${src##git+*}" ]; then
+        # Skip directories, comments, blank lines and git sources.
+        if [ -z "${src##\#*}" ] || [ -z "${src##git+*}" ] ||
+           [ -d "$repo_dir/$src" ] || [ -d "/$src" ]; then
             :
 
         # Remote source.
         elif [ -z "${src##*://*}" ]; then
             sh256 "$src_dir/$1/${dest:-.}/${src##*/}"
-
-        # Skip directories.
-        elif [ -d "$repo_dir/$src" ] || [ -d "/$src" ]; then
-            :
 
         # Local file (relative).
         elif [ -f "$repo_dir/$src" ]; then
