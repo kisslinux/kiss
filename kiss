@@ -665,14 +665,15 @@ pkg_build() {
 
     # Install any pre-built dependencies if they exist in the binary
     # directory and are up to date.
-    for pkg do
-        ! contains "$explicit_build" "$pkg" && pkg_cache "$pkg" && {
+    for pkg in "$@"; do
+        if ! contains "$explicit_build" "$pkg" && pkg_cache "$pkg"; then
             log "$pkg" "Found pre-built binary, installing"
             (KISS_FORCE=1 args i "$tar_file")
+        else
+            set -- "$@" "$pkg"
+        fi
 
-            # Remove the now installed package from the build list.
-            shift
-        }
+        shift
     done
 
     for pkg do pkg_sources "$pkg"; done
