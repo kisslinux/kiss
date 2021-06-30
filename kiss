@@ -383,20 +383,16 @@ pkg_depends() {
             die "Circular dependency detected $1 <> ${4##* }"
         esac
 
-        _f=$(pkg_find "$1" 2>/dev/null)/depends ||:
+        # Skip traversing over depends files of make dependencies which exist
+        # in the binary cache.
+        if [ "$5" != "make" ] || { [ "$5" = "make" ] && ! pkg_cache "$1"; }; then
+            _f=$(pkg_find "$1" 2>/dev/null)/depends ||:
 
-        # Recurse through the dependencies of the child packages.
-        ! [ -e "$_f" ] || while read -r dep dep_type || [ "$dep" ]; do
-            # Skip comments.
-            [ "${dep##\#*}" ] || continue
-
-            # Skip make depends if unneeded.
-            case $dep_type in make)
-                ! pkg_cache "$1" || continue
-            esac
-
-            pkg_depends "$dep" '' "$3" "$4 $1"
-        done < "$_f" ||:
+            # Recurse through the dependencies of the child packages.
+            ! [ -e "$_f" ] || while read -r dep dep_type || [ "$dep" ]; do
+            ! [ "${dep##\#*}" ] || pkg_depends "$dep" '' "$3" "$4 $1" "$dep_type"
+            done < "$_f" ||:
+        fi
 
         # After child dependencies are added to the list,
         # add the package which depends on them.
