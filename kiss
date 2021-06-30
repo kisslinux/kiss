@@ -1140,18 +1140,29 @@ pkg_etc() (
     done ||:
 )
 
+pkg_removable() {
+    # Check if a package is removable and die if it is not.
+    # A package is removable when it has no dependents or
+    # when KISS_FORCE is set to 1.
+    case ${KISS_FORCE:=0} in 0)
+        log "$1" "Checking if package removable"
+
+        cd "$sys_db"
+        set +f
+
+        ! grep -lFx -- "$1" */depends ||
+            die "$1" "Not removable, has dependents"
+
+        set -f
+        cd "$OLDPWD"
+    esac
+}
+
 pkg_remove() {
     # Remove a package and all of its files. The '/etc' directory is handled
     # differently and configuration files are *not* overwritten.
     pkg_list "$1" >/dev/null || return
-
-    # Make sure that nothing depends on this package.
-    [ "$KISS_FORCE" = 1 ] || {
-        log "$1" "Checking for reverse dependencies"
-
-        (cd "$sys_db"; set +f; grep -lFx "$1" -- */depends) &&
-            die "$1" "Can't remove package, others depend on it"
-    }
+    pkg_removable "$1"
 
     # Block being able to abort the script with 'Ctrl+C' during removal.
     # Removes all risk of the user aborting a package removal leaving an
