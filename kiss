@@ -782,9 +782,7 @@ pkg_checksums() {
 pkg_verify() {
     # Verify all package checksums. This is achieved by generating a new set
     # of checksums and then comparing those with the old set.
-    verify_cmd="
-    NR==FNR{a[\$1];next}/^git  .*|^SKIP$/{next}!((\$1)in a){exit 1}
-    "
+    verify_cmd="NR==FNR{a[\$1];next}/^SKIP$/{next}!((\$1)in a){exit 1}"
 
     for pkg do
         repo_dir=$(pkg_find "$pkg")
