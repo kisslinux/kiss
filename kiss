@@ -1667,7 +1667,7 @@ create_tmp_dirs() {
 
     # Top-level Temporary cache directory.
     tmp_dir=${KISS_TMPDIR:="$cac_dir/proc"}
-    tmp_dir=${tmp_dir%"${tmp_dir##*[!/]}"}/kiss/$pid
+    tmp_dir=${tmp_dir%"${tmp_dir##*[!/]}"}/$pid
 
     # Temporary cache directories.
     mak_dir=$tmp_dir/build
