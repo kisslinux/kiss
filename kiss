@@ -396,7 +396,7 @@ pkg_depends() {
 
         # After child dependencies are added to the list,
         # add the package which depends on them.
-        [ "$2" = explicit ] || deps="$deps $1 "
+        [ "$2" = explicit ] || deps="$deps $1"
     }
 }
 
@@ -406,8 +406,8 @@ pkg_order() {
     order=; redro=; deps=
 
     for pkg do case $pkg in
-        /*.tar.*) deps="$deps $pkg " ;;
-        *.tar.*)  deps="$deps $ppwd/$pkg " ;;
+        /*.tar.*) deps="$deps $pkg" ;;
+        *.tar.*)  deps="$deps $ppwd/$pkg" ;;
         *)        pkg_depends "$pkg" raw
     esac done
 
