@@ -33,6 +33,10 @@ repology_name() {
             remote=baselayout-kiss
         ;;
 
+        clang)
+            remote=llvm
+        ;;
+
         dash)
             remote=dash-shell
         ;;
