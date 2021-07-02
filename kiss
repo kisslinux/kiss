@@ -1494,7 +1494,6 @@ args() {
                 KISS_CHOICE="$KISS_CHOICE" \
                 KISS_COLOR="$KISS_COLOR" \
                 KISS_TMPDIR="$KISS_TMPDIR" \
-                KISS_PID="$KISS_PID" \
                 "$0" "$action" "$@"
             return
         }
@@ -1669,7 +1668,7 @@ main() {
     # to each specific KISS instance. This allows multiple package manager
     # instances to be run at once. Store the value in another variable so
     # that it doesn't change beneath us.
-    pid=${KISS_PID:-$$}
+    pid=$$
 
     # Catch errors and ensure that build files and directories are cleaned
     # up before we die. This occurs on 'Ctrl+C' as well as success and error.
