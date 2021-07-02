@@ -28,7 +28,7 @@ contains() {
 prompt() {
     [ "$1" ] && log "$1"
 
-    log "Continue?: Press Enter to continue or Ctrl+C to abort here"
+    log "Continue?: Press Enter to continue or Ctrl+C to abort"
 
     # korn-shell does not exit on interrupt of read.
     [ "$KISS_PROMPT" = 0 ] || read -r _ || exit 1
