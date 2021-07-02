@@ -411,7 +411,7 @@ pkg_depends() {
 pkg_order() {
     # Order a list of packages based on dependence and take into account
     # pre-built tarballs if this is to be called from 'kiss i'.
-    order=; redro=; deps=
+    unset order redro deps
 
     for pkg do case $pkg in
         /*.tar.*) deps="$deps $pkg" ;;
@@ -421,12 +421,12 @@ pkg_order() {
 
     # Filter the list, only keeping explicit packages. The purpose of these
     # two loops is to order the argument list based on dependence.
-    for pkg in $deps; do
-        contains "$*" "$pkg" || contains "$*" "${pkg##"$ppwd/"}" &&
-            order="$order $pkg " redro=" $pkg $redro"
-    done
+    for pkg in $deps; do case " $* " in *" $pkg "* | *" ${pkg##"$ppwd/"} "*)
+        order="$order $pkg"
+        redro="$pkg $redro"
+    esac done
 
-    deps=
+    unset deps
 }
 
 pkg_strip() {
@@ -624,6 +624,12 @@ pkg_tar() (
 
 pkg_build() {
     # Build packages and turn them into packaged tarballs.
+    # Order the argument list and filter out duplicates.
+    pkg_order "$@"
+
+    # See [1] at top of script.
+    # shellcheck disable=2046,2086
+    set -- $order
 
     log "Resolving dependencies"
 
@@ -632,12 +638,9 @@ pkg_build() {
     # differently from those pulled in as dependencies.
     #
     # This also resolves all dependencies and stores the result in '$deps'.
-    # Any duplicates are also filtered out.
     for pkg do
-        contains "$explicit" "$pkg" || {
-            pkg_depends "$pkg" explicit filter
-            explicit="$explicit $pkg "
-        }
+        pkg_depends "$pkg" explicit filter
+        explicit="$explicit $pkg "
     done
 
     # If this is an update, don't always build explicitly passsed packages
@@ -1449,8 +1452,7 @@ pkg_updates() {
     # shellcheck disable=2046,2086
     {
         pkg_update=1
-        pkg_order "$@"
-        pkg_build $order
+        pkg_build "$@"
     }
 
     log "Updated all packages"
