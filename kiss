@@ -138,12 +138,20 @@ sh256() {
 pkg_lint() {
     log "$1" "Checking repository files"
 
-    cd "$(pkg_find "$1")"
-    read -r _ release 2>/dev/null < version || die "Version file not found"
+    _r=$(pkg_find "$1")
+    cd "$_r"
 
-    [ "$release" ] || die "$1" "Release field not found in version file"
-    [ -x build ]   || die "$1" "Build file not found or not executable"
-    [ -f sources ] || war "$1" "Sources file not found"
+    read -r _ release 2>/dev/null < version ||
+        die "Version file not found"
+
+    [ "$release" ] ||
+        die "$1" "Release field not found in version file"
+
+    [ -x build ] ||
+        die "$1" "Build file not found or not executable"
+
+    [ -f sources ] ||
+        war "$1" "Sources file not found"
 }
 
 pkg_find() {
