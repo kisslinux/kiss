@@ -138,8 +138,8 @@ sh256() {
 pkg_lint() {
     log "$1" "Checking repository files"
 
-    _r=$(pkg_find "$1")
-    cd "$_r"
+    pkg_find "$1"
+    cd "$repo_dir"
 
     read -r _ release 2>/dev/null < version ||
         die "Version file not found"
@@ -174,15 +174,15 @@ pkg_find() {
     # by the current user. Either way, we need to die here.
     [ "$1" ] || die "Package '$query' not in any repository"
 
-    # Show all search results if called from 'kiss search', else print only
-    # the first match.
-    [ "$all" ] && printf '%s\n' "$@" || printf '%s\n' "$1"
+    # Show all search results if called from 'kiss search', else store the
+    # value in a variable.
+    [ "$all" ] && printf '%s\n' "$@" || repo_dir=$1
 }
 
 pkg_list() {
     # List installed packages. As the format is files and directories, this
     # just involves a simple for loop and file read.
-    cd "$sys_db" 2>/dev/null
+    cd "$sys_db"
 
     # Optional arguments can be passed to check for specific packages. If no
     # arguments are passed, list all.
@@ -203,7 +203,9 @@ pkg_list() {
 pkg_cache() {
     # Find the tarball of a package using a glob. Use the first found match
     # of '<pkg_name>[#@]<pkg_version><pkg_release>.tar.*'.
-    read -r version release 2>/dev/null < "$(pkg_find "$1")/version" ||
+    pkg_find "$1"
+
+    read -r version release 2>/dev/null < "$repo_dir/version" ||
         die "$1" "Failed to read version"
 
     set +f
@@ -219,7 +221,7 @@ pkg_cache() {
 pkg_sources() {
     # Download any remote package sources. The existence of local files is
     # also checked.
-    repo_dir=$(pkg_find "$1")
+    pkg_find "$1"
 
     # Support packages without sources. Simply do nothing.
     [ -f "$repo_dir/sources" ] || return 0
@@ -267,7 +269,7 @@ pkg_sources() {
 pkg_extract() {
     # Extract all source archives to the build directory and copy over any
     # local repository files.
-    repo_dir=$(pkg_find "$1")
+    pkg_find "$1"
 
     # Support packages without sources. Simply do nothing.
     [ -f "$repo_dir/sources" ] || return 0
@@ -402,12 +404,16 @@ pkg_depends() {
         # Skip traversing over depends files of make dependencies which exist
         # in the binary cache.
         if [ "$5" != "make" ] || { [ "$5" = "make" ] && ! pkg_cache "$1"; }; then
-            _f=$(pkg_find "$1" 2>/dev/null)/depends ||:
+            pkg_find "$1"
+
+            ! [ -e "$repo_dir/depends" ] ||
 
             # Recurse through the dependencies of the child packages.
-            ! [ -e "$_f" ] || while read -r dep dep_type || [ "$dep" ]; do
-            ! [ "${dep##\#*}" ] || pkg_depends "$dep" '' "$3" "$4 $1" "$dep_type"
-            done < "$_f" ||:
+            while read -r dep dep_type || [ "$dep" ]; do
+                [ "${dep##\#*}" ] || continue
+
+                pkg_depends "$dep" '' "$3" "$4 $1" "$dep_type"
+            done < "$repo_dir/depends" ||:
         fi
 
         # After child dependencies are added to the list,
@@ -608,8 +614,10 @@ pkg_tar() (
     # contains the package's database entry.
     log "$1" "Creating tarball"
 
+    pkg_find "$1"
+
     # Read the version information to name the package.
-    read -r version release < "$(pkg_find "$1")/version" ||
+    read -r version release < "$repo_dir/version" ||
         die "$1" "Failed to read version"
 
     # Use 'cd' to avoid needing tar's '-C' flag which may not be portable
@@ -701,7 +709,7 @@ pkg_build() {
 
         run_hook pre-extract "$pkg" "$pkg_dir/$pkg"
         pkg_extract "$pkg"
-        repo_dir=$(pkg_find "$pkg")
+        pkg_find "$pkg"
 
         # Install built packages to a directory under the package name to
         # avoid collisions with other packages.
@@ -775,7 +783,7 @@ pkg_build() {
 
 pkg_checksums() {
     # Generate checksums for packages.
-    repo_dir=$(pkg_find "$1")
+    pkg_find "$1"
 
     while read -r src dest || [ "$src" ]; do
         # Skip directories, comments, blank lines and git sources.
@@ -804,7 +812,7 @@ pkg_verify() {
     verify_cmd="NR==FNR{a[\$1];next}/^SKIP$/{next}!((\$1)in a){exit 1}"
 
     for pkg do
-        repo_dir=$(pkg_find "$pkg")
+        pkg_find "$pkg"
 
         [ -f "$repo_dir/sources" ] || continue
 
@@ -1420,7 +1428,9 @@ pkg_updates() {
         read -r db_ver db_rel < "$pkg/version" ||
             die "${pkg##*/}" "Failed to read installed version"
 
-        read -r re_ver re_rel < "$(pkg_find "${pkg##*/}")/version" ||
+        pkg_find "${pkg##*/}"
+
+        read -r re_ver re_rel < "$repo_dir/version" ||
             die "${pkg##*/}" "Failed to read repository version"
 
         # Compare installed packages to repository packages.
@@ -1532,7 +1542,7 @@ args() {
             for pkg do pkg_lint    "$pkg"; done
             for pkg do pkg_sources "$pkg" c; done
             for pkg do
-                repo_dir=$(pkg_find "$pkg")
+                pkg_find "$pkg"
 
                 [ -f "$repo_dir/sources" ] || {
                     log "$pkg" "No sources file, skipping checksums"
@@ -1589,7 +1599,10 @@ args() {
 
             # shellcheck disable=2046
             # see [1] at top of script.
-            set -- $(KISS_PATH=$PATH pkg_find kiss-\* all -x)
+            set -- $(
+                export KISS_PATH=$PATH
+                pkg_find kiss-\* all -x
+            )
 
             # To align descriptions figure out which extension has the longest
             # name by doing a simple 'name > max ? name : max' on the basename
@@ -1613,8 +1626,10 @@ args() {
         ;;
 
         *)
-            util=$(KISS_PATH=$PATH pkg_find "kiss-$action*" "" -x 2>/dev/null) ||
-                die "'kiss $action' is not a valid command"
+            util=$(
+                export KISS_PATH=$PATH
+                pkg_find "kiss-$action*" "" -x 2>/dev/null
+            ) || die "'kiss $action' is not a valid command"
 
             "$util" "$@"
         ;;
