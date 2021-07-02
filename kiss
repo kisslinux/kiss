@@ -1551,20 +1551,8 @@ args() {
                     continue
                 }
 
-                # False positive ('>> file' with no command).
-                # shellcheck disable=2188
-                printf '%s\n' "$sums" |
-
-                if 2>/dev/null >> "$repo_dir/checksums"; then
-                    tee "$repo_dir/checksums"
-
-                else
-                    log "$pkg" "Need permissions to generate checksums"
-                    file_owner "$repo_dir"
-
-                    user=$user as_root tee "$repo_dir/checksums"
-                fi
-
+                printf '%s\n' "$sums"
+                printf '%s\n' "$sums" > "$repo_dir/checksums"
                 log "$pkg" "Generated checksums"
             done
         ;;
