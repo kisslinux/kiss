@@ -844,7 +844,7 @@ pkg_conflicts() {
         # Print the file with all symlinks in its path
         # resolved to their real locations.
         printf '%s\n' "${PWD#"$KISS_ROOT"}/${file##*/}"
-    done < "$tar_dir/$1/$pkg_db/$1/manifest" > "$mak_dir/$pid-m"
+    done < "$tar_dir/$1/$pkg_db/$1/manifest" > "$mak_dir/cf_m"
 
     p_name=$1
     set +f
@@ -868,16 +868,16 @@ pkg_conflicts() {
     # Store the list of found conflicts in a file as we'll be using the
     # information multiple times. Storing things in the cache dir allows
     # us to be lazy as they'll be automatically removed on script end.
-    grep -Fxf "$mak_dir/$pid-m" -- "$@" 2>/dev/null > "$mak_dir/$pid-c" ||:
+    grep -Fxf "$mak_dir/cf_m" -- "$@" 2>/dev/null > "$mak_dir/cf" ||:
 
     # Enable alternatives automatically if it is safe to do so.
     # This checks to see that the package that is about to be installed
     # doesn't overwrite anything it shouldn't in '/var/db/kiss/installed'.
-    grep -q ":/var/db/kiss/installed/" "$mak_dir/$pid-c" || choice_auto=1
+    grep -q ":/var/db/kiss/installed/" "$mak_dir/cf" || choice_auto=1
 
     if [ "$KISS_CHOICE" != 0  ] &&
        [ "$choice_auto"  = 1  ] &&
-       [ -s "$mak_dir/$pid-c" ]; then
+       [ -s "$mak_dir/cf" ]; then
         # This is a novel way of offering an "alternatives" system.
         # It is entirely dynamic and all "choices" are created and
         # destroyed on the fly.
@@ -921,7 +921,7 @@ pkg_conflicts() {
                 log "this must be fixed in $p_name. Contact the maintainer"
                 die "by finding their details via 'kiss-maintainer'" "" "!>"
             }
-        done < "$mak_dir/$pid-c"
+        done < "$mak_dir/cf"
 
         log "$p_name" "Converted all conflicts to choices (kiss a)"
 
@@ -929,7 +929,7 @@ pkg_conflicts() {
         # to its new spot (and name) in the choices directory.
         pkg_manifest "$p_name" "$tar_dir" 2>/dev/null
 
-    elif [ -s "$mak_dir/$pid-c" ]; then
+    elif [ -s "$mak_dir/cf" ]; then
         log "Package '$p_name' conflicts with another package" "" "!>"
         log "Run 'KISS_CHOICE=1 kiss i $p_name' to add conflicts" "" "!>"
         die "as alternatives." "" "!>"
