@@ -1410,11 +1410,11 @@ pkg_updates() {
     set +f --
 
     for pkg in "$sys_db/"*; do
-        {
-            read -r db_ver db_rel < "$pkg/version"
-            read -r re_ver re_rel < "$(pkg_find "${pkg##*/}")/version"
+        read -r db_ver db_rel < "$pkg/version" ||
+            die "${pkg##*/}" "Failed to read installed version"
 
-        } || die "$pkg" "Failed to read version"
+        read -r re_ver re_rel < "$(pkg_find "${pkg##*/}")/version" ||
+            die "${pkg##*/}" "Failed to read repository version"
 
         # Compare installed packages to repository packages.
         [ "$db_ver-$db_rel" = "$re_ver-$re_rel" ] || {
