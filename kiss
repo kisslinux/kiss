@@ -475,7 +475,7 @@ pkg_fix_deps() {
     # Dynamically look for missing runtime dependencies by checking each
     # binary and library with 'ldd'. This catches any extra libraries and or
     # dependencies pulled in by the package's build suite.
-    log "$1" "looking for dependencies (using ${elf_cmd##*/})"
+    log "$1" "looking for dependencies (using ${elf##*/})"
 
     cd "$pkg_dir/$1/$pkg_db/$1"
 
@@ -489,9 +489,9 @@ pkg_fix_deps() {
     while read -r file; do
         ldd_buf=$(ldd -- "$file" 2>/dev/null) ||:
 
-        case $elf_cmd in
+        case $elf in
             *readelf)
-                "$elf_cmd" -d "$file"
+                "$elf" -d "$file"
             ;;
 
             *)
@@ -508,7 +508,7 @@ pkg_fix_deps() {
 
                     # Resolve library path.
                     # ldd: libjson-c.so.5 => /lib/libjson-c.so.5 ...
-                    case $elf_cmd in
+                    case $elf in
                         *readelf) line=${ldd_buf#*"	$line => "} ;;
                         *)        line=${line##*=> } ;;
                     esac
@@ -1685,11 +1685,11 @@ main() {
     )"} || su=su
 
     # Figure out which utility is available to dump elf information.
-    elf_cmd=${KISS_ELF:="$(
+    elf=${KISS_ELF:="$(
         command -v readelf      ||
         command -v eu-readelf   ||
         command -v llvm-readelf
-    )"} || elf_cmd=ldd
+    )"} || elf=ldd
 
     # Store the date and time of script invocation to be used as the name of
     # the log files the package manager creates uring builds.
