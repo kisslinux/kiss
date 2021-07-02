@@ -1388,17 +1388,14 @@ pkg_updates() {
                         # This prevents 'git' from changing the original
                         # ownership of files and directories in the rare
                         # case that the repository is owned by a 3rd user.
-                        (
-                            file_owner "$PWD"
+                        file_owner "$PWD"
 
-                            # We're in a repository which is owned by a 3rd
-                            # user. Not root or the current user.
-                            [ "$user" = root ] ||
-                                log "Dropping to $user for pull"
+                        # We're in a repository which is owned by a 3rd
+                        # user. Not root or the current user.
+                        [ "$user" = root ] || log "Dropping to $user for pull"
 
-                            as_root git pull
-                            as_root git submodule update --remote --init -f
-                        )
+                        as_root git pull
+                        as_root git submodule update --remote --init -f
                     fi
                 }
             ;;
