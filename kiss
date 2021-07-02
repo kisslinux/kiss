@@ -35,21 +35,29 @@ prompt() {
 }
 
 as_root() {
-    [ "$uid" = 0 ] || log "Using '${su:=su}' (to become ${user:=root})"
-
-    case ${su##*/} in
-        doas|sudo|ssu)
-            "$su" -u "$user" -- env "$@"
+    case $uid/${user:=root}/${su##*/} in
+        0/root/*)
+            "$@"
         ;;
 
-        su)
-            "$su" -c "env $* <&3" "$user" 3<&0 </dev/tty
+        */doas|*/sudo|*/ssu)
+            log "Using '$su' (to become $user)"
+            "$su" -u "$user" -- "$@"
+        ;;
+
+        */su)
+            log "Using 'su' (to become $user)"
+            printf 'Note: su will ask for password every time.\n%s\n' \
+                   '      Use doas, sudo or ssu for more control.'
+            "$su" -c "$* <&3" "$user" 3<&0 </dev/tty
         ;;
 
         *)
-            die "Invalid KISS_SU value: $su (valid: doas, sudo, ssu, su)"
+            die "Invalid KISS_SU value: '$su' (valid: doas, sudo, ssu, su)"
         ;;
     esac
+
+    unset user
 }
 
 file_owner() {
@@ -1385,23 +1393,8 @@ pkg_updates() {
                             [ "$user" = root ] ||
                                 log "Dropping to $user for pull"
 
-                            # Nesting is deep and line is long.
-                            git_cmd="
-                        git pull && git submodule update --remote --init -f
-                            "
-
-                            # 'sudo' and 'doas' properly parse command-line
-                            # arguments and split them in the common way. 'su'
-                            # on the other hand requires that each argument be
-                            # properly quoted as the command passed to it must
-                            # be a string... This sets quotes where needed.
-                            case $su in */su) git_cmd="'$git_cmd'"; esac
-
-                            # Spawn a subshell to run multiple commands as
-                            # root at once. This makes things easier on users
-                            # who aren't using persist/timestamps for auth
-                            # caching.
-                            user=$user as_root sh -c "$git_cmd"
+                            as_root git pull
+                            as_root git submodule update --remote --init -f
                         )
                     fi
                 }
@@ -1497,17 +1490,17 @@ args() {
     # can't run singular functions as root so this is needed.
     case $action in a|alternatives|i|install|r|remove)
         [ -z "$1" ] || [ -w "$KISS_ROOT/" ] || [ "$uid" = 0 ] || {
-            as_root HOME="$HOME" \
-                    XDG_CACHE_HOME="$XDG_CACHE_HOME" \
-                    KISS_PATH="$KISS_PATH" \
-                    KISS_FORCE="$KISS_FORCE" \
-                    KISS_ROOT="$KISS_ROOT" \
-                    KISS_CHOICE="$KISS_CHOICE" \
-                    KISS_COLOR="$KISS_COLOR" \
-                    KISS_TMPDIR="$KISS_TMPDIR" \
-                    KISS_PID="$KISS_PID" \
-                    "$0" "$action" "$@"
-
+            as_root env \
+                HOME="$HOME" \
+                XDG_CACHE_HOME="$XDG_CACHE_HOME" \
+                KISS_PATH="$KISS_PATH" \
+                KISS_FORCE="$KISS_FORCE" \
+                KISS_ROOT="$KISS_ROOT" \
+                KISS_CHOICE="$KISS_CHOICE" \
+                KISS_COLOR="$KISS_COLOR" \
+                KISS_TMPDIR="$KISS_TMPDIR" \
+                KISS_PID="$KISS_PID" \
+                "$0" "$action" "$@"
             return
         }
     esac
@@ -1689,7 +1682,12 @@ main() {
 
     # Figure out which 'sudo' command to use based on the user's choice or what
     # is available on the system.
-    su=${KISS_SU:-"$(command -v sudo || command -v doas || command -v ssu)"} ||:
+    su=${KISS_SU:-"$(
+        command -v sudo ||
+        command -v doas ||
+        command -v ssu  ||
+        command -v su
+    )"} || su=su
 
     # Figure out which utility is available to dump elf information.
     elf_cmd=${KISS_ELF:="$(
