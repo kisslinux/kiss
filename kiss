@@ -1425,37 +1425,31 @@ pkg_updates() {
 
     set -f
 
-    contains "$*" kiss && {
-        log "Detected package manager update"
-        log "The package manager will be updated first"
+    case " $* " in
+        *" kiss "*)
+            log "Detected package manager update"
+            log "The package manager will be updated first"
 
-        prompt
+            prompt
 
-        pkg_build kiss
-        args i kiss
+            pkg_build kiss
+            args i kiss
 
-        log "Updated the package manager"
-        log "Re-run 'kiss update' to update your system"
+            log "Updated the package manager"
+            log "Re-run 'kiss update' to update your system"
+        ;;
 
-        exit 0
-    }
+        "  ")
+            log "Everything is up to date"
+        ;;
 
-    [ "$1" ] || {
-        log "Everything is up to date"
-        return
-    }
-
-    log "Packages to update: $*"
-
-    # Build all packages requiring an update.
-    # See [1] at top of script.
-    # shellcheck disable=2046,2086
-    {
-        pkg_update=1
-        pkg_build "$@"
-    }
-
-    log "Updated all packages"
+        *)
+            log "Packages to update: $*"
+            pkg_update=1
+            pkg_build "$@"
+            log "Updated all packages"
+        ;;
+    esac
 }
 
 pkg_clean() {
