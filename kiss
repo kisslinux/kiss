@@ -2,7 +2,7 @@
 # shellcheck source=/dev/null
 #
 # This is a simple package manager written in POSIX shell for use
-# in KISS Linux (https://k1ss.org).
+# in KISS Linux (https://kisslinux.xyz).
 #
 # Created by Dylan Araps.
 
