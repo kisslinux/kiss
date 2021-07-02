@@ -1597,7 +1597,8 @@ args() {
         help-ext)
             log 'Installed extensions (kiss-* in PATH)'
 
-            # shellcheck disable=2046
+            # Behavior intentional.
+            # shellcheck disable=2046,2030,2031
             # see [1] at top of script.
             set -- $(
                 export KISS_PATH=$PATH
@@ -1626,6 +1627,8 @@ args() {
         ;;
 
         *)
+            # Behavior intentional.
+            # shellcheck disable=2030,2031
             util=$(
                 export KISS_PATH=$PATH
                 pkg_find "kiss-$action*" "" -x 2>/dev/null
