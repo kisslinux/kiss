@@ -1353,56 +1353,55 @@ pkg_updates() {
             printf 'Skipping repository, not a directory\n'
             continue
         }
+
         cd "$repo"
 
-        case $(git remote 2>/dev/null) in
-            "")
-                log "$repo" " "
-                printf 'Skipping git pull, not a repository\n'
-            ;;
+        git remote >/dev/null 2>&1 || {
+            log "$repo" " "
+            printf 'Skipping git pull, not a repository\n'
+            continue
+        }
 
-            *)
-                # Go to the repository's root directory.
-                cd "$(git rev-parse --show-toplevel)"
+        # Go to the repository's root directory.
+        git_root=$(git rev-parse --show-toplevel)
+        cd "${git_root:?"failed to find git root for '$PWD'"}"
 
-                # Go to the real root directory if this is a submodule.
-                git_root=$(git rev-parse --show-superproject-working-tree)
-                cd "${git_root:-"$PWD"}"
+        # Go to the real root directory if this is a submodule.
+        git_root=$(git rev-parse --show-superproject-working-tree)
+        cd "${git_root:-"$PWD"}"
 
-                contains "$repos" "$PWD" || {
-                    repos="$repos $PWD "
+        contains "$repos" "$PWD" || {
+            repos="$repos $PWD "
 
-                    # Display a tick if signing is enabled for this repository.
-                    case $(git config merge.verifySignatures) in
-                        true) log "$PWD" "[signed] " ;;
-                        *)    log "$PWD" " " ;;
-                    esac
+            # Display a tick if signing is enabled for this repository.
+            case $(git config merge.verifySignatures) in
+                true) log "$PWD" "[signed] " ;;
+                *)    log "$PWD" " " ;;
+            esac
 
-                    if [ -w "$PWD" ] && [ "$uid" != 0 ]; then
-                        git pull
-                        git submodule update --remote --init -f
+            if [ -w "$PWD" ] && [ "$uid" != 0 ]; then
+                git pull
+                git submodule update --remote --init -f
 
-                    else
-                        [ "$uid" = 0 ] || log "$PWD" "Need root to update"
+            else
+                [ "$uid" = 0 ] || log "$PWD" "Need root to update"
 
-                        # Find out the owner of the repository and spawn
-                        # git as this user below.
-                        #
-                        # This prevents 'git' from changing the original
-                        # ownership of files and directories in the rare
-                        # case that the repository is owned by a 3rd user.
-                        file_owner "$PWD"
+                # Find out the owner of the repository and spawn
+                # git as this user below.
+                #
+                # This prevents 'git' from changing the original
+                # ownership of files and directories in the rare
+                # case that the repository is owned by a 3rd user.
+                file_owner "$PWD"
 
-                        # We're in a repository which is owned by a 3rd
-                        # user. Not root or the current user.
-                        [ "$user" = root ] || log "Dropping to $user for pull"
+                # We're in a repository which is owned by a 3rd
+                # user. Not root or the current user.
+                [ "$user" = root ] || log "Dropping to $user for pull"
 
-                        as_root git pull
-                        as_root git submodule update --remote --init -f
-                    fi
-                }
-            ;;
-        esac
+                as_root git pull
+                as_root git submodule update --remote --init -f
+            fi
+        }
     done
 
     log "Checking for new package versions"
