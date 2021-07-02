@@ -1345,6 +1345,9 @@ pkg_updates() {
 
     # Update each repository in '$KISS_PATH'.
     for repo do
+        # Handle null repositories (KISS_PATH=repo:::::repo).
+        [ "$repo" ] || continue
+
         [ -d "$repo" ] || {
             log "$repo" " "
             printf 'Skipping repository, not a directory\n'
