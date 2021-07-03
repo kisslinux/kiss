@@ -583,6 +583,15 @@ pkg_manifest() (
     sort -r | sed '/^\.\/$/d;ss.ss' > "$PWD/$pkg_db/$1/manifest"
 )
 
+pkg_manifest_validate() {
+    log "$1" "Checking if manifest valid"
+
+    while read -r line; do
+        [ -h "./$line" ] || [ -e "./$line" ] ||
+            die "File $line missing from tarball but mentioned in manifest"
+    done < "$pkg_db/$1/manifest"
+}
+
 pkg_etcsums() {
     # Generate checksums for each configuration file in the package's /etc/
     # directory for use in "smart" handling of these files.
@@ -1150,30 +1159,27 @@ pkg_etc() (
 
 pkg_removable() {
     # Check if a package is removable and die if it is not.
-    # A package is removable when it has no dependents or
-    # when KISS_FORCE is set to 1.
+    # A package is removable when it has no dependents.
+    log "$1" "Checking if package removable"
 
-    # Intended behavior.
-    # shellcheck disable=2030,2031
-    case ${KISS_FORCE:=0} in 0)
-        log "$1" "Checking if package removable"
+    cd "$sys_db"
+    set +f
 
-        cd "$sys_db"
-        set +f
+    ! grep -lFx -- "$1" */depends ||
+        die "$1" "Not removable, has dependents"
 
-        ! grep -lFx -- "$1" */depends ||
-            die "$1" "Not removable, has dependents"
-
-        set -f
-        cd "$OLDPWD"
-    esac
+    set -f
+    cd "$OLDPWD"
 }
 
 pkg_remove() {
     # Remove a package and all of its files. The '/etc' directory is handled
     # differently and configuration files are *not* overwritten.
     pkg_list "$1" >/dev/null || return
-    pkg_removable "$1"
+
+    # Intended behavior.
+    # shellcheck disable=2030,2031
+    [ "${KISS_FORCE:=0}" = 1 ] || pkg_removable "$1"
 
     # Block being able to abort the script with 'Ctrl+C' during removal.
     # Removes all risk of the user aborting a package removal leaving an
@@ -1196,6 +1202,34 @@ pkg_remove() {
     trap pkg_clean EXIT INT
 
     log "$1" "Removed successfully"
+}
+
+pkg_installable() {
+    # Check if a package is removable and die if it is not.
+    # A package is removable when all of its dependencies
+    # are satisfied.
+    log "$1" "Checking if package installable"
+
+    ! [ -f "$2" ] ||
+
+    while read -r dep dep_type || [ "$dep" ]; do
+        case $dep-$dep_type in
+            *-\#)
+                continue
+            ;;
+
+            *-)
+                pkg_list "$dep" >/dev/null 2>&1 || {
+                    printf '%s %s\n' "$dep" "$dep_type"
+                    set -- "$1" "$2" "$(($3 + 1))"
+                }
+            ;;
+        esac
+    done < "$2"
+
+    case ${3:-0} in [1-9]*)
+        die "$1" "Package not installable, missing $3 package(s)"
+    esac
 }
 
 pkg_install() {
@@ -1255,24 +1289,9 @@ pkg_install() {
     # fine assumption to make in 99.99% of cases.
     [ -f "./$pkg_db/$pkg_name/manifest" ] || die "Not a valid KISS package"
 
-    # Ensure that the tarball's manifest is correct by checking that each file
-    # and directory inside of it actually exists.
     [ "$KISS_FORCE" = 1 ] || {
-        log "$pkg_name" "Checking that manifest is valid"
-        while read -r line; do
-            [ -h "./$line" ] || [ -e "./$line" ] ||
-                die "File $line missing from tarball but mentioned in manifest"
-        done < "$pkg_db/$pkg_name/manifest"
-
-        log "$pkg_name" "Checking that all dependencies are installed"
-        [ -f "$tar_dir/$pkg_name/$pkg_db/$pkg_name/depends" ] &&
-            while read -r dep dep_type || [ "$dep" ]; do
-                [ "${dep##\#*}" ] || continue
-                [ "$dep_type" ]   || pkg_list "$dep" >/dev/null ||
-                    install_dep="$install_dep'$dep', "
-            done < "$tar_dir/$pkg_name/$pkg_db/$pkg_name/depends"
-
-        [ "$install_dep" ] && die "$1" "Package requires ${install_dep%, }"
+        pkg_manifest_validate "$pkg_name"
+        pkg_installable "$pkg_name" "$tar_dir/$pkg_name/$pkg_db/$pkg_name/depends"
     }
 
     run_hook pre-install "$pkg_name" "$tar_dir/$pkg_name"
