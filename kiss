@@ -193,15 +193,17 @@ pkg_list() {
     [ "$1" ] || { set +f; set -f -- *; }
 
     # Loop over each package and print its name and version.
-    for pkg do
-        [ -d "$pkg" ] || {
-            log "$pkg" "not installed"
+    for _list_pkg do
+        [ -d "$_list_pkg" ] || {
+            log "$_list_pkg" "not installed"
             return 1
         }
 
-        read -r version 2>/dev/null < "$pkg/version" || version=null
-        printf '%s\n' "$pkg $version"
+        read -r version 2>/dev/null < "$_list_pkg/version" || version=null
+        printf '%s\n' "$_list_pkg $version"
     done
+
+    cd "$OLDPWD"
 }
 
 pkg_cache() {
@@ -377,7 +379,7 @@ pkg_depends() {
     # dependencies are listed first and then the parents in reverse order.
     contains "$deps" "$1" || {
         # Filter out non-explicit, aleady installed dependencies.
-        [ "$3" ] && [ -z "$2" ] && (pkg_list "$1" >/dev/null 2>&1) && return
+        [ "$3" ] && [ -z "$2" ] && pkg_list "$1" >/dev/null 2>&1 && return
 
         # Detect circular dependencies and bail out.
         # Looks for multiple repeating patterns of (dep dep_parent) (5 is max).
