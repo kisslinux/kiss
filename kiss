@@ -138,13 +138,10 @@ sh256() {
 pkg_lint() {
     log "$1" "Checking repository files"
 
-    pkg_find "$1"
+    pkg_find_version "$1"
     cd "$repo_dir"
 
-    read -r _ release 2>/dev/null < version ||
-        die "Version file not found"
-
-    [ "$release" ] ||
+    [ "$repo_rel" ] ||
         die "$1" "Release field not found in version file"
 
     [ -x build ] ||
@@ -152,6 +149,13 @@ pkg_lint() {
 
     [ -f sources ] ||
         war "$1" "Sources file not found"
+}
+
+pkg_find_version() {
+    pkg_find "$1"
+
+    read -r repo_ver repo_rel < "$repo_dir/version" ||
+        die "$1" "Failed to read version file ($repo_dir/version)"
 }
 
 pkg_find() {
@@ -203,13 +207,10 @@ pkg_list() {
 pkg_cache() {
     # Find the tarball of a package using a glob. Use the first found match
     # of '<pkg_name>[#@]<pkg_version><pkg_release>.tar.*'.
-    pkg_find "$1"
-
-    read -r version release 2>/dev/null < "$repo_dir/version" ||
-        die "$1" "Failed to read version"
+    pkg_find_version "$1"
 
     set +f
-    set -f -- "$bin_dir/$1"[#@]"$version-$release.tar."*
+    set -f -- "$bin_dir/$1"[#@]"$repo_ver-$repo_rel.tar."*
 
     [ -f "$2" ] && shift
 
@@ -599,11 +600,7 @@ pkg_tar() (
     # contains the package's database entry.
     log "$1" "Creating tarball"
 
-    pkg_find "$1"
-
-    # Read the version information to name the package.
-    read -r version release < "$repo_dir/version" ||
-        die "$1" "Failed to read version"
+    pkg_find_version "$1"
 
     # Use 'cd' to avoid needing tar's '-C' flag which may not be portable
     # across implementations.
@@ -617,7 +614,7 @@ pkg_tar() (
         lz)   lzip -z  ;;
         xz)   xz -zT0 ;;
         zst)  zstd -z  ;;
-    esac > "$bin_dir/$1@$version-$release.tar.${KISS_COMPRESS:=gz}"
+    esac > "$bin_dir/$1@$repo_ver-$repo_rel.tar.${KISS_COMPRESS:=gz}"
 
     log "$1" "Successfully created tarball"
     run_hook post-package "$1"
@@ -694,16 +691,12 @@ pkg_build() {
 
         run_hook pre-extract "$pkg" "$pkg_dir/$pkg"
         pkg_extract "$pkg"
-        pkg_find "$pkg"
+        pkg_find_version "$pkg"
 
         # Install built packages to a directory under the package name to
         # avoid collisions with other packages.
         mkdir -p "$pkg_dir/$pkg/$pkg_db" "$mak_dir/$pkg"
         cd "$mak_dir/$pkg"
-
-        # Log the version so we can pass it to the package build file.
-        read -r build_version _ < "$repo_dir/version" ||
-            die "$pkg" "Failed to read version"
 
         log "$pkg" "Starting build"
         run_hook pre-build "$pkg" "$pkg_dir/$pkg"
@@ -711,7 +704,7 @@ pkg_build() {
         # Call the build script, log the output to the terminal and to a file.
         # There's no PIPEFAIL in POSIX shelll so we must resort to tricks like
         # killing the script ourselves.
-        { "$repo_dir/build" "$pkg_dir/$pkg" "$build_version" 2>&1 || {
+        { "$repo_dir/build" "$pkg_dir/$pkg" "$repo_ver" 2>&1 || {
             log "$pkg" "Build failed"
             log "$pkg" "Log stored to $log_dir/$pkg-$time-$pid"
             run_hook build-fail "$pkg" "$pkg_dir/$pkg"
@@ -1413,14 +1406,11 @@ pkg_updates() {
         read -r db_ver db_rel < "$pkg/version" ||
             die "${pkg##*/}" "Failed to read installed version"
 
-        pkg_find "${pkg##*/}"
-
-        read -r re_ver re_rel < "$repo_dir/version" ||
-            die "${pkg##*/}" "Failed to read repository version"
+        pkg_find_version "${pkg##*/}"
 
         # Compare installed packages to repository packages.
-        [ "$db_ver-$db_rel" = "$re_ver-$re_rel" ] || {
-            printf '%s\n' "${pkg##*/} $db_ver-$db_rel ==> $re_ver-$re_rel"
+        [ "$db_ver-$db_rel" = "$repo_ver-$repo_rel" ] || {
+            printf '%s\n' "${pkg##*/} $db_ver-$db_rel ==> $repo_ver-$repo_rel"
             set -- "$@" "${pkg##*/}"
         }
     done
