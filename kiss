@@ -35,25 +35,25 @@ prompt() {
 }
 
 as_root() {
-    case $uid/${user:=root}/${su##*/} in
+    case $uid/${user:=root}/${cmd_su##*/} in
         0/root/*)
             "$@"
         ;;
 
         */doas|*/sudo|*/ssu)
-            log "Using '$su' (to become $user)"
-            "$su" -u "$user" -- "$@"
+            log "Using '$cmd_su' (to become $user)"
+            "$cmd_su" -u "$user" -- "$@"
         ;;
 
         */su)
             log "Using 'su' (to become $user)"
             printf 'Note: su will ask for password every time.\n%s\n' \
                    '      Use doas, sudo or ssu for more control.'
-            "$su" -c "$* <&3" "$user" 3<&0 </dev/tty
+            "$cmd_su" -c "$* <&3" "$user" 3<&0 </dev/tty
         ;;
 
         *)
-            die "Invalid KISS_SU value: '$su' (valid: doas, sudo, ssu, su)"
+            die "Invalid KISS_SU value: '$cmd_su' (valid: doas, sudo, ssu, su)"
         ;;
     esac
 
@@ -503,9 +503,9 @@ pkg_fix_deps() {
     while read -r file; do
         ldd_buf=$(ldd -- "$file" 2>/dev/null) ||:
 
-        case $elf in
+        case $cmd_elf in
             *readelf)
-                "$elf" -d "$file"
+                "$cmd_elf" -d "$file"
             ;;
 
             *)
@@ -522,7 +522,7 @@ pkg_fix_deps() {
 
                     # Resolve library path.
                     # ldd: libjson-c.so.5 => /lib/libjson-c.so.5 ...
-                    case $elf in
+                    case $cmd_elf in
                         *readelf) line=${ldd_buf#*"	$line => "} ;;
                         *)        line=${line##*=> } ;;
                     esac
@@ -1693,19 +1693,19 @@ main() {
 
     # Figure out which 'sudo' command to use based on the user's choice or what
     # is available on the system.
-    su=${KISS_SU:-"$(
+    cmd_su=${KISS_SU:-"$(
         command -v sudo ||
         command -v doas ||
         command -v ssu  ||
         command -v su
-    )"} || su=su
+    )"} || cmd_su=su
 
     # Figure out which utility is available to dump elf information.
-    elf=${KISS_ELF:="$(
+    cmd_elf=${KISS_ELF:="$(
         command -v readelf      ||
         command -v eu-readelf   ||
         command -v llvm-readelf
-    )"} || elf=ldd
+    )"} || cmd_elf=ldd
 
     # Store the date and time of script invocation to be used as the name of
     # the log files the package manager creates uring builds.
