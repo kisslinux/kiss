@@ -1216,6 +1216,8 @@ pkg_installable() {
     # are satisfied.
     log "$1" "Checking if package installable"
 
+    # False positive.
+    # shellcheck disable=2094
     ! [ -f "$2" ] ||
 
     while read -r dep dep_type || [ "$dep" ]; do
