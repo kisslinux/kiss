@@ -405,7 +405,7 @@ pkg_depends() {
                 [ "${dep##\#*}" ] || continue
 
                 pkg_depends "$dep" '' "$3" "$4 $1" "$dep_type"
-            done < "$repo_dir/depends" ||:
+            done < "$repo_dir/depends" || :
         fi
 
         # After child dependencies are added to the list,
@@ -475,7 +475,7 @@ pkg_strip() {
                 strip -s -R .comment -R .note "$file"
             ;;
         esac
-    done 2>/dev/null ||:
+    done 2>/dev/null || :
 }
 
 pkg_fix_deps() {
@@ -494,7 +494,7 @@ pkg_fix_deps() {
     find "$pkg_dir/${PWD##*/}/" -type f 2>/dev/null |
 
     while read -r file; do
-        ldd_buf=$(ldd -- "$file" 2>/dev/null) ||:
+        ldd_buf=$(ldd -- "$file" 2>/dev/null) || :
 
         case $cmd_elf in
             *readelf)
@@ -545,12 +545,12 @@ pkg_fix_deps() {
                     esac
                 ;;
             esac
-        done ||:
+        done || :
     done |
 
     sort -uk1,1 depends - > "$tmp_dir/.fixdeps"
 
-    diff -U 3 depends - < "$tmp_dir/.fixdeps" ||:
+    diff -U 3 depends - < "$tmp_dir/.fixdeps" || :
 
     mv -f "$tmp_dir/.fixdeps" depends
 
@@ -732,7 +732,8 @@ pkg_build() {
         # Remove all .la files from the packages. They're unneeded and cause
         # issues when a package stops providing one. This recently caused an
         # issue with harfbuzz (See: 05096e5a4dc6db5d202342f538d067d87ae7135e).
-        find "$pkg_dir/$pkg/usr/lib" -name \*.la -exec rm -f {} + 2>/dev/null ||:
+        find "$pkg_dir/$pkg/usr/lib" \
+            -name \*.la -exec rm -f {} + 2>/dev/null || :
 
         # Remove this unneeded file from all packages as it is an endless
         # source of conflicts. This is used with info pages we we do not support.
@@ -871,7 +872,7 @@ pkg_conflicts() {
     # Store the list of found conflicts in a file as we'll be using the
     # information multiple times. Storing things in the cache dir allows
     # us to be lazy as they'll be automatically removed on script end.
-    grep -Fxf "$mak_dir/cf_m" -- "$@" 2>/dev/null > "$mak_dir/cf" ||:
+    grep -Fxf "$mak_dir/cf_m" -- "$@" 2>/dev/null > "$mak_dir/cf" || :
 
     # Enable alternatives automatically if it is safe to do so.
     # This checks to see that the package that is about to be installed
@@ -953,7 +954,7 @@ pkg_swap() {
         # Figure out which package owns the file we are going to swap for
         # another package's. Print the full path to the manifest file which
         # contains the match to our search.
-        pkg_owns=$(set +f; grep -lFx "$2" "$sys_db/"*/manifest) ||:
+        pkg_owns=$(set +f; grep -lFx "$2" "$sys_db/"*/manifest) || :
 
         # Extract the package name from the path above.
         pkg_owns=${pkg_owns%/*}
@@ -1052,7 +1053,7 @@ pkg_install_files() {
                     [ -h "$_file" ] || chmod "$b$oct" "$_file"
                 }
         esac
-    done ||:
+    done || :
 }
 
 pkg_remove_files() {
@@ -1068,7 +1069,7 @@ pkg_remove_files() {
                 printf 'Skipping %s (modified)\n' "$file"
                 continue
             }
-        esac 2>/dev/null ||:
+        esac 2>/dev/null || :
 
         _file=${KISS_ROOT:+"$KISS_ROOT/"}${file%%/}
 
@@ -1080,13 +1081,13 @@ pkg_remove_files() {
 
         # Remove empty directories.
         elif [ -d "$_file" ]; then
-            rmdir "$_file" 2>/dev/null ||:
+            rmdir "$_file" 2>/dev/null || :
 
         # Remove everything else.
         else
             rm -f "$_file"
         fi
-    done ||:
+    done || :
 
     # Remove all broken directory symlinks.
     for sym do
@@ -1110,7 +1111,7 @@ pkg_etc() (
 
         { sum_new=$(sh256 "$file")
           sum_sys=$(sh256 "$KISS_ROOT/$file")
-          sum_old=$(awk "NR == $i" "$mak_dir/c"); } 2>/dev/null ||:
+          sum_old=$(awk "NR == $i" "$mak_dir/c"); } 2>/dev/null || :
 
         log "$pkg_name" "Doing 3-way handshake for $file"
         printf '%s\n' "Previous: ${sum_old:-null}"
@@ -1145,7 +1146,7 @@ pkg_etc() (
 
         cp -fPp "$file" "$KISS_ROOT/${file}${new}"
         chown root:root "$KISS_ROOT/${file}${new}" 2>/dev/null
-    done ||:
+    done || :
 )
 
 pkg_removable() {
@@ -1182,11 +1183,11 @@ pkg_remove() {
 
     if [ -x "$sys_db/$1/pre-remove" ]; then
         log "$1" "Running pre-remove script"
-        "$sys_db/$1/pre-remove" ||:
+        "$sys_db/$1/pre-remove" || :
     fi
 
     # Make a backup of the etcsums file (if it exists).
-    cp -f "$sys_db/$1/etcsums" "$mak_dir/c" 2>/dev/null ||:
+    cp -f "$sys_db/$1/etcsums" "$mak_dir/c" 2>/dev/null || :
 
     log "$1" "Removing package"
     pkg_remove_files < "$sys_db/$1/manifest"
@@ -1287,8 +1288,8 @@ pkg_install() {
 
     # If the package is already installed (and this is an upgrade) make a
     # backup of the manifest and etcsums files.
-    cp -f "$sys_db/$pkg_name/manifest" "$mak_dir/m" 2>/dev/null ||:
-    cp -f "$sys_db/$pkg_name/etcsums"  "$mak_dir/c" 2>/dev/null ||:
+    cp -f "$sys_db/$pkg_name/manifest" "$mak_dir/m" 2>/dev/null || :
+    cp -f "$sys_db/$pkg_name/etcsums"  "$mak_dir/c" 2>/dev/null || :
 
     # Install the package's files by iterating over its manifest.
     pkg_install_files -z "$tar_dir/$pkg_name"
@@ -1640,7 +1641,7 @@ create_tmp_dirs() {
 
     # This allows for automatic setup of a KISS chroot and will
     # do nothing on a normal system.
-    mkdir -p "$KISS_ROOT/" 2>/dev/null ||:
+    mkdir -p "$KISS_ROOT/" 2>/dev/null || :
 
     # System package database.
     sys_db=$KISS_ROOT/${pkg_db:=var/db/kiss/installed}
