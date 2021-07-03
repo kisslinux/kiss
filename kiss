@@ -157,12 +157,12 @@ pkg_lint() {
 pkg_find() {
     # Figure out which repository a package belongs to by searching for
     # directories matching the package name in $KISS_PATH/*.
-    query=$1 all=$2 what=$3 IFS=:; set --
+    query=$1 all=$2 what=$3 where=$4 IFS=:; set --
 
     # Both counts of word-splitting are intentional here. Firstly to split
     # the repositories and secondly to allow for the query to be a glob.
     # shellcheck disable=2086
-    for path in $KISS_PATH "${what:-$sys_db}"; do set +f
+    for path in ${where:-$KISS_PATH} "${what:-$sys_db}"; do set +f
         for path2 in "$path/"$query; do
             test "${what:--d}" "$path2" && set -f -- "$@" "$path2"
         done
@@ -1600,10 +1600,7 @@ args() {
             # Behavior intentional.
             # shellcheck disable=2046,2030,2031
             # see [1] at top of script.
-            set -- $(
-                export KISS_PATH=$PATH
-                pkg_find kiss-\* all -x
-            )
+            set -- $(pkg_find kiss-\* all -x "$PATH")
 
             # To align descriptions figure out which extension has the longest
             # name by doing a simple 'name > max ? name : max' on the basename
@@ -1627,14 +1624,8 @@ args() {
         ;;
 
         *)
-            # Behavior intentional.
-            # shellcheck disable=2030,2031
-            util=$(
-                export KISS_PATH=$PATH
-                pkg_find "kiss-$action*" "" -x 2>/dev/null
-            ) || die "'kiss $action' is not a valid command"
-
-            "$util" "$@"
+            pkg_find "kiss-$action*" "" -x "$PATH"
+            "$repo_dir" "$@"
         ;;
     esac
 
