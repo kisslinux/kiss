@@ -580,23 +580,19 @@ pkg_manifest() (
     sort -r | sed '/^\.\/$/d;ss.ss' > "$PWD/$pkg_db/$1/manifest"
 )
 
-pkg_etcsums() (
+pkg_etcsums() {
     # Generate checksums for each configuration file in the package's /etc/
     # directory for use in "smart" handling of these files.
     log "$1" "Generating etcsums"
 
-    # This function runs as a sub-shell to avoid having to 'cd' back to the
-    # prior directory before being able to continue.
-    [ -d "$pkg_dir/$1/etc" ] || return 0
-
-    cd "$pkg_dir/$1"
+    ! [ -d "$pkg_dir/$1/etc" ] ||
 
     # This can't be a simple 'find -exec' as 'sh256' is a shell function
     # and not a real command of any kind. This is the shell equivalent.
-    find etc ! -type d | sort | while read -r line; do
+    find "$pkg_dir/$1/etc" ! -type d | sort | while read -r line; do
         sh256 "$line"
     done > "$pkg_dir/$1/$pkg_db/$1/etcsums"
-)
+}
 
 pkg_tar() (
     # Create a tarball from the built package's files. This tarball also
