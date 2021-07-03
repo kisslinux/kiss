@@ -675,6 +675,9 @@ pkg_build() {
     for pkg in "$@"; do
         if ! contains "$explicit_build" "$pkg" && pkg_cache "$pkg"; then
             log "$pkg" "Found pre-built binary, installing"
+
+            # Intended behavior.
+            # shellcheck disable=2030,2031
             (export KISS_FORCE=1; args i "$tar_file")
         else
             set -- "$@" "$pkg"
@@ -750,6 +753,9 @@ pkg_build() {
 
         if [ "$pkg_update" ] || ! contains "$explicit" "$pkg"; then
             log "$pkg" "Needed as a dependency or has an update, installing"
+
+            # Intended behavior.
+            # shellcheck disable=2030,2031
             (export KISS_FORCE=1; args i "$pkg")
         fi
     done
@@ -1145,6 +1151,9 @@ pkg_removable() {
     # Check if a package is removable and die if it is not.
     # A package is removable when it has no dependents or
     # when KISS_FORCE is set to 1.
+
+    # Intended behavior.
+    # shellcheck disable=2030,2031
     case ${KISS_FORCE:=0} in 0)
         log "$1" "Checking if package removable"
 
