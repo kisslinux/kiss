@@ -587,9 +587,15 @@ pkg_manifest_validate() {
     log "$1" "Checking if manifest valid"
 
     while read -r line; do
-        [ -h "./$line" ] || [ -e "./$line" ] ||
-            die "File $line missing from tarball but mentioned in manifest"
+        [ -h "./$line" ] || [ -e "./$line" ] || {
+            printf '%s\n' "$line"
+            set -- "$@" "$line"
+        }
     done < "$pkg_db/$1/manifest"
+
+    case $# in [2-9]|[1-9][0-9]*)
+        die "$1" "manifest contains $(($# - 1)) non-existent files"
+    esac
 }
 
 pkg_etcsums() {
