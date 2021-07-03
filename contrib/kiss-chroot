@@ -10,21 +10,25 @@ die() {
     exit 1
 }
 
+run() {
+    printf '%s\n' "$*"
+    "$@" || return "${_ret:=0}"
+}
+
 clean() {
     log Unmounting host filesystems; {
-        umount "$1/sys/firmware/efi/efivars" 2>/dev/null ||:
-        umount "$1/tmp" ||:
-        umount "$1/run" ||:
-        umount "$1/dev/pts" ||:
-        umount "$1/dev/shm" ||:
-        umount "$1/dev"  ||:
-        umount "$1/proc" ||:
-        umount "$1/sys"  ||:
+        run umount "$1/dev/shm"
+        run umount "$1/dev/pts"
+        run umount "$1/dev"
+        run umount "$1/proc"
+        run umount "$1/run"
+        run umount "$1/sys/firmware/efi/efivars" 2>/dev/null
+        run umount "$1/sys"
+        run umount "$1/tmp"
     }
 
     log Cleaning leftover host files; {
-        rm -f "$1/root/.ash_history"
-        rm -f "$1/etc/resolv.conf"
+        run rm -f "$1/etc/resolv.conf"
     }
 }
 
@@ -39,50 +43,53 @@ mounted() {
         [ "$target" = "$1" ] && return 0
     done < /proc/mounts
 
-    printf 'mounting %s\n' "$1" >&2
     return 1
 }
 
-set -- "${1%"${1##*[!/]}"}"
-[ -z "$1" ]        && die Need a path to the chroot
-[ -d "$1" ]        || die Given path does not exist
-[ "$(id -u)" = 0 ] || die Script needs to be run as root
-
-trap 'clean "$1"' EXIT INT
-
-log Mounting host filesystems; {
-    mounted "$1/dev"  || mount -o bind /dev "$1/dev"  ||:
-    mounted "$1/proc" || mount -t proc proc "$1/proc" ||:
-    mounted "$1/sys"  || mount -t sysfs sys "$1/sys"  ||:
-
-    mounted "$1/dev/shm" ||
-        mount -t tmpfs shmfs "$1/dev/shm"  ||:
-
-    mounted "$1/dev/pts" ||
-        mount -o bind /dev/pts "$1/dev/pts"  ||:
-
-    mounted "$1/tmp" ||
-        mount -o mode=1777,nosuid,nodev -t tmpfs tmpfs "$1/tmp"  ||:
-
-    mounted "$1/run" ||
-        mount -t tmpfs tmpfs "$1/run"  ||:
-
-    mounted "$1/sys/firmware/efi/efivars" ||
-        mount -t efivarfs efivarfs "$1/sys/firmware/efi/efivars" 2>/dev/null ||:
+mmount() {
+    dest=$1
+    shift
+    mounted "$dest" || run mount "$@" "$dest"
 }
 
-log Copying /etc/resolv.conf from host; {
-    cp -f /etc/resolv.conf "$1/etc" ||:
+main() {
+    # Ensure input does not end in '/'.
+    set -- "${1%"${1##*[!/]}"}"
+
+    [ "$1" ]           || die Need a path to the chroot
+    [ -d "$1" ]        || die Given path does not exist
+    [ "$(id -u)" = 0 ] || die Script needs to be run as root
+
+    trap 'clean "${1%"${1##*[!/]}"}"' EXIT INT
+
+    log Mounting host filesystems; {
+        mmount "$1/dev"     -o bind  /dev
+        mmount "$1/dev/pts" -o bind /dev/pts
+        mmount "$1/dev/shm" -t tmpfs shmfs
+        mmount "$1/proc"    -t proc  proc
+        mmount "$1/run"     -t tmpfs tmpfs
+        mmount "$1/sys"     -t sysfs sys
+        mmount "$1/sys/firmware/efi/efivars" -t efivarfs efivarfs 2>/dev/null
+        mmount "$1/tmp"     -o mode=1777,nosuid,nodev -t tmpfs tmpfs
+    }
+
+    log Copying /etc/resolv.conf from host; {
+        run cp -f /etc/resolv.conf "$1/etc"
+    }
+
+    log Entering chroot; {
+        _ret=1
+
+        run chroot "$1" /usr/bin/env -i \
+            HOME=/root \
+            TERM="$TERM" \
+            SHELL=/bin/sh \
+            USER=root \
+            CFLAGS="${CFLAGS:--march=x86-64 -mtune=generic -pipe -Os}" \
+            CXXFLAGS="${CXXFLAGS:--march=x86-64 -mtune=generic -pipe -Os}" \
+            MAKEFLAGS="${MAKEFLAGS:--j$(nproc 2>/dev/null || echo 1)}" \
+            /bin/sh -l
+    }
 }
 
-log Entering chroot; {
-    chroot "$1" /usr/bin/env -i \
-        HOME=/root \
-        TERM="$TERM" \
-        SHELL=/bin/sh \
-        USER=root \
-        CFLAGS="${CFLAGS:--march=x86-64 -mtune=generic -pipe -Os}" \
-        CXXFLAGS="${CXXFLAGS:--march=x86-64 -mtune=generic -pipe -Os}" \
-        MAKEFLAGS="${MAKEFLAGS:--j$(nproc 2>/dev/null || echo 1)}" \
-        /bin/sh -l
-}
+main "$1"
