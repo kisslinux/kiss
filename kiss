@@ -489,7 +489,7 @@ pkg_fix_deps() {
     # Dynamically look for missing runtime dependencies by checking each
     # binary and library with 'ldd'. This catches any extra libraries and or
     # dependencies pulled in by the package's build suite.
-    log "$1" "looking for dependencies (using ${elf##*/})"
+    log "$1" "looking for dependencies (using ${cmd_elf##*/})"
 
     cd "$pkg_dir/$1/$pkg_db/$1"
 
