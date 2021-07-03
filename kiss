@@ -675,7 +675,7 @@ pkg_build() {
     for pkg in "$@"; do
         if ! contains "$explicit_build" "$pkg" && pkg_cache "$pkg"; then
             log "$pkg" "Found pre-built binary, installing"
-            (KISS_FORCE=1 args i "$tar_file")
+            (export KISS_FORCE=1; args i "$tar_file")
         else
             set -- "$@" "$pkg"
         fi
@@ -750,7 +750,7 @@ pkg_build() {
 
         if [ "$pkg_update" ] || ! contains "$explicit" "$pkg"; then
             log "$pkg" "Needed as a dependency or has an update, installing"
-            (KISS_FORCE=1 args i "$pkg")
+            (export KISS_FORCE=1; args i "$pkg")
         fi
     done
 
@@ -758,7 +758,7 @@ pkg_build() {
     # shellcheck disable=2046,2086
     set -- $explicit
 
-    [ "$pkg_update" ] || prompt "Install built packages? [$*]" && args i "$@"
+    [ "$pkg_update" ] || prompt "Install built packages? [$*]" && (args i "$@")
 }
 
 pkg_checksums() {
