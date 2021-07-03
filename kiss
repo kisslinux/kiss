@@ -422,6 +422,7 @@ pkg_order() {
     for pkg do case $pkg in
         /*.tar.*) deps="$deps $pkg" ;;
         *.tar.*)  deps="$deps $ppwd/$pkg" ;;
+        */*)      die "Invalid argument: '/!*[]' ($pkg)" ;;
         *)        pkg_depends "$pkg" raw
     esac done
 
@@ -1467,14 +1468,26 @@ args() {
     action=$1
     shift "$(($# != 0))"
 
-    # Unless this is a search, sanitize the user's input. The call to
-    # 'pkg_find()' supports basic globbing, ensure input doesn't expand
-    # to anything except for when this behavior is needed.
-    #
-    # This handles the globbing characters '*', '!', '[' and ']' as per:
-    # https://pubs.opengroup.org/onlinepubs/009695399/utilities/xcu_chap02.html
-    [ "${action##[aos]*}" ] && case "$*" in *\**|*\!*|*\[*|*\]*)
-        die "Arguments contain invalid characters: '!*[]' ($*)"
+    # Ensure that arguments do not contain invalid characters. Wildcards can
+    # not be used here as they would conflict with kiss extensions.
+    case $action in
+        a|alternatives)
+            case $1 in */*|*\**|*\!*|*\[*|*\]*)
+                die "Invalid argument: '/!*[]' ($1)"
+            esac
+        ;;
+
+        b|build|c|checksum|d|download|l|list|r|remove)
+            case $* in */*|*\**|*\!*|*\[*|*\]*)
+                die "Arguments contain invalid characters: '/!*[]' ($*)"
+            esac
+        ;;
+
+        i|install)
+            case $* in *\**|*\!*|*\[*|*\]*)
+                die "Arguments contain invalid characters: '!*[]' ($*)"
+            esac
+        ;;
     esac
 
     # CRUX style usage using the current directory as the name of the package
