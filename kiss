@@ -103,13 +103,13 @@ run_hook() {
 
 decompress() {
     case $1 in
-        *.bz2)      bzip2 -d  ;;
-        *.lzma)     lzma -dc  ;;
-        *.lz)       lzip -dc  ;;
-        *.tar)      cat       ;;
-        *.tgz|*.gz) gzip -d   ;;
+        *.bz2)      bzip2 -d ;;
+        *.lzma)     lzma -dc ;;
+        *.lz)       lzip -dc ;;
+        *.tar)      cat      ;;
+        *.tgz|*.gz) gzip -d  ;;
         *.xz|*.txz) xz -dcT0 ;;
-        *.zst)      zstd -dc  ;;
+        *.zst)      zstd -dc ;;
     esac < "$1"
 }
 
@@ -234,15 +234,13 @@ pkg_sources() {
     mkdir -p "$src_dir/$1" && cd "$src_dir/$1"
 
     while read -r src dest || [ "$src" ]; do
-        # Remote git repository or comment.
         if [ -z "${src##\#*}" ] || [ -z "${src##git+*}" ]; then
+            # Remote git repository or comment.
             :
 
-        # Remote source (cached).
         elif [ -f "./${dest:-.}/${src##*/}" ]; then
-            log "$1" "Found cached source '${src##*/}'"
+            log "$1" "Found cached remote source '${src##*/}'"
 
-        # Remote source.
         elif [ -z "${src##*://*}" ]; then
             log "$1" "Downloading $src"
             mkdir -p "$PWD/$dest"
@@ -252,11 +250,9 @@ pkg_sources() {
                 die "$1" "Failed to download $src"
             }
 
-        # Local source (relative).
         elif [ -e "$repo_dir/$src" ]; then
             log "$1" "Found local relative source '$src'"
 
-        # Local source (absolute).
         elif [ -e "/$src" ]; then
             log "$1" "Found local absolute source '$src'"
 
@@ -280,7 +276,6 @@ pkg_extract() {
         mkdir -p "$mak_dir/$1/$dest" && cd "$mak_dir/$1/$dest"
 
         case $src in \#*|'') ;;
-            # Git repository.
             git+*)
                 # Split the source into URL + OBJECT (branch or commit).
                 url=${src##git+} com=${url##*[@#]} com=${com#${url%[#@]*}}
@@ -296,25 +291,24 @@ pkg_extract() {
                 } || die "$1" "Failed to clone $src"
             ;;
 
-            # Tarballs of any kind. This is a shell equivalent of
-            # GNU tar's '--strip-components 1'.
             *://*.tar|*://*.tar.??|*://*.tar.???|*://*.tar.????|*://*.t?z)
-                # Decompress the archive to a temporary .tar archive.
+                # This is a portable shell implementation of GNU tar's
+                # '--strip-components 1'.
+
                 decompress "$src_dir/$1/${dest:-.}/${src##*/}" > .ktar
 
                 # Extract the tar archive to the current directory.
                 tar xf .ktar || die "$1" "Couldn't extract ${src##*/}"
 
                 # Iterate over all directories in the first level of the
-                # tarball's manifest. This is our equivalent of GNU tar's
-                # '--strip-components 1'.
+                # tarball's manifest.
                 tar tf .ktar | while IFS=/ read -r dir _; do
                     # Some tarballs contain './' as the top-level directory,
                     # we need to skip these occurances.
                     [ -d "${dir#.}" ] || continue
 
                     # Move the directory to prevent naming conflicts between
-                    # the child and parent
+                    # the child and parent.
                     mv -f "$dir" "$pid-$dir"
 
                     # First attempt to move all files up a directory level,
@@ -330,11 +324,11 @@ pkg_extract() {
                     # invocation to be left out of the list. Weird, right?
                     {
                         find "$pid-$dir/." ! -name . -prune \
-                            -exec sh -c 'mv -f "$0" "$@" .' {} + ||
+                            -exec sh -c 'mv -f "$0" "$@" .' {} + 2>/dev/null ||
 
                         find "$pid-$dir/." ! -name . -prune \
                             -exec sh -c 'cp -fRp "$0" "$@" .' {} +
-                    } 2>/dev/null
+                    }
 
                     # Remove the directory now that all files have been
                     # transferred out of it. This can't be a simple 'rmdir'
@@ -347,7 +341,6 @@ pkg_extract() {
                 rm -f .ktar
             ;;
 
-            # Zip archives.
             *://*.zip)
                 unzip "$src_dir/$1/${dest:-.}/${src##*/}" ||
                     die "$1" "Couldn't extract ${src##*/}"
