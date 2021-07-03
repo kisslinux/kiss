@@ -227,10 +227,6 @@ pkg_sources() {
     [ -f "$repo_dir/sources" ] || return 0
 
     log "$1" "Downloading sources"
-
-    # Store each downloaded source in a directory named after the package it
-    # belongs to. This avoid conflicts between two packages having a source
-    # of the same name.
     mkdir -p "$src_dir/$1" && cd "$src_dir/$1"
 
     while read -r src dest || [ "$src" ]; do
