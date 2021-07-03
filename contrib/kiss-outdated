@@ -113,6 +113,9 @@ repology_name() {
 
         kiss)
             remote=kiss-package-manager
+
+            # Temporary.
+            remote=kiss-unclassified
         ;;
 
         liberation-fonts)
@@ -127,6 +130,10 @@ repology_name() {
         links2)
             # TODO [community]: Rename package?
             remote=links
+        ;;
+
+        linux-headers)
+            remote=linux
         ;;
 
         lux)
@@ -256,12 +263,16 @@ main() {
                 # Package up-to-date, do nothing.
             ;;
 
-            - | '' | ' ')
+            '' | ' ')
                 printf '\n%s: empty response\n' "$pkg" >&2
                 printf 'possible causes:\n' >&2
                 printf '    package name differs from repology name,\n' >&2
                 printf '    package not tracked by repology,\n' >&2
                 printf '    network error\n\n' >&2
+            ;;
+
+            '-')
+                # No version scheme, do nothing.
             ;;
 
             *)
