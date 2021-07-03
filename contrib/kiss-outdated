@@ -86,8 +86,8 @@ repology_name() {
             remote=gnupg
         ;;
 
-        gtk+[23])
-            remote=gtk
+        gtk+3)
+            remote=gtk3+classic
         ;;
 
         gst-*)
