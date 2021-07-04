@@ -226,14 +226,11 @@ pkg_list() {
 
 pkg_cache() {
     # Find the tarball of a package using a glob. Use the first found match
-    # of '<pkg_name>[#@]<pkg_version><pkg_release>.tar.*'.
+    # of '<pkg_name>@<pkg_version><pkg_release>.tar.*'.
     pkg_find_version "$1"
 
     set +f
-    set -f -- "$bin_dir/$1"[#@]"$repo_ver-$repo_rel.tar."*
-
-    [ -f "$2" ] && shift
-
+    set -f -- "$bin_dir/$1@$repo_ver-$repo_rel.tar."*
     tar_file=$1
 
     [ -f "$1" ]
