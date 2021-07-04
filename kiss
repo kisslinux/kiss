@@ -343,10 +343,12 @@ pkg_extract() {
             *.tar|*.tar.??|*.tar.???|*.tar.????|*.t?z)
                 # This is a portable shell implementation of GNU tar's
                 # '--strip-components 1'.
-                decompress "$_res" > .ktar
+                decompress "$_res" > .ktar ||
+                    die "$1" "Failed to decompress $_res"
 
                 # Extract the tar archive to the current directory.
-                tar xf .ktar
+                tar xf .ktar ||
+                    die "$1" "Failed to extract $_res"
 
                 # Iterate over all directories in the first level of the
                 # tarball's manifest.
