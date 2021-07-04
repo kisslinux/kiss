@@ -876,6 +876,8 @@ pkg_conflicts() {
         # Print the file with all symlinks in its path
         # resolved to their real locations.
         printf '%s\n' "${PWD#"$KISS_ROOT"}/${file##*/}"
+
+        cd "$OLDPWD"
     done < "$tar_dir/$1/$pkg_db/$1/manifest" > "$mak_dir/cf_m"
 
     p_name=$1
