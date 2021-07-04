@@ -701,8 +701,10 @@ pkg_build() {
         shift
     done
 
-    for pkg do pkg_sources "$pkg"; done
-    pkg_verify "$@"
+    for pkg do
+        pkg_sources "$pkg"
+        pkg_verify "$pkg"
+    done
 
     # Finally build and create tarballs for all passed packages and
     # dependencies.
@@ -811,35 +813,31 @@ pkg_checksums() {
 pkg_verify() {
     # Verify all package checksums. This is achieved by generating a new set
     # of checksums and then comparing those with the old set.
-    verify_cmd="NR==FNR{a[\$1];next}/^SKIP$/{next}!((\$1)in a){exit 1}"
+    log "$1" "Checking sources"
 
-    for pkg do
-        pkg_find "$pkg"
+    pkg_find "$1"
 
-        [ -f "$repo_dir/sources" ] || continue
+    [ -f "$repo_dir/sources" ] || return 0
 
-        verify_sum=$(pkg_checksums "$pkg")
+    # Read the repository checksums into a list.
+    while read -r chk _ || [ "$chk" ]; do
+        set -- "$@" "$chk"
+    done < "$repo_dir/checksums"
 
-        [ "$verify_sum" ] || continue
-        [ -f "$repo_dir/checksums" ] || die "$pkg" "checksums file missing"
+    # Generate a new set of checksums to compare against.
+    pkg_checksums "$1" > "$mak_dir/v"
 
-        # Check that the first column (separated by whitespace) match in both
-        # checksum files. If any part of either file differs, mismatch. Abort.
-        printf '%s\n' "$verify_sum" |
+    # Check that the first column (separated by whitespace) match in both
+    # checksum files. If any part of either file differs, mismatch. Abort.
+    while read -r new _; do shift
+        printf 'old %s\nnew %s\n' "${1:-missing}" "$new"
 
-        awk "$verify_cmd" - "$repo_dir/checksums" || {
-            log "$pkg" "Checksum mismatch"
+        case $new-${1:-null} in
+            "$1-$new"|"$new-SKIP") ;;
 
-            # Instead of dying above, log it to the terminal. Also define a
-            # variable so we *can* die after all checksum files have been
-            # checked.
-            mismatch="$mismatch$pkg "
-        }
-    done
-
-    [ -z "$mismatch" ] || die "Checksum mismatch with: ${mismatch% }"
-
-    log "Verified all checksums"
+            *) die "${repo_dir##*/}" "Checksum mismatch"
+        esac
+    done < "$mak_dir/v"
 }
 
 pkg_conflicts() {
