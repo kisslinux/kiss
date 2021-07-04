@@ -80,6 +80,7 @@ as_root() {
 }
 
 file_owner() {
+    # Intentional, globbing disabled.
     # shellcheck disable=2046
     set -- $(ls -ld "$1")
 
@@ -184,6 +185,8 @@ pkg_find() {
 
     # Both counts of word-splitting are intentional here. Firstly to split
     # the repositories and secondly to allow for the query to be a glob.
+    #
+    # Intentional.
     # shellcheck disable=2086
     for path in ${where:-$KISS_PATH} "${what:-$sys_db}"; do set +f
         for path2 in "$path/"$query; do
@@ -299,7 +302,7 @@ pkg_source() {
             log "$1" "Downloading $src"
             mkdir -p "$PWD/$dest"
 
-            # Intentional behavior, globbing disabled.
+            # Intentional, globbing disabled.
             # shellcheck disable=2046,2086
             ${KISS_DL:-curl -fLo} "$_des" "$src" || {
                 rm -f "$_des"
@@ -671,7 +674,7 @@ pkg_build() {
     # Order the argument list and filter out duplicates.
     pkg_order "$@"
 
-    # See [1] at top of script.
+    # Intentional, globbing disabled.
     # shellcheck disable=2046,2086
     set -- $order
 
@@ -703,7 +706,7 @@ pkg_build() {
 
     log "Building: explicit: $*${deps:+, implicit: ${deps## }}"
 
-    # See [1] at top of script.
+    # Intentional, globbing disabled.
     # shellcheck disable=2046,2086
     set -- $deps "$@"
 
@@ -807,7 +810,7 @@ pkg_build() {
         fi
     done
 
-    # Turn the explicit packages into a 'list'. See [1] at top of script.
+    # Intentional, globbing disabled.
     # shellcheck disable=2046,2086
     set -- $explicit
 
@@ -1390,7 +1393,7 @@ pkg_updates() {
     log "Updating repositories"
 
     # Create a list of all repositories.
-    # See [1] at top of script.
+    # Intentional, globbing disabled.
     # shellcheck disable=2046,2086
     { IFS=:; set -- $KISS_PATH; unset IFS; }
 
@@ -1641,9 +1644,8 @@ args() {
         help-ext)
             log 'Installed extensions (kiss-* in PATH)'
 
-            # Behavior intentional.
+            # Intentional, globbing disabled.
             # shellcheck disable=2046,2030,2031
-            # see [1] at top of script.
             set -- $(pkg_find kiss-\* all -x "$PATH")
 
             # To align descriptions figure out which extension has the longest
