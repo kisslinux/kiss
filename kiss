@@ -657,7 +657,7 @@ pkg_tar() (
         gz)   gzip -6  ;;
         lzma) lzma -z  ;;
         lz)   lzip -z  ;;
-        xz)   xz -zT0 ;;
+        xz)   xz -zT0  ;;
         zst)  zstd -z  ;;
     esac > "$bin_dir/$1@$repo_ver-$repo_rel.tar.${KISS_COMPRESS:=gz}"
 
