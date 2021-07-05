@@ -1204,7 +1204,7 @@ pkg_remove() {
     fi
 
     # Make a backup of the etcsums file (if it exists).
-    cp -f "$sys_db/$1/etcsums" "$mak_dir/c" 2>/dev/null || :
+    cp -f "$sys_db/$1/etcsums" "$mak_dir/c" 2>/dev/null || : > "$mak_dir/c"
 
     log "$1" "Removing package"
     pkg_remove_files < "$sys_db/$1/manifest"
@@ -1320,8 +1320,10 @@ pkg_install() {
 
     # If the package is already installed (and this is an upgrade) make a
     # backup of the manifest and etcsums files.
-    cp -f "$sys_db/$pkg_name/manifest" "$mak_dir/m" 2>/dev/null || :
-    cp -f "$sys_db/$pkg_name/etcsums"  "$mak_dir/c" 2>/dev/null || :
+    cp -f "$sys_db/$pkg_name/manifest" "$mak_dir/m" 2>/dev/null ||
+        : > "$mak_dir/m"
+    cp -f "$sys_db/$pkg_name/etcsums"  "$mak_dir/c" 2>/dev/null ||
+        : > "$mak_dir/c"
 
     # Install the package's files by iterating over its manifest.
     pkg_install_files -z "$tar_dir/$pkg_name"
