@@ -311,6 +311,51 @@ pkg_source() {
     done < "$repo_dir/sources"
 }
 
+pkg_extract_tar_hack() {
+    # This is a portable shell implementation of GNU tar's
+    # '--strip-components 1'. Use of this function denotes a
+    # performance penalty.
+    decompress "$2" > "$tmp_dir/ktar" ||
+        die "$1" "Failed to decompress $2"
+
+    tar xf "$tmp_dir/ktar" ||
+        die "$1" "Failed to extract $2"
+
+    # Iterate over all directories in the first level of the
+    # tarball's manifest.
+    tar tf "$tmp_dir/ktar" | while IFS=/ read -r dir _; do
+        # Some tarballs contain './' as the top-level directory,
+        # we need to skip these occurances.
+        [ -d "${dir#.}" ] || continue
+
+        # Move the directory to prevent naming conflicts between
+        # the child and parent.
+        mv -f "$dir" "$pid-$dir"
+
+        # First attempt to move all files up a directory level,
+        # if any files/directories fail (due to mv's lack of
+        # directory merge capability), simply do the exercise
+        # again and copy-merge the remaining files/directories.
+        #
+        # We can't use '-exec {} +' with any arguments between
+        # the '{}' and '+' as this is not POSIX. We must also
+        # use '$0' and '$@' to reference all arguments.
+        #
+        # Using only '$@' causes a single file from each
+        # invocation to be left out of the list. Weird, right?
+        find "$pid-$dir/." ! -name . -prune \
+            -exec sh -c 'mv -f "$0" "$@" .' {} + 2>/dev/null ||
+
+        find "$pid-$dir/." ! -name . -prune \
+            -exec sh -c 'cp -fRp "$0" "$@" .' {} +
+
+        # Remove the directory now that all files have been
+        # transferred out of it. This can't be a simple 'rmdir'
+        # as we may leave files in here if any were copied.
+        rm -rf "$pid-$dir"
+    done
+}
+
 pkg_extract() {
     # Extract all source archives to the build directory and copy over any
     # local repository files.
@@ -342,54 +387,7 @@ pkg_extract() {
             ;;
 
             *.tar|*.tar.??|*.tar.???|*.tar.????|*.t?z)
-                # This is a portable shell implementation of GNU tar's
-                # '--strip-components 1'.
-                decompress "$_res" > .ktar ||
-                    die "$1" "Failed to decompress $_res"
-
-                # Extract the tar archive to the current directory.
-                tar xf .ktar ||
-                    die "$1" "Failed to extract $_res"
-
-                # Iterate over all directories in the first level of the
-                # tarball's manifest.
-                tar tf .ktar | while IFS=/ read -r dir _; do
-                    # Some tarballs contain './' as the top-level directory,
-                    # we need to skip these occurances.
-                    [ -d "${dir#.}" ] || continue
-
-                    # Move the directory to prevent naming conflicts between
-                    # the child and parent.
-                    mv -f "$dir" "$pid-$dir"
-
-                    # First attempt to move all files up a directory level,
-                    # if any files/directories fail (due to mv's lack of
-                    # directory merge capability), simply do the exercise
-                    # again and copy-merge the remaining files/directories.
-                    #
-                    # We can't use '-exec {} +' with any arguments between
-                    # the '{}' and '+' as this is not POSIX. We must also
-                    # use '$0' and '$@' to reference all arguments.
-                    #
-                    # Using only '$@' causes a single file from each
-                    # invocation to be left out of the list. Weird, right?
-                    {
-                        find "$pid-$dir/." ! -name . -prune \
-                            -exec sh -c 'mv -f "$0" "$@" .' {} + 2>/dev/null ||
-
-                        find "$pid-$dir/." ! -name . -prune \
-                            -exec sh -c 'cp -fRp "$0" "$@" .' {} +
-                    }
-
-                    # Remove the directory now that all files have been
-                    # transferred out of it. This can't be a simple 'rmdir'
-                    # as we may leave files in here due to above.
-                    rm -rf "$pid-$dir"
-                done
-
-                # Clean up after ourselves and remove the temporary tar
-                # archive we've created. Not needed at all really.
-                rm -f .ktar
+                pkg_extract_tar_hack "$1" "$_res"
             ;;
 
             *.zip)
