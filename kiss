@@ -1133,7 +1133,7 @@ pkg_etc() (
 
         { sh256 "$file";            sum_new=$hash
           sh256 "$KISS_ROOT/$file"; sum_sys=$hash
-          sum_old=$(awk "NR == $i" "$mak_dir/c"); } 2>/dev/null || :
+          sum_old=$(awk "NR == $i" "$mak_dir/c"); } >/dev/null 2>&1 || :
 
         log "$pkg_name" "Doing 3-way handshake for $file"
         printf '%s\n' "Previous: ${sum_old:-null}"
