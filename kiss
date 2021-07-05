@@ -357,8 +357,7 @@ pkg_extract_tar_hack() {
 
 pkg_extract() {
     # Extract all source archives to the build directory and copy over any
-    # local repository files.
-    pkg_find "$1"
+    # local repository files. NOTE: repo_dir comes from caller.
 
     # Support packages without sources. Simply do nothing.
     [ -f "$repo_dir/sources" ] || return 0
@@ -730,8 +729,8 @@ pkg_build() {
         log "$pkg" "Building package ($((in+=1))/$#)"
 
         run_hook pre-extract "$pkg" "$pkg_dir/$pkg"
-        pkg_extract "$pkg"
         pkg_find_version "$pkg"
+        pkg_extract "$pkg"
 
         # Install built packages to a directory under the package name to
         # avoid collisions with other packages.
