@@ -390,6 +390,10 @@ pkg_extract() {
                 unzip "$_res"
             ;;
 
+            '')
+                # Blank lines / Comments.
+            ;;
+
             *)
                 cp -Rf "$_res" .
             ;;
