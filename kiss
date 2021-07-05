@@ -797,11 +797,13 @@ pkg_build() {
         fi
     done
 
-    # Intentional, globbing disabled.
-    # shellcheck disable=2046,2086
-    set -- $explicit
+    [ "$pkg_update" ] || {
+        # Intentional, globbing disabled.
+        # shellcheck disable=2046,2086
+        set -- $explicit
 
-    [ "$pkg_update" ] || prompt "Install built packages? [$*]" && (args i "$@")
+        ! prompt "Install built packages? [$*]" || (args i "$@")
+    }
 }
 
 pkg_checksums() {
