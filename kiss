@@ -277,7 +277,7 @@ pkg_source_resolve() {
         _res=/${2##/}
 
     else
-        return 1
+        die "$1" "No local file '$src'"
     fi
 
     [ "$4" ] || printf 'found %s\n' "$_res"
@@ -295,8 +295,7 @@ pkg_source() {
     mkdir -p "$src_dir/$1" && cd "$src_dir/$1"
 
     while read -r src dest || [ "$src" ]; do
-        pkg_source_resolve "$1" "$src" "$dest" "$2" ||
-            die "$1" "No local file '$src'"
+        pkg_source_resolve "$1" "$src" "$dest" "$2"
 
         case $_res in url+*)
             log "$1" "Downloading $src"
@@ -325,8 +324,7 @@ pkg_extract() {
     while read -r src dest || [ "$src" ]; do
         mkdir -p "$mak_dir/$1/$dest" && cd "$mak_dir/$1/$dest"
 
-        pkg_source_resolve "$1" "$src" "$dest" >/dev/null ||
-            die "$1" "No local file '$src'"
+        pkg_source_resolve "$1" "$src" "$dest" >/dev/null
 
         case $_res in
             git+*)
@@ -822,8 +820,7 @@ pkg_checksums() {
     pkg_find "$1"
 
     while read -r src dest || [ "$src" ]; do
-        pkg_source_resolve "$1" "$src" "$dest" >/dev/null ||
-            die "$1" "No local file '$src'"
+        pkg_source_resolve "$1" "$src" "$dest" >/dev/null
 
         case $_res in */*[!.])
             sh256 "$_res"
