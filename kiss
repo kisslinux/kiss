@@ -578,14 +578,12 @@ EOF
     fi
 }
 
-pkg_manifest() (
+pkg_manifest() {
     # Generate the package's manifest file. This is a list of each file
     # and directory inside the package. The file is used when uninstalling
     # packages, checking for package conflicts and for general debugging.
     log "$1" "Generating manifest"
 
-    # This function runs as a sub-shell to avoid having to 'cd' back to the
-    # prior directory before being able to continue.
     cd "${2:-$pkg_dir}/$1"
 
     # find: Print all files and directories and append '/' to directories.
@@ -599,7 +597,9 @@ pkg_manifest() (
     # sed:  Remove the first character in each line (./dir -> /dir) and
     #       remove all lines which only contain '.'.
     sort -r | sed '/^\.\/$/d;ss.ss' > "$PWD/$pkg_db/$1/manifest"
-)
+
+    cd "$OLDPWD"
+}
 
 pkg_manifest_validate() {
     log "$1" "Checking if manifest valid"
