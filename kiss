@@ -181,16 +181,15 @@ pkg_find_version() {
 pkg_find() {
     # Figure out which repository a package belongs to by searching for
     # directories matching the package name in $KISS_PATH/*.
-    query=$1 all=$2 what=$3 where=$4 IFS=:; set --
+    set -- "$1" "$2" "$3" "${4:-"$KISS_PATH"}"
+    IFS=:
 
-    # Both counts of word-splitting are intentional here. Firstly to split
-    # the repositories and secondly to allow for the query to be a glob.
-    #
+    # Iterate over KISS_PATH, grabbing all directories which match the query.
     # Intentional.
     # shellcheck disable=2086
-    for path in ${where:-$KISS_PATH} "${what:-$sys_db}"; do set +f
-        for path2 in "$path/"$query; do
-            test "${what:--d}" "$path2" && set -f -- "$@" "$path2"
+    for _p in $4 "${3:-$sys_db}"; do set +f
+        for _d in "$_p/"$1; do
+            test "${3:--d}" "$_d" && set -f -- "$@" "$_d"
         done
     done
 
@@ -198,11 +197,11 @@ pkg_find() {
 
     # A package may also not be found due to a repository not being readable
     # by the current user. Either way, we need to die here.
-    [ "$1" ] || die "Package '$query' not in any repository"
+    [ "$5" ] || die "Package '$1' not in any repository"
 
     # Show all search results if called from 'kiss search', else store the
     # value in a variable.
-    [ "$all" ] && printf '%s\n' "$@" || repo_dir=$1
+    [ "$2" ] && { shift 4; printf '%s\n' "$@"; } || repo_dir=$5
 }
 
 pkg_list() {
