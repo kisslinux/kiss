@@ -151,7 +151,8 @@ sh256() {
             digest -a sha256        "$1"
         ) 2>/dev/null
 
-        printf '%s\n' "${hash%% *}"
+        hash=${hash%% *}
+        printf '%s\n' "$hash"
     fi
 }
 
@@ -1083,10 +1084,10 @@ pkg_remove_files() {
     # functions allows us to stop duplicating code.
     while read -r file; do
         case $file in /etc/?*[!/])
-            sum_sys=$(sh256 "$KISS_ROOT/$file")
-            sum_old=$(grep -F "$sum_sys" "$mak_dir/c")
+            sh256 "$KISS_ROOT/$file" >/dev/null
+            sum_old=$(grep -F "$hash" "$mak_dir/c")
 
-            [ "$sum_sys" = "$sum_old" ] || {
+            [ "$hash" = "$sum_old" ] || {
                 printf 'Skipping %s (modified)\n' "$file"
                 continue
             }
@@ -1130,8 +1131,8 @@ pkg_etc() (
     find etc ! -type d | sort | while read -r file; do
         i=$((i + 1))
 
-        { sum_new=$(sh256 "$file")
-          sum_sys=$(sh256 "$KISS_ROOT/$file")
+        { sh256 "$file";            sum_new=$hash
+          sh256 "$KISS_ROOT/$file"; sum_sys=$hash
           sum_old=$(awk "NR == $i" "$mak_dir/c"); } 2>/dev/null || :
 
         log "$pkg_name" "Doing 3-way handshake for $file"
