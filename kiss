@@ -571,11 +571,13 @@ EOF
     done | sort -uk1,1 depends - > "$tmp_dir/.fixdeps"
 
     # If the depends file was modified, show a diff and replace it.
-    ! [ -s "$tmp_dir/.fixdeps" ] || {
+    if [ -s "$tmp_dir/.fixdeps" ]; then
         diff -U 3 depends - < "$tmp_dir/.fixdeps" 2>/dev/null || :
         mv -f "$tmp_dir/.fixdeps" depends
         pkg_manifest "${PWD##*/}"
-    }
+    else
+        rm -f depends
+    fi
 }
 
 pkg_manifest() (
