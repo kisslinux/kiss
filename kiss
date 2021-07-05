@@ -187,9 +187,9 @@ pkg_find() {
     # Iterate over KISS_PATH, grabbing all directories which match the query.
     # Intentional.
     # shellcheck disable=2086
-    for _p in $4 "${3:-$sys_db}"; do set +f
-        for _d in "$_p/"$1; do
-            test "${3:--d}" "$_d" && set -f -- "$@" "$_d"
+    for _find_path in $4 "${3:-$sys_db}"; do set +f
+        for _find_pkg in "$_find_path/"$1; do
+            test "${3:--d}" "$_find_pkg" && set -f -- "$@" "$_find_pkg"
         done
     done
 
