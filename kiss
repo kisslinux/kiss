@@ -527,43 +527,41 @@ pkg_fix_deps() {
             continue
 
         while read -r line || [ "$line" ]; do
-            case $line in
-                *NEEDED*\[*\] | *'=>'*)
-                    # readelf: 0x0000 (NEEDED) Shared library: [libjson-c.so.5]
-                    line=${line##*\[}
-                    line=${line%%\]*}
+            case $line in *NEEDED*\[*\] | *'=>'*)
+                # readelf: 0x0000 (NEEDED) Shared library: [libjson-c.so.5]
+                line=${line##*\[}
+                line=${line%%\]*}
 
-                    # Resolve library path.
-                    # ldd: libjson-c.so.5 => /lib/libjson-c.so.5 ...
-                    case $cmd_elf in
-                        *readelf) line=${ldd_buf#*"	$line => "} ;;
-                        *)        line=${line##*=> } ;;
-                    esac
-                    line=${line%% *}
+                # Resolve library path.
+                # ldd: libjson-c.so.5 => /lib/libjson-c.so.5 ...
+                case $cmd_elf in
+                    *readelf) line=${ldd_buf#*"	$line => "} ;;
+                    *)        line=${line##*=> } ;;
+                esac
+                line=${line%% *}
 
-                    # Skip files owned by libc and POSIX.
-                    case ${line##*/} in
-                        ld-*           |\
-                        lib[cm].so*    |\
-                        libdl.so*      |\
-                        libpthread.so* |\
-                        librt.so*      |\
-                        libtrace.so*   |\
-                        libxnet.so*    |\
-                        ldd)
+                # Skip files owned by libc and POSIX.
+                case ${line##*/} in
+                    ld-*           |\
+                    lib[cm].so*    |\
+                    libdl.so*      |\
+                    libpthread.so* |\
+                    librt.so*      |\
+                    libtrace.so*   |\
+                    libxnet.so*    |\
+                    ldd)
+                        continue
+                    ;;
+
+                    *)
+                        # Skip file if owned by current package
+                        pkg_owner -l "/${line#/}\$" "$PWD/manifest" &&
                             continue
-                        ;;
 
-                        *)
-                            # Skip file if owned by current package
-                            pkg_owner -l "/${line#/}\$" "$PWD/manifest" &&
-                                continue
-
-                            pkg_owner -l "/${line#/}\$" "$@" &&
-                                printf '%s\n' "$pkg_owner"
-                        ;;
-                    esac
-                ;;
+                        pkg_owner -l "/${line#/}\$" "$@" &&
+                            printf '%s\n' "$pkg_owner"
+                    ;;
+                esac
             esac
         done <<EOF || :
 ${elf_buf:-"$ldd_buf"}
