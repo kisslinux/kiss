@@ -447,9 +447,9 @@ pkg_order() {
 
     for pkg do case $pkg in
         /*.tar.*) deps="$deps $pkg" ;;
-        *.tar.*)  deps="$deps $ppwd/$pkg" ;;
-        */*)      die "Invalid argument: '/!*[]' ($pkg)" ;;
-        *)        pkg_depends "$pkg" raw
+         *.tar.*) deps="$deps $ppwd/$pkg" ;;
+             */*) die "Invalid argument: '/!*[]' ($pkg)" ;;
+               *) pkg_depends "$pkg" raw
     esac done
 
     # Filter the list, only keeping explicit packages. The purpose of these
@@ -519,20 +519,14 @@ pkg_fix_deps() {
 
     find "$pkg_dir/${PWD##*/}/" -type f 2>/dev/null |
 
-    while read -r file; do
-        ldd_buf=$(ldd -- "$file" 2>/dev/null) || :
+    while read -r _fix_file; do
+        ldd_buf=$(ldd -- "$_fix_file" 2>/dev/null) ||
+            continue
 
-        case $cmd_elf in
-            *readelf)
-                "$cmd_elf" -d "$file"
-            ;;
+        elf_buf=${cmd_elf:+"$("$cmd_elf" -d "$_fix_file" 2>/dev/null)"} ||
+            continue
 
-            *)
-                printf '%s\n' "$ldd_buf"
-            ;;
-        esac 2>/dev/null |
-
-        while read -r line; do
+        while read -r line || [ "$line" ]; do
             case $line in
                 *NEEDED*\[*\] | *'=>'*)
                     # readelf: 0x0000 (NEEDED) Shared library: [libjson-c.so.5]
@@ -571,20 +565,17 @@ pkg_fix_deps() {
                     esac
                 ;;
             esac
-        done || :
-    done |
+        done <<EOF || :
+${elf_buf:-"$ldd_buf"}
+EOF
+    done | sort -uk1,1 depends - > "$tmp_dir/.fixdeps"
 
-    sort -uk1,1 depends - > "$tmp_dir/.fixdeps"
-
-    diff -U 3 depends - < "$tmp_dir/.fixdeps" || :
-
-    mv -f "$tmp_dir/.fixdeps" depends
-
-    if [ -s depends ]; then
+    # If the depends file was modified, show a diff and replace it.
+    ! [ -s "$tmp_dir/.fixdeps" ] || {
+        diff -U 3 depends - < "$tmp_dir/.fixdeps" 2>/dev/null || :
+        mv -f "$tmp_dir/.fixdeps" depends
         pkg_manifest "${PWD##*/}"
-    else
-        rm -f depends
-    fi
+    }
 }
 
 pkg_manifest() (
@@ -1237,7 +1228,7 @@ pkg_installable() {
 
     while read -r dep dep_type || [ "$dep" ]; do
         case $dep-$dep_type in
-            *-\#)
+            \#*-*)
                 continue
             ;;
 
