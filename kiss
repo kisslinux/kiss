@@ -300,9 +300,7 @@ pkg_source() {
             log "$1" "Downloading $src"
             mkdir -p "$PWD/$dest"
 
-            # Intentional, globbing disabled.
-            # shellcheck disable=2046,2086
-            ${KISS_DL:-curl -fLo} "$_des" "$src" || {
+            curl -fLo "$_des" "$src" || {
                 rm -f "$_des"
                 die "$1" "Failed to download $src"
             }
