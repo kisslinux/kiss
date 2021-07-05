@@ -357,7 +357,9 @@ pkg_extract_tar_hack() {
 
 pkg_extract() {
     # Extract all source archives to the build directory and copy over any
-    # local repository files. NOTE: repo_dir comes from caller.
+    # local repository files.
+    #
+    # NOTE: repo_dir comes from caller.
 
     # Support packages without sources. Simply do nothing.
     [ -f "$repo_dir/sources" ] || return 0
@@ -632,9 +634,9 @@ pkg_etcsums() {
 pkg_tar() (
     # Create a tarball from the built package's files. This tarball also
     # contains the package's database entry.
+    #
+    # NOTE: repo_ comes from caller.
     log "$1" "Creating tarball"
-
-    pkg_find_version "$1"
 
     # Use 'cd' to avoid needing tar's '-C' flag which may not be portable
     # across implementations.
