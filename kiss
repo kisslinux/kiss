@@ -27,7 +27,7 @@
 
 log() {
     printf '%b%s %b%s%b %s\n' \
-        "$lcol" "${3:-->}" "${lclr}${2:+$lcol2}" "$1" "$lclr" "$2" >&2
+        "$c1" "${3:-->}" "${c3}${2:+$c2}" "$1" "$c3" "$2" >&2
 }
 
 war() {
@@ -1659,7 +1659,7 @@ args() {
             # Print each extension, grab its description from the second line
             # in the file and align the output based on the above max.
             for path do
-                printf "%b->%b %-${max}s " "$lcol" "$lclr" "${path#*/kiss-}"
+                printf "%b->%b %-${max}s " "$c1" "$c3" "${path#*/kiss-}"
                 sed -n 's/^# *//;2p' "$path"
             done >&2
         ;;
@@ -1713,9 +1713,10 @@ main() {
     # Globally disable globbing and enable exit-on-error.
     set -ef
 
-    # Allow the user to disable colors in output via an environment variable.
-    # Check this once so as to not slow down printing.
-    [ "$KISS_COLOR" = 0 ] || lcol='\033[1;33m' lcol2='\033[1;34m' lclr='\033[m'
+    # Color can be disabled via the environment variable KISS_COLOR. Colors are
+    # also automatically disabled if output is being used in a pipe/redirection.
+    [ "$KISS_COLOR" = 0 ] || ! [ -t 2 ] ||
+        c1='\033[1;33m' c2='\033[1;34m' c3='\033[m'
 
     # Store the original working directory to ensure that relative paths
     # passed by the user on the command-line properly resolve to locations
