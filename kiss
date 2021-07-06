@@ -449,13 +449,12 @@ pkg_order() {
         /*.tar.*) deps="$deps $pkg" ;;
          *.tar.*) deps="$deps $ppwd/$pkg" ;;
              */*) die "Invalid argument: '/!*[]' ($pkg)" ;;
-               *) pkg_depends "$pkg" raw
+               *) pkg_lint "$pkg"; pkg_depends "$pkg" raw
     esac done
 
     # Filter the list, only keeping explicit packages. The purpose of these
     # two loops is to order the argument list based on dependence.
     for pkg in $deps; do case " $* " in *" $pkg "* | *" ${pkg##"$ppwd/"} "*)
-        pkg_lint "$pkg"
         order="$order $pkg"
         redro="$pkg $redro"
     esac done
