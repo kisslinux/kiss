@@ -1186,7 +1186,7 @@ pkg_remove() {
 
     if [ -x "$sys_db/$1/pre-remove" ]; then
         log "$1" "Running pre-remove script"
-        "$sys_db/$1/pre-remove" || :
+        "$sys_db/$1/pre-remove"
     fi
 
     # Make a backup of the etcsums file (if it exists).
