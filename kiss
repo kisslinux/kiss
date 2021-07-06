@@ -1516,25 +1516,23 @@ args() {
             esac
         ;;
 
-        b|build|c|checksum|d|download|l|list|r|remove)
-            case $* in */*|*\**|*\!*|*\[*|*\]*)
-                die "Arguments contain invalid characters: '/!*[]' ($*)"
+        b|build|c|checksum|d|download|i|install|l|list|r|remove)
+            case ${action%%"${action#?}"}-$* in
+                i-*[\*\!\[\]]*)
+                    die "Arguments contain invalid characters: '!*[]' ($*)"
+                ;;
+
+                [!i]-*[\*\!\[\]/]*)
+                    die "Arguments contain invalid characters: '!*[]/' ($*)"
+                ;;
+
+                [!l]-)
+                    # Use basename of current directory as package.
+                    export KISS_PATH=${PWD%/*}:$KISS_PATH
+                    set -- "${PWD##*/}"
+                ;;
             esac
         ;;
-
-        i|install)
-            case $* in *\**|*\!*|*\[*|*\]*)
-                die "Arguments contain invalid characters: '!*[]' ($*)"
-            esac
-        ;;
-    esac
-
-    # CRUX style usage using the current directory as the name of the package
-    # to be operated on. This needs to sit before the 'as_root()' calls as
-    # they reset the current working directory during their invocations.
-    [ "$1" ] || case $action in b|build|c|checksum|d|download|i|install|r|remove)
-        export KISS_PATH=${PWD%/*}:$KISS_PATH
-        set -- "${PWD##*/}"
     esac
 
     # Rerun the script as root with a fixed environment if needed. We sadly
