@@ -422,7 +422,7 @@ pkg_depends() {
             die "Circular dependency detected $1 <> ${4##* }"
         esac
 
-        pkg_find "$1"
+        "${6:-pkg_find}" "$1"
 
         ! [ -e "$repo_dir/depends" ] ||
 
@@ -430,7 +430,7 @@ pkg_depends() {
         while read -r dep dep_type || [ "$dep" ]; do
             [ "${dep##\#*}" ] || continue
 
-            pkg_depends "$dep" '' "$3" "$4 $1" "$dep_type"
+            pkg_depends "$dep" '' "$3" "$4 $1" "$dep_type" "$6"
         done < "$repo_dir/depends" || :
 
         # Add parent to dependencies list.
@@ -455,6 +455,7 @@ pkg_order() {
     # Filter the list, only keeping explicit packages. The purpose of these
     # two loops is to order the argument list based on dependence.
     for pkg in $deps; do case " $* " in *" $pkg "* | *" ${pkg##"$ppwd/"} "*)
+        pkg_lint "$pkg"
         order="$order $pkg"
         redro="$pkg $redro"
     esac done
@@ -666,7 +667,7 @@ pkg_build() {
     #
     # This also resolves all dependencies and stores the result in '$deps'.
     for pkg do
-        pkg_depends "$pkg" expl filter
+        pkg_depends "$pkg" expl filter '' '' pkg_lint
         explicit="$explicit $pkg "
     done
 
@@ -693,10 +694,6 @@ pkg_build() {
 
     # Ask for confirmation if extra packages need to be built.
     [ "$#" -ne "$explicit_cnt" ] || [ "$pkg_update" ] && prompt
-
-    for pkg do
-        pkg_lint "$pkg"
-    done
 
     log "Checking for pre-built dependencies"
 
@@ -1585,7 +1582,6 @@ args() {
         ;;
 
         c|checksum)
-            for pkg do pkg_lint   "$pkg"; done
             for pkg do pkg_source "$pkg" c; done
             for pkg do
                 pkg_find "$pkg"
