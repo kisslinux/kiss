@@ -121,6 +121,14 @@ run_hook() {
     esac
 }
 
+run_hook_pkg() {
+    # Run a hook from the package's database files.
+    if [ -x "$sys_db/$2/$1" ]; then
+        log "$2" "Running $1 hook"
+        "$sys_db/$2/$1"
+    fi
+}
+
 decompress() {
     case $1 in
         *.bz2)      bzip2 -d ;;
@@ -1184,10 +1192,8 @@ pkg_remove() {
     # incomplete package installed.
     trap '' INT
 
-    if [ -x "$sys_db/$1/pre-remove" ]; then
-        log "$1" "Running pre-remove hook"
-        "$sys_db/$1/pre-remove"
-    fi
+    run_hook_pkg pre-remove "$1"
+    run_hook     pre-remove "$1" "$sys_db/$1"
 
     # Make a backup of the etcsums file (if it exists).
     cp -f "$sys_db/$1/etcsums" "$mak_dir/c" 2>/dev/null || : > "$mak_dir/c"
@@ -1342,12 +1348,8 @@ pkg_install() {
     # need to block 'Ctrl+C'.
     trap pkg_clean EXIT INT
 
-    if [ -x "$sys_db/$pkg_name/post-install" ]; then
-        log "$pkg_name" "Running post-install hook"
-        "$sys_db/$pkg_name/post-install"
-    fi
-
-    run_hook post-install "$pkg_name" "$sys_db/$pkg_name"
+    run_hook_pkg post-install "$pkg_name"
+    run_hook     post-install "$pkg_name" "$sys_db/$pkg_name"
 
     log "$pkg_name" "Installed successfully"
 }
