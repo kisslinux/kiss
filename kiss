@@ -1521,16 +1521,14 @@ args() {
                     # Use basename of current directory as package.
                     set -- "${PWD##*/}"
                 ;;
-
-                [!l]-*)
-                    # Order the argument list based on dependence.
-                    pkg_order "$@"
-
-                    # Intentional, globbing disabled.
-                    # shellcheck disable=2046,2086
-                    set -- $order
-                ;;
             esac
+
+            # Order the argument list based on dependence.
+            pkg_order "$@"
+
+            # Intentional, globbing disabled.
+            # shellcheck disable=2046,2086
+            set -- $order
         ;;
     esac
 
