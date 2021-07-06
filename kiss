@@ -158,18 +158,15 @@ sh256() {
 }
 
 pkg_lint() {
-    log "$1" "Checking repository files"
-
     pkg_find_version "$1"
-    cd "$repo_dir"
 
     [ "$repo_rel" ] ||
         die "$1" "Release field not found in version file"
 
-    [ -x build ] ||
+    [ -x "$repo_dir/build" ] ||
         die "$1" "Build file not found or not executable"
 
-    [ -f sources ] ||
+    [ -f "$repo_dir/sources" ] ||
         war "$1" "Sources file not found"
 }
 
