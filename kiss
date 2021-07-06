@@ -725,55 +725,9 @@ pkg_build_all() {
 
         pkg_find_version "$pkg"
         run_hook pre-extract "$pkg" "$pkg_dir/$pkg"
-        pkg_extract "$pkg"
 
-        # Install built packages to a directory under the package name to
-        # avoid collisions with other packages.
-        mkdir -p "$pkg_dir/$pkg/$pkg_db" "$mak_dir/$pkg"
-        cd "$mak_dir/$pkg"
-
-        log "$pkg" "Starting build"
-        run_hook pre-build "$pkg" "$pkg_dir/$pkg"
-
-        # Call the build script, log the output to the terminal and to a file.
-        # There's no PIPEFAIL in POSIX shelll so we must resort to tricks like
-        # killing the script ourselves.
-        { "$repo_dir/build" "$pkg_dir/$pkg" "$repo_ver" 2>&1 || {
-            log "$pkg" "Build failed"
-            log "$pkg" "Log stored to $log_dir/$pkg-$time-$pid"
-            run_hook build-fail "$pkg" "$pkg_dir/$pkg"
-            pkg_clean
-            kill 0
-        } } | tee "$log_dir/$pkg-$time-$pid"
-
-        # Delete the log file if the build succeeded to prevent the directory
-        # from filling very quickly with useless logs.
-        [ "$KISS_KEEPLOG" = 1 ] || rm -f "$log_dir/$pkg-$time-$pid"
-
-        # Copy the repository files to the package directory. This acts as the
-        # database entry.
-        cp -LRf "$repo_dir" "$pkg_dir/$pkg/$pkg_db/"
-
-        log "$pkg" "Successfully built package"
-        run_hook post-build "$pkg" "$pkg_dir/$pkg"
-
-        # Remove all .la files from the packages. They're unneeded and cause
-        # issues when a package stops providing one.
-        find "$pkg_dir/$pkg/usr/lib" \
-            -name \*.la -exec rm -f {} + 2>/dev/null || :
-
-        # Remove this unneeded file from all packages as it is an endless
-        # source of conflicts. This is used with info pages we we do not support.
-        rm -f "$pkg_dir/$pkg/usr/lib/charset.alias"
-
-        # Create the manifest file early and make it empty. This ensures that
-        # the manifest is added to the manifest.
-        : > "$pkg_dir/$pkg/$pkg_db/$pkg/manifest"
-
-        # If the package contains '/etc', add a file called 'etcsums' to the
-        # manifest. See comment directly above.
-        [ -d "$pkg_dir/$pkg/etc" ] && : > "$pkg_dir/$pkg/$pkg_db/$pkg/etcsums"
-
+        pkg_extract  "$pkg"
+        pkg_build    "$pkg"
         pkg_strip    "$pkg"
         pkg_manifest "$pkg"
         pkg_fix_deps "$pkg"
@@ -796,6 +750,48 @@ pkg_build_all() {
 
         ! prompt "Install built packages? [$*]" || (args i "$@")
     }
+}
+
+pkg_build() {
+    # Install built packages to a directory under the package name to
+    # avoid collisions with other packages.
+    mkdir -p "$pkg_dir/$1/$pkg_db" "$mak_dir/$1" && cd "$mak_dir/$1"
+
+    log "$1" "Starting build"
+    run_hook pre-build "$1" "$pkg_dir/$1"
+
+    # Call the build script, log the output to the terminal and to a file.
+    # There's no PIPEFAIL in POSIX shell so we must resort to tricks like kill.
+    { "$repo_dir/build" "$pkg_dir/$1" "$repo_ver" 2>&1 || {
+        log "$1" "Build failed"
+        log "$1" "Log stored to $log_dir/$1-$time-$pid"
+        run_hook build-fail "$pkg" "$pkg_dir/$1"
+        pkg_clean
+        kill 0
+    } } | tee "$log_dir/$1-$time-$pid"
+
+    # Delete the log file if the build succeeded to prevent the directory
+    # from filling very quickly with useless logs.
+    [ "$KISS_KEEPLOG" = 1 ] || rm -f "$log_dir/$1-$time-$pid"
+
+    # Copy the repository files to the package directory.
+    cp -LRf "$repo_dir" "$pkg_dir/$1/$pkg_db/"
+
+    log "$1" "Successfully built package"
+    run_hook post-build "$1" "$pkg_dir/$1"
+
+    # Remove all .la files from package.
+    find "$pkg_dir/$1/usr/lib" \
+        -name \*.la -exec rm -f {} + 2>/dev/null || :
+
+    # Remove unneeded file from all packages.
+    rm -f "$pkg_dir/$1/usr/lib/charset.alias"
+
+    # Ensure manifest is added to manfiest.
+    : > "$pkg_dir/$1/$pkg_db/$1/manifest"
+
+    # Ensure etcsums is added to manifest if /etc/ exists in package.
+    ! [ -d "$pkg_dir/$1/etc" ] || : > "$pkg_dir/$1/$pkg_db/$1/etcsums"
 }
 
 pkg_checksums() {
