@@ -704,7 +704,9 @@ pkg_build() {
     # Ask for confirmation if extra packages need to be built.
     [ "$#" -ne "$explicit_cnt" ] || [ "$pkg_update" ] && prompt
 
-    for pkg do pkg_lint "$pkg"; done
+    for pkg do
+        pkg_lint "$pkg"
+    done
 
     log "Checking for pre-built dependencies"
 
