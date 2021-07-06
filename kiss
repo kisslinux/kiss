@@ -1600,18 +1600,13 @@ args() {
             done
         ;;
 
-        i|install|r|remove)
-            case $action in
-                i*) for pkg do pkg_install "$pkg"; done ;;
-                r*) for pkg in $redro; do pkg_remove  "$pkg"; done
-            esac
-        ;;
-
+        i|install)  for pkg do pkg_install "$pkg"; done ;;
         b|build)    pkg_build_all "${@:?No packages installed}" ;;
         d|download) for pkg do pkg_source "$pkg"; done ;;
         l|list)     pkg_list "$@" ;;
-        u|update)   pkg_updates ;;
+        r|remove)   for pkg in $redro; do pkg_remove "$pkg"; done ;;
         s|search)   for pkg do pkg_find "$pkg" all; done ;;
+        u|update)   pkg_updates ;;
         v|version)  printf '5.4.7\n' ;;
 
         '')
