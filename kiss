@@ -528,11 +528,8 @@ pkg_fix_deps() {
     find "$pkg_dir/${PWD##*/}/" -type f 2>/dev/null |
 
     while read -r _fix_file; do
-        ldd_buf=$(ldd -- "$_fix_file" 2>/dev/null) ||
-            continue
-
-        elf_buf=${cmd_elf:+"$("$cmd_elf" -d "$_fix_file" 2>/dev/null)"} ||
-            continue
+        ldd_buf=$(ldd -- "$_fix_file" 2>/dev/null)        || continue
+        elf_buf=$("$cmd_elf" -d "$_fix_file" 2>/dev/null) || elf_buf=$ldd_buf
 
         while read -r line || [ "$line" ]; do
             case $line in *NEEDED*\[*\] | *'=>'*)
@@ -572,7 +569,7 @@ pkg_fix_deps() {
                 esac
             esac
         done <<EOF || :
-${elf_buf:-"$ldd_buf"}
+$elf_buf
 EOF
     done | sort -uk1,1 depends - > "$tmp_dir/.fixdeps"
 
@@ -1493,19 +1490,19 @@ args() {
     # not be used here as they would conflict with kiss extensions.
     case $action in
         a|alternatives)
-            case $1 in *\**|*\!*|*\[*|*\]*|*' '*|*/*)
-                die "Invalid argument: '!*[] /' ($1)"
+            case $1 in *\**|*\!*|*\[*|*\]*|*/*)
+                die "Invalid argument: '!*[]/' ($1)"
             esac
         ;;
 
         b|build|c|checksum|d|download|i|install|l|list|r|remove)
             case ${action%%"${action#?}"}-$* in
-                i-*\!*|i-*\**|i-*\[*|i-*\]*|i-*' '*)
-                    die "Arguments contain invalid characters: '!*[] ' ($*)"
+                i-*\!*|i-*\**|i-*\[*|i-*\]*)
+                    die "Arguments contain invalid characters: '!*[]' ($*)"
                 ;;
 
-                [!i]-*\!*|[!i]-*\**|[!i]-*\[*|[!i]-*\]*|[!i]-*' '*|[!i]-*/*)
-                    die "Arguments contain invalid characters: '!*[] /' ($*)"
+                [!i]-*\!*|[!i]-*\**|[!i]-*\[*|[!i]-*\]*|[!i]-*/*)
+                    die "Arguments contain invalid characters: '!*[]/' ($*)"
                 ;;
 
                 [!l]-)
@@ -1715,7 +1712,7 @@ main() {
     )"} || cmd_su=su
 
     # Figure out which utility is available to dump elf information.
-    cmd_elf=${KISS_ELF:="$(
+    cmd_elf=${KISS_ELF:-"$(
         command -v readelf      ||
         command -v eu-readelf   ||
         command -v llvm-readelf
