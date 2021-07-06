@@ -1185,7 +1185,7 @@ pkg_remove() {
     trap '' INT
 
     if [ -x "$sys_db/$1/pre-remove" ]; then
-        log "$1" "Running pre-remove script"
+        log "$1" "Running pre-remove hook"
         "$sys_db/$1/pre-remove"
     fi
 
