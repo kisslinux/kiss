@@ -656,7 +656,7 @@ pkg_tar() (
     run_hook post-package "$1"
 )
 
-pkg_build() {
+pkg_build_all() {
     # Build packages and turn them into packaged tarballs.
     # Order the argument list and filter out duplicates.
     log "Resolving dependencies"
@@ -1466,7 +1466,7 @@ pkg_updates() {
 
             prompt
 
-            pkg_build kiss
+            pkg_build_all kiss
             args i kiss
 
             log "Updated the package manager"
@@ -1484,7 +1484,7 @@ pkg_updates() {
 
             # Intentional, globbing disabled.
             # shellcheck disable=2046,2086
-            pkg_build $order
+            pkg_build_all $order
 
             log "Updated all packages"
         ;;
@@ -1611,7 +1611,7 @@ args() {
             esac
         ;;
 
-        b|build)    pkg_build "${@:?No packages installed}" ;;
+        b|build)    pkg_build_all "${@:?No packages installed}" ;;
         d|download) for pkg do pkg_source "$pkg"; done ;;
         l|list)     pkg_list "$@" ;;
         u|update)   pkg_updates ;;
