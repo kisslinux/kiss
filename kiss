@@ -426,24 +426,21 @@ pkg_depends() {
             die "Circular dependency detected $1 <> ${4##* }"
         esac
 
-        # Skip traversing over depends files of make dependencies which exist
-        # in the binary cache.
-        if [ "$5" != "make" ] || { [ "$5" = "make" ] && ! pkg_cache "$1"; }; then
-            pkg_find "$1"
+        pkg_find "$1"
 
-            ! [ -e "$repo_dir/depends" ] ||
+        ! [ -e "$repo_dir/depends" ] ||
 
-            # Recurse through the dependencies of the child packages.
-            while read -r dep dep_type || [ "$dep" ]; do
-                [ "${dep##\#*}" ] || continue
+        # Recurse through the dependencies of the child packages.
+        while read -r dep dep_type || [ "$dep" ]; do
+            [ "${dep##\#*}" ] || continue
 
-                pkg_depends "$dep" '' "$3" "$4 $1" "$dep_type"
-            done < "$repo_dir/depends" || :
+            pkg_depends "$dep" '' "$3" "$4 $1" "$dep_type"
+        done < "$repo_dir/depends" || :
+
+        # Add parent to dependencies list.
+        if [ "$2" != expl ] || { [ "$5" = make ] && ! pkg_cache "$1"; }; then
+            deps="$deps $1"
         fi
-
-        # After child dependencies are added to the list,
-        # add the package which depends on them.
-        [ "$2" = explicit ] || deps="$deps $1"
     }
 }
 
@@ -679,7 +676,7 @@ pkg_build() {
     #
     # This also resolves all dependencies and stores the result in '$deps'.
     for pkg do
-        pkg_depends "$pkg" explicit filter
+        pkg_depends "$pkg" expl filter
         explicit="$explicit $pkg "
     done
 
