@@ -658,12 +658,6 @@ pkg_tar() (
 pkg_build() {
     # Build packages and turn them into packaged tarballs.
     # Order the argument list and filter out duplicates.
-    pkg_order "$@"
-
-    # Intentional, globbing disabled.
-    # shellcheck disable=2046,2086
-    set -- $order
-
     log "Resolving dependencies"
 
     # Mark packages passed on the command-line separately from those
@@ -1489,7 +1483,12 @@ pkg_updates() {
         *)
             log "Packages to update: $*"
             pkg_update=1
-            pkg_build "$@"
+            pkg_order "$@"
+
+            # Intentional, globbing disabled.
+            # shellcheck disable=2046,2086
+            pkg_build $order
+
             log "Updated all packages"
         ;;
     esac
@@ -1527,9 +1526,20 @@ args() {
                 ;;
 
                 [!l]-)
-                    # Use basename of current directory as package.
+                    # Add parent directory to repository list.
                     export KISS_PATH=${PWD%/*}:$KISS_PATH
+
+                    # Use basename of current directory as package.
                     set -- "${PWD##*/}"
+                ;;
+
+                [!l]-*)
+                    # Order the argument list based on dependence.
+                    pkg_order "$@"
+
+                    # Intentional, globbing disabled.
+                    # shellcheck disable=2046,2086
+                    set -- $order
                 ;;
             esac
         ;;
@@ -1599,10 +1609,8 @@ args() {
         ;;
 
         i|install|r|remove)
-            pkg_order "$@"
-
             case $action in
-                i*) for pkg in $order; do pkg_install "$pkg"; done ;;
+                i*) for pkg do pkg_install "$pkg"; done ;;
                 r*) for pkg in $redro; do pkg_remove  "$pkg"; done
             esac
         ;;
