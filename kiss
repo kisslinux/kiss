@@ -736,8 +736,8 @@ pkg_build() {
     for pkg do
         log "$pkg" "Building package ($((in+=1))/$#)"
 
-        run_hook pre-extract "$pkg" "$pkg_dir/$pkg"
         pkg_find_version "$pkg"
+        run_hook pre-extract "$pkg" "$pkg_dir/$pkg"
         pkg_extract "$pkg"
 
         # Install built packages to a directory under the package name to
