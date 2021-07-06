@@ -771,8 +771,7 @@ pkg_build() {
         run_hook post-build "$pkg" "$pkg_dir/$pkg"
 
         # Remove all .la files from the packages. They're unneeded and cause
-        # issues when a package stops providing one. This recently caused an
-        # issue with harfbuzz (See: 05096e5a4dc6db5d202342f538d067d87ae7135e).
+        # issues when a package stops providing one.
         find "$pkg_dir/$pkg/usr/lib" \
             -name \*.la -exec rm -f {} + 2>/dev/null || :
 
