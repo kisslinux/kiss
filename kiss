@@ -446,9 +446,9 @@ pkg_order() {
     unset order redro deps
 
     for pkg do case $pkg in
-        /*.tar.*) deps="$deps $pkg" ;;
-         *.tar.*) deps="$deps $ppwd/$pkg" ;;
-             */*) die "Invalid argument: '/!*[]' ($pkg)" ;;
+      /*@*.tar.*) deps="$deps $pkg" ;;
+       *@*.tar.*) deps="$deps $ppwd/$pkg" ;;
+             */*) die "Not a package' ($pkg)" ;;
                *) pkg_lint "$pkg"; pkg_depends "$pkg" raw
     esac done
 
