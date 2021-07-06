@@ -173,7 +173,7 @@ pkg_lint() {
 pkg_find_version() {
     pkg_find "$1"
 
-    read -r repo_ver repo_rel < "$repo_dir/version" ||
+    read -r repo_ver repo_rel 2>/dev/null < "$repo_dir/version" ||
         die "$1" "Failed to read version file ($repo_dir/version)"
 }
 
