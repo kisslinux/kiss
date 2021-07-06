@@ -661,11 +661,8 @@ pkg_build_all() {
     # Order the argument list and filter out duplicates.
     log "Resolving dependencies"
 
-    # Mark packages passed on the command-line separately from those
-    # detected as dependencies. We need to treat explicitly passed packages
-    # differently from those pulled in as dependencies.
-    #
-    # This also resolves all dependencies and stores the result in '$deps'.
+    # Mark packages passed on the command-line explicit.
+    # Also resolve dependencies for all explicit packages.
     for pkg do
         pkg_depends "$pkg" expl filter '' '' pkg_lint
         explicit="$explicit $pkg "
@@ -678,8 +675,7 @@ pkg_build_all() {
     set --
 
     # If an explicit package is a dependency of another explicit package,
-    # remove it from the explicit list as it needs to be installed as a
-    # dependency.
+    # remove it from the explicit list.
     for pkg in $explicit; do
         contains "$deps" "$pkg" || set -- "$@" "$pkg"
     done
