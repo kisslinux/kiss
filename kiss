@@ -409,10 +409,9 @@ pkg_depends() {
     # Resolve all dependencies and generate an ordered list. The deepest
     # dependencies are listed first and then the parents in reverse order.
     contains "$deps" "$1" || {
-        # Filter out non-explicit, aleady installed dependencies.
-        if [ "$3" ] && [ -z "$2" ] && pkg_list "$1" >/dev/null 2>&1; then
-            return
-        fi
+        # Filter out non-explicit, already installed packages.
+        [ -z "$3" ] || [ "$2" ] || contains "$explicit" "$1" ||
+            ! pkg_list "$1" >/dev/null 2>&1 || return
 
         # Detect circular dependencies and bail out.
         # Looks for multiple repeating patterns of (dep dep_parent) (5 is max).
@@ -693,6 +692,7 @@ pkg_build() {
         contains "$deps" "$pkg" || set -- "$@" "$pkg"
     done
     explicit_cnt=$#
+    explicit=$*
 
     log "Building: explicit: $*${deps:+, implicit: ${deps## }}"
 
