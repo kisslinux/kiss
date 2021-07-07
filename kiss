@@ -1257,8 +1257,7 @@ pkg_install() {
     # anything incorrect.
     #
     # This is the better method as it is "seamless". An update to busybox won't
-    # create a window in which there is no access to all of its utilities to
-    # give an example.
+    # create a window in which there is no access to all of its utilities.
 
     # Install can also take the full path to a tarball. We don't need to check
     # the repository if this is the case.
@@ -1332,9 +1331,6 @@ pkg_install() {
     # This is the aforementioned step removing any files from the old version of
     # the package if the installation is an update. Each file type has to be
     # specially handled to ensure no system breakage occurs.
-    #
-    # Files in /etc/ are skipped entirely as they'll be handled via a 3-way
-    # checksum system due to the nature of their existence.
     grep -vFxf "$sys_db/$pkg_name/manifest" "$mak_dir/m" 2>/dev/null |
     pkg_remove_files
 
