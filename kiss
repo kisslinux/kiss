@@ -810,9 +810,9 @@ pkg_checksums() {
 pkg_verify() {
     # Verify all package checksums. This is achieved by generating a new set
     # of checksums and then comparing those with the old set.
+    #
+    # NOTE: repo_dir comes from caller.
     log "$1" "Checking sources"
-
-    pkg_find "$1"
 
     [ -f "$repo_dir/sources" ] || return 0
 
