@@ -701,7 +701,7 @@ pkg_build_all() {
     # directory and are up to date.
     for pkg in "$@"; do
         if ! contains "$explicit_build" "$pkg" && pkg_cache "$pkg"; then
-            log "$pkg" "Found pre-built binary, installing"
+            log "$pkg" "Found pre-built binary (${tar_file##*/})"
 
             # Intended behavior.
             # shellcheck disable=2030,2031
@@ -1298,7 +1298,7 @@ pkg_install() {
     run_hook pre-install "$pkg_name" "$tar_dir/$pkg_name"
     pkg_conflicts "$pkg_name"
 
-    log "$pkg_name" "Installing package"
+    log "$pkg_name" "Installing package (${tar_file##*/})"
 
     # Block being able to abort the script with Ctrl+C during installation.
     # Removes all risk of the user aborting a package installation leaving
