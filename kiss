@@ -701,7 +701,7 @@ pkg_build_all() {
     # directory and are up to date.
     for pkg in "$@"; do
         if ! contains "$explicit_build" "$pkg" && pkg_cache "$pkg"; then
-            log "$pkg" "Found pre-built binary (${tar_file##*/})"
+            log "$pkg" "Found pre-built binary"
 
             # Intended behavior.
             # shellcheck disable=2030,2031
