@@ -844,10 +844,10 @@ pkg_conflicts() {
     # Filter the tarball's manifest and select only files. Resolve all
     # symlinks in file paths as well.
     while read -r file; do
-        file=$KISS_ROOT/${file#/}
-
         # Skip all directories.
         case $file in */) continue; esac
+
+        file=$KISS_ROOT/${file#/}
 
         # Attempt to resolve symlinks by using 'cd'.
         # If this fails, fallback to the file's parent
