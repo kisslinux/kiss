@@ -872,7 +872,9 @@ pkg_conflicts() {
     for manifest do
         shift
 
-        [ "$sys_db/$p_name/manifest" = "$manifest" ] && continue
+        case $manifest in "$sys_db/$p_name/manifest")
+            continue
+        esac
 
         set -- "$@" "$manifest"
     done
