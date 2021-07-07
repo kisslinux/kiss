@@ -1019,7 +1019,7 @@ pkg_install_files() {
     # Reverse the manifest file so that we start shallow and go deeper as we
     # iterate over each item. This is needed so that directories are created
     # going down the tree.
-    sort "$2/$pkg_db/${2##*/}/manifest" |
+    sort "$2/$pkg_db/${2##*/}/manifest" > "$mak_dir/if"
 
     while read -r file; do
         # Grab the octal permissions so that directory creation
@@ -1066,7 +1066,7 @@ pkg_install_files() {
                     [ -h "$_file" ] || chmod "$b$oct" "$_file"
                 }
         esac
-    done || :
+    done < "$mak_dir/if" || :
 }
 
 pkg_remove_files() {
