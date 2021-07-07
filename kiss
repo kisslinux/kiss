@@ -721,7 +721,7 @@ pkg_build_all() {
     # Finally build and create tarballs for all passed packages and
     # dependencies.
     for pkg do
-        log "$pkg" "Building package ($((in+=1))/$#)"
+        log "$pkg" "Building package ($((_build_cur+=1))/${_build_tot:=$#})"
 
         pkg_find_version "$pkg"
         run_hook pre-extract "$pkg" "$pkg_dir/$pkg"
