@@ -1502,7 +1502,7 @@ args() {
             esac
         ;;
 
-        b|build|c|checksum|d|download|i|install|l|list|r|remove)
+        b|build|c|checksum|d|download|i|install|l|list)
             case ${action%%"${action#?}"}-$* in
                 i-*\!*|i-*\**|i-*\[*|i-*\]*)
                     die "Arguments contain invalid characters: '!*[]' ($*)"
@@ -1527,6 +1527,12 @@ args() {
             # Intentional, globbing disabled.
             # shellcheck disable=2046,2086
             set -- $order
+        ;;
+
+        r|remove)
+            case $* in *\**|*\!*|*\[*|*\]*|*/*)
+                die "Invalid argument: '!*[]/' ($*)"
+            esac
         ;;
     esac
 
@@ -1597,7 +1603,7 @@ args() {
         b|build)    pkg_build_all "${@:?No packages installed}" ;;
         d|download) for pkg do pkg_source "$pkg"; done ;;
         l|list)     pkg_list "$@" ;;
-        r|remove)   for pkg in $redro; do pkg_remove "$pkg"; done ;;
+        r|remove)   for pkg do pkg_remove "$pkg"; done ;;
         s|search)   for pkg do pkg_find "$pkg" all; done ;;
         u|update)   pkg_updates ;;
         v|version)  printf '5.4.8\n' ;;
