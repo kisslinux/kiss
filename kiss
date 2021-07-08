@@ -240,7 +240,7 @@ pkg_cache() {
 
     set +f
     set -f -- \
-        "$bin_dir/$1@$repo_ver-$repo_rel.tar.${KISS_COMPRESS:=gz}" \
+        "$bin_dir/$1@$repo_ver-$repo_rel.tar.$KISS_COMPRESS" \
         "$bin_dir/$1@$repo_ver-$repo_rel.tar."*
 
     tar_file=$1
@@ -656,14 +656,14 @@ pkg_tar() (
     cd "$pkg_dir/$1"
 
     # Create a tarball from the contents of the built package.
-    tar cf - . | case ${KISS_COMPRESS:=gz} in
+    tar cf - . | case $KISS_COMPRESS in
         bz2)  bzip2 -z ;;
         gz)   gzip -6  ;;
         lzma) lzma -z  ;;
         lz)   lzip -z  ;;
         xz)   xz -zT0  ;;
         zst)  zstd -z  ;;
-    esac > "$bin_dir/$1@$repo_ver-$repo_rel.tar.${KISS_COMPRESS:=gz}"
+    esac > "$bin_dir/$1@$repo_ver-$repo_rel.tar.$KISS_COMPRESS"
 
     log "$1" "Successfully created tarball"
     run_hook post-package "$1"
@@ -1709,6 +1709,9 @@ main() {
     # Catch errors and ensure that build files and directories are cleaned
     # up before we die. This occurs on 'Ctrl+C' as well as success and error.
     trap pkg_clean EXIT INT
+
+    # Default compression method.
+    : "${KISS_COMPRESS:=gz}"
 
     # Figure out which 'sudo' command to use based on the user's choice or what
     # is available on the system.
