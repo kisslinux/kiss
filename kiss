@@ -341,6 +341,9 @@ pkg_extract_tar_hack() {
     # Iterate over all directories in the first level of the
     # tarball's manifest.
     tar tf "$tmp_dir/ktar" | while IFS=/ read -r dir _; do
+        # Skip the directory if seen before.
+        ! contains "$_seen" "$dir" || continue && _seen="$_seen $dir"
+
         # Some tarballs contain './' as the top-level directory,
         # we need to skip these occurances.
         [ -d "${dir#.}" ] || continue
