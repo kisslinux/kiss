@@ -234,15 +234,24 @@ pkg_list() {
 }
 
 pkg_cache() {
-    # Find the tarball of a package using a glob. Use the first found match
-    # of '<pkg_name>@<pkg_version><pkg_release>.tar.*'.
+    # Find the tarball of a package using a glob. Use the user's set compression
+    # method if found or first match of the below glob.
     pkg_find_version "$1"
 
     set +f
-    set -f -- "$bin_dir/$1@$repo_ver-$repo_rel.tar."*
+    set -f -- \
+        "$bin_dir/$1@$repo_ver-$repo_rel.tar.${KISS_COMPRESS:=gz}" \
+        "$bin_dir/$1@$repo_ver-$repo_rel.tar."*
+
     tar_file=$1
 
-    [ -f "$1" ]
+    # Found tarball matching KISS_COMPRESS.
+    ! [ -f "$1" ] || return 0
+
+    tar_file=$2
+
+    # Use result of glob.
+    [ -f "$2" ]
 }
 
 pkg_source_resolve() {
@@ -1528,6 +1537,7 @@ args() {
             as_root env \
                 HOME="$HOME" \
                 XDG_CACHE_HOME="$XDG_CACHE_HOME" \
+                KISS_COMPRESS="$KISS_COMPRESS" \
                 KISS_PATH="$KISS_PATH" \
                 KISS_FORCE="$KISS_FORCE" \
                 KISS_ROOT="$KISS_ROOT" \
