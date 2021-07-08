@@ -179,10 +179,14 @@ pkg_lint() {
 }
 
 pkg_find_version() {
-    pkg_find "$1"
+    pkg_find_die "$1"
 
     read -r repo_ver repo_rel 2>/dev/null < "$repo_dir/version" ||
         die "$1" "Failed to read version file ($repo_dir/version)"
+}
+
+pkg_find_die() {
+    pkg_find "$@" || die "Package '$1' not in any repository"
 }
 
 pkg_find() {
@@ -204,7 +208,7 @@ pkg_find() {
 
     # A package may also not be found due to a repository not being readable
     # by the current user. Either way, we need to die here.
-    [ "$5" ] || die "Package '$1' not in any repository"
+    [ "$5" ] || return 1
 
     # Show all search results if called from 'kiss search', else store the
     # value in a variable.
@@ -301,7 +305,7 @@ pkg_source_resolve() {
 pkg_source() {
     # Download any remote package sources. The existence of local files is
     # also checked.
-    pkg_find "$1"
+    pkg_find_die "$1"
 
     # Support packages without sources. Simply do nothing.
     [ -f "$repo_dir/sources" ] || return 0
@@ -439,9 +443,7 @@ pkg_depends() {
             die "Circular dependency detected $1 <> ${4##* }"
         esac
 
-        "${6:-pkg_find}" "$1"
-
-        ! [ -e "$repo_dir/depends" ] ||
+        ! "${6:-pkg_find}" "$1" || ! [ -e "$repo_dir/depends" ] ||
 
         # Recurse through the dependencies of the child packages.
         while read -r dep dep_type || [ "$dep" ]; do
@@ -466,7 +468,7 @@ pkg_order() {
       /*@*.tar.*) deps="$deps $pkg" ;;
        *@*.tar.*) deps="$deps $ppwd/$pkg" ;;
              */*) die "Not a package' ($pkg)" ;;
-               *) pkg_lint "$pkg"; pkg_depends "$pkg" raw
+               *) pkg_depends "$pkg" raw
     esac done
 
     # Filter the list, only keeping explicit packages. The purpose of these
@@ -1502,7 +1504,7 @@ args() {
             esac
         ;;
 
-        b|build|c|checksum|d|download|i|install|l|list)
+        b|build|c|checksum|d|download|i|install|l|list|r|remove)
             case ${action%%"${action#?}"}-$* in
                 i-*\!*|i-*\**|i-*\[*|i-*\]*)
                     die "Arguments contain invalid characters: '!*[]' ($*)"
@@ -1527,12 +1529,6 @@ args() {
             # Intentional, globbing disabled.
             # shellcheck disable=2046,2086
             set -- $order
-        ;;
-
-        r|remove)
-            case $* in *\**|*\!*|*\[*|*\]*|*/*)
-                die "Invalid argument: '!*[]/' ($*)"
-            esac
         ;;
     esac
 
@@ -1579,7 +1575,7 @@ args() {
         c|checksum)
             for pkg do pkg_source "$pkg" c; done
             for pkg do
-                pkg_find "$pkg"
+                pkg_find_die "$pkg"
 
                 [ -f "$repo_dir/sources" ] || {
                     log "$pkg" "No sources file, skipping checksums"
@@ -1603,8 +1599,8 @@ args() {
         b|build)    pkg_build_all "${@:?No packages installed}" ;;
         d|download) for pkg do pkg_source "$pkg"; done ;;
         l|list)     pkg_list "$@" ;;
-        r|remove)   for pkg do pkg_remove "$pkg"; done ;;
-        s|search)   for pkg do pkg_find "$pkg" all; done ;;
+        r|remove)   for pkg in $redro; do pkg_remove "$pkg"; done ;;
+        s|search)   for pkg do pkg_find_die "$pkg" all; done ;;
         u|update)   pkg_updates ;;
         v|version)  printf '5.4.8\n' ;;
 
@@ -1653,7 +1649,7 @@ args() {
         ;;
 
         *)
-            pkg_find "kiss-$action*" "" -x "$PATH"
+            pkg_find_die "kiss-$action*" "" -x "$PATH"
             "$repo_dir" "$@"
         ;;
     esac
