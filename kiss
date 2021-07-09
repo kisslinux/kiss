@@ -270,6 +270,10 @@ pkg_source_resolve() {
     elif [ -z "${2##git+*}" ]; then
         _res=$2
 
+    # Fossil repository
+    elif [ -z "${2##fossil+*}" ]; then
+        _res=$2
+
     # Remote source (cached).
     elif [ -f "$src_dir/$1/${3:+"$3/"}${2##*/}" ]; then
         _res=$src_dir/$1/${3:+"$3/"}${2##*/}
@@ -376,6 +380,17 @@ pkg_extract_tar_hack() {
     done
 }
 
+pkg_extract_git() {
+    git init
+    git remote add origin "${1%[#@]*}"
+    git fetch -t --filter=tree:0 origin "$2" || git fetch -t
+    git -c advice.detachedHead=0 checkout "${2:-FETCH_HEAD}"
+}
+
+pkg_extract_fossil() {
+    fossil open -f "${1%[#@]*}" "${2:-trunk}"
+}
+
 pkg_extract() {
     # Extract all source archives to the build directory and copy over any
     # local repository files.
@@ -393,18 +408,16 @@ pkg_extract() {
         pkg_source_resolve "$1" "$src" "$dest" >/dev/null
 
         case $_res in
-            git+*)
+            git+*|fossil+*)
+                vcs=${src%%+*}
                 # Split the source into URL + OBJECT (branch or commit).
-                url=${src##git+} com=${url##*[@#]} com=${com#${url%[#@]*}}
+                url=${src##${vcs}+} com=${url##*[@#]} com=${com#${url%[#@]*}}
 
                 # This magic will shallow clone branches, commits or the
                 # regular repository. It correctly handles cases where a
                 # shallow clone is not possible.
                 log "$1" "Cloning ${url%[#@]*}"
-                git init
-                git remote add origin "${url%[#@]*}"
-                git fetch -t --filter=tree:0 origin "$com" || git fetch -t
-                git -c advice.detachedHead=0 checkout "${com:-FETCH_HEAD}"
+                "pkg_extract_$vcs" "${url%[#@]*}" "$com"
             ;;
 
             *.tar|*.tar.??|*.tar.???|*.tar.????|*.t?z)
