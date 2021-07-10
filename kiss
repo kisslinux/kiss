@@ -833,7 +833,7 @@ pkg_verify() {
     # Read the repository checksums into a list.
     while read -r chk _ || [ "$chk" ]; do
         set -- "$@" "$chk"
-    done < "$repo_dir/checksums"
+    done 2>/dev/null < "$repo_dir/checksums"
 
     # Generate a new set of checksums to compare against.
     pkg_checksums "$1" > "$mak_dir/v"
