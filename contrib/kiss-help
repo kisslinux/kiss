@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/sh -e
 # Read KISS documentation
 
 cd "$KISS_ROOT/usr/share/doc/kiss" 2>/dev/null || {
@@ -6,8 +6,23 @@ cd "$KISS_ROOT/usr/share/doc/kiss" 2>/dev/null || {
     exit 1
 }
 
-[ -f "${1:-.}/index.txt" ] && file=./${1:-.}/index.txt
-[ -f "${1:-.}.txt" ]       && file=./${1:-.}.txt
-[ -f "${1:-:}" ]           && file=./${1:-.}
+! [ -f "${1:-.}/index.txt" ] || file=./${1:-.}/index.txt
+! [ -f "${1:-.}.txt" ]       || file=./${1:-.}.txt
+! [ -f "${1:-:}" ]           || file=./${1:-.}
 
-"${PAGER:-less}" "${file:-404.txt}"
+# Fallback to search (allows 'kiss help firefox' to work).
+# False positive, intended behavior.
+# shellcheck disable=2046
+[ "$file" ] || {
+    set -f
+    set +f -- $(find . -name "${1##*/}.txt")
+    file=$1
+}
+
+: "${file:=404.txt}"
+
+cat <<EOF - "$file" | "${PAGER:-less}"
+Reading $PWD/${file#./}
+________________________________________________________________________________
+
+EOF
