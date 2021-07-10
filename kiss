@@ -774,6 +774,11 @@ pkg_build() {
     log "$1" "Starting build"
     run_hook pre-build "$1" "$pkg_dir/$1"
 
+    # Attempt to create the log file early so any permissions errors are caught
+    # before the build starts. 'tee' is run in a pipe and POSIX shell has no
+    # pipe-fail causing confusing behavior when tee fails.
+    : > "$log_dir/$1-$time-$pid"
+
     # Call the build script, log the output to the terminal and to a file.
     # There's no PIPEFAIL in POSIX shell so we must resort to tricks like kill.
     { "$repo_dir/build" "$pkg_dir/$1" "$repo_ver" 2>&1 || {
