@@ -53,6 +53,10 @@ prompt() {
     [ "$KISS_PROMPT" = 0 ] || read -r _ || exit 1
 }
 
+mkcd() {
+    mkdir -p "$@" && cd "$1"
+}
+
 as_root() {
     case $uid/${user:=root}/${cmd_su##*/} in
         0/root/*)
@@ -312,7 +316,7 @@ pkg_source() {
     [ -f "$repo_dir/sources" ] || return 0
 
     log "$1" "Checking sources"
-    mkdir -p "$src_dir/$1" && cd "$src_dir/$1"
+    mkcd "$src_dir/$1"
 
     while read -r src dest || [ "$src" ]; do
         pkg_source_resolve "$1" "$src" "$dest" "$2"
@@ -389,9 +393,12 @@ pkg_extract() {
     log "$1" "Extracting sources"
 
     while read -r src dest || [ "$src" ]; do
-        mkdir -p "$mak_dir/$1/$dest" && cd "$mak_dir/$1/$dest"
-
         pkg_source_resolve "$1" "$src" "$dest" >/dev/null
+
+        # Create the source's directories if not null.
+        case $_res in *?*)
+            mkcd "$mak_dir/$1/$dest"
+        esac
 
         case $_res in
             git+*)
@@ -770,7 +777,7 @@ pkg_build_all() {
 pkg_build() {
     # Install built packages to a directory under the package name to
     # avoid collisions with other packages.
-    mkdir -p "$pkg_dir/$1/$pkg_db" "$mak_dir/$1" && cd "$mak_dir/$1"
+    mkcd "$mak_dir/$1" "$pkg_dir/$1/$pkg_db"
 
     log "$1" "Starting build"
     run_hook pre-build "$1" "$pkg_dir/$1"
@@ -1296,8 +1303,7 @@ pkg_install() {
         ;;
     esac
 
-    mkdir -p "$tar_dir/$pkg_name"
-    cd       "$tar_dir/$pkg_name"
+    mkcd "$tar_dir/$pkg_name"
 
     # The tarball is extracted to a temporary directory where its contents are
     # then "installed" to the filesystem. Running this step as soon as possible
