@@ -265,6 +265,7 @@ pkg_source_resolve() {
 
     if [ -z "${2##\#*}" ]; then
         _res=
+        return
 
     # Git repository.
     elif [ -z "${2##git+*}" ]; then
