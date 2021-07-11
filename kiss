@@ -571,11 +571,13 @@ pkg_fix_deps() {
                 case ${line##*/} in
                     ld-*           |\
                     lib[cm].so*    |\
+                    libcrypt.so*   |\
                     libdl.so*      |\
                     libpthread.so* |\
                     libresolv.so*  |\
                     librt.so*      |\
                     libtrace.so*   |\
+                    libutil.so*    |\
                     libxnet.so*    |\
                     ldd)
                         continue
