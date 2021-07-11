@@ -573,6 +573,7 @@ pkg_fix_deps() {
                     lib[cm].so*    |\
                     libcrypt.so*   |\
                     libdl.so*      |\
+                    libmvec.so*    |\
                     libpthread.so* |\
                     libresolv.so*  |\
                     librt.so*      |\
