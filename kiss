@@ -573,6 +573,7 @@ pkg_fix_deps() {
                     lib[cm].so*    |\
                     libdl.so*      |\
                     libpthread.so* |\
+                    libresolv.so*  |\
                     librt.so*      |\
                     libtrace.so*   |\
                     libxnet.so*    |\
