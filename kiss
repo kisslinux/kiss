@@ -1085,7 +1085,23 @@ pkg_install_files() {
                 # Skip directories as they're likely symlinks in this case.
                 # Pure directories in manifests have a suffix of '/'.
                 [ -d "$_file" ] || test "$1" "$_file" || {
-                    cp -fP "$2/${file#/}" "$_file"
+                    _file_tmp=$2/${file#/}
+
+                    # Copy the file to a temporary location so that later
+                    # verification (after pkg_remove_files()) is possible.
+                    #
+                    # This duplication only occurs during the first
+                    # invocation of pkg_install_files() - the second call
+                    # will simply do the 'mv' call.
+                    case $1 in -z)
+                        cp -fP "$2/${file#/}" "$2/__f-$pid"
+                        _file_tmp=$2/__f-$pid
+                    esac
+
+                    # Atomically move the temporary file to the root
+                    # filesystem. The running processes will either get
+                    # the old file or the new one.
+                    mv -f "$_file_tmp" "$_file"
 
                     # Skip changing permissions of symlinks. This prevents
                     # errors when the symlink exists prior to the target.
