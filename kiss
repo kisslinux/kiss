@@ -135,13 +135,13 @@ run_hook_pkg() {
 
 decompress() {
     case $1 in
-        *.bz2)      bzip2 -d ;;
-        *.lzma)     lzma -dc ;;
-        *.lz)       lzip -dc ;;
-        *.tar)      cat      ;;
-        *.tgz|*.gz) gzip -d  ;;
-        *.xz|*.txz) xz -dcT0 ;;
-        *.zst)      zstd -dc ;;
+        *.tbz|*.bz2) bzip2 -d ;;
+        *.lzma)      lzma -dc ;;
+        *.lz)        lzip -dc ;;
+        *.tar)       cat      ;;
+        *.tgz|*.gz)  gzip -d  ;;
+        *.xz|*.txz)  xz -dcT0 ;;
+        *.zst)       zstd -dc ;;
     esac < "$1"
 }
 
