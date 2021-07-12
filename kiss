@@ -157,9 +157,9 @@ sh256() {
 
     if [ ! -d "$1" ] && [ -e "$1" ]; then
         hash=$(
+            openssl dgst -sha256 -r "$1" ||
             sha256sum               "$1" ||
             sha256 -r               "$1" ||
-            openssl dgst -sha256 -r "$1" ||
             shasum -a 256           "$1" ||
             digest -a sha256        "$1"
         ) 2>/dev/null || die "Failed to generate checksums for '$1'"
