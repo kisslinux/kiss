@@ -85,8 +85,8 @@ main() {
             TERM="$TERM" \
             SHELL=/bin/sh \
             USER=root \
-            CFLAGS="${CFLAGS:--march=x86-64 -mtune=generic -pipe -Os}" \
-            CXXFLAGS="${CXXFLAGS:--march=x86-64 -mtune=generic -pipe -Os}" \
+            CFLAGS="${CFLAGS:--march=x86-64 -mtune=generic -pipe -O2}" \
+            CXXFLAGS="${CXXFLAGS:--march=x86-64 -mtune=generic -pipe -O2}" \
             MAKEFLAGS="${MAKEFLAGS:--j$(nproc 2>/dev/null || echo 1)}" \
             /bin/sh -l
     }
