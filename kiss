@@ -1395,7 +1395,7 @@ pkg_install() {
     log "$pkg_name" "Installed successfully"
 }
 
-pkg_updates() {
+pkg_update() {
     # Check all installed packages for updates. So long as the installed
     # version and the version in the repositories differ, it's considered
     # an update.
@@ -1636,7 +1636,7 @@ args() {
         l|list)     pkg_list "$@" ;;
         r|remove)   for pkg in $redro; do pkg_remove "$pkg"; done ;;
         s|search)   for pkg do pkg_find_die "$pkg" all; done ;;
-        u|update)   pkg_updates ;;
+        u|update)   pkg_update ;;
         v|version)  printf '5.4.11\n' ;;
 
         '')
