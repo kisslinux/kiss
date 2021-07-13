@@ -1063,7 +1063,7 @@ file_rwx() {
              [ST]*) ;;
         esac
 
-        case "$((${c%?} % 3))" in 0)
+        case $(("${c%?}" % 3)) in 0)
             oct=$oct$o o=0
         esac
     done
