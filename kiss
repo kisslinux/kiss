@@ -1046,29 +1046,31 @@ pkg_swap() {
     mv -f "$mak_dir/.$1" "../installed/$1/manifest"
 }
 
+file_rwx() {
+    # Grab the octal permissions so that directory creation
+    # preserves permissions.
+    # See: [2] at top of script.
+    rwx=$(ls -ld "$1") oct='' o=0
+
+    # Convert the output of 'ls' (rwxrwx---) to octal. This is simply
+    # a 1-9 loop with the second digit being the value of the field.
+    for c in 14 22 31 44 52 61 74 82 91; do
+        rwx=${rwx#?}
+
+        case $rwx in
+            [rwx]*): "$((o+=${c#?}))" ;;
+             [st]*): "$((o+=1))" ;;
+             [ST]*) ;;
+        esac
+
+        case "$((${c%?} % 3))" in 0)
+            oct=$oct$o o=0
+        esac
+    done
+}
+
 pkg_install_files() {
     while read -r file; do
-        # Grab the octal permissions so that directory creation
-        # preserves permissions.
-        # See: [2] at top of script.
-        rwx=$(ls -ld "$2/${file#/}") oct='' b='' o=0
-
-        # Convert the output of 'ls' (rwxrwx---) to octal. This is simply
-        # a 1-9 loop with the second digit being the value of the field.
-        for c in 14 22 31 44 52 61 74 82 91; do
-            rwx=${rwx#?}
-
-            case $rwx in
-                [rwx]*): "$((o+=${c#?}))" ;;
-                 [st]*): "$((o+=1))" ;;
-                 [ST]*) ;;
-            esac
-
-            case "$((${c%?} % 3))" in 0)
-                oct=$oct$o o=0
-            esac
-        done
-
         _file=$KISS_ROOT/${file#/}
 
         # Copy files and create directories (preserving permissions),
@@ -1080,7 +1082,10 @@ pkg_install_files() {
             */)
                 # Skip directories if they already exist in the file system.
                 # (Think /usr/bin, /usr/lib, etc).
-                [ -d "$_file" ] || mkdir -m "$oct" "$_file"
+                [ -d "$_file" ] || {
+                    file_rwx "$2/${file#/}"
+                    mkdir -m "$oct" "$_file"
+                }
             ;;
 
             *)
