@@ -1060,11 +1060,13 @@ pkg_install_files() {
 
             case $rwx in
                 [rwx]*): "$((o+=${c#?}))" ;;
-                 [st]*): "$((o+=1))" "$((b+=4 / (${c%?}/3)))" ;;
-                 [ST]*): "$((b+=1))" ;;
+                 [st]*): "$((o+=1))" ;;
+                 [ST]*) ;;
             esac
 
-            [ "$((${c%?} % 3))" = 0 ] && oct=$oct$o o=0
+            case "$((${c%?} % 3))" in 0)
+                oct=$oct$o o=0
+            esac
         done
 
         _file=$KISS_ROOT/${file#/}
@@ -1098,10 +1100,6 @@ pkg_install_files() {
                     # destination. The running processes will either get
                     # the old file or the new one.
                     mv -f "$__tmp" "$_file"
-
-                    # Skip changing permissions of symlinks. This prevents
-                    # errors when the symlink exists prior to the target.
-                    [ -h "$_file" ] || chmod "$b$oct" "$_file"
                 }
         esac
     done
