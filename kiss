@@ -1085,30 +1085,26 @@ pkg_install_files() {
                 # Skip directories as they're likely symlinks in this case.
                 # Pure directories in manifests have a suffix of '/'.
                 [ -d "$_file" ] || test "$1" "$_file" || {
-                    _file_tmp=$2/${file#/}
+                    # Construct a temporary filename which is a) unique and
+                    # b) identifiable as related to the package manager.
+                    __tmp=$KISS_ROOT$file
+                    __tmp=${__tmp%/*}/__kiss-tmp-$pkg_name-${file##*/}-$pid
 
-                    # Copy the file to a temporary location so that later
-                    # verification (after pkg_remove_files()) is possible.
-                    #
-                    # This duplication only occurs during the first
-                    # invocation of pkg_install_files() - the second call
-                    # will simply do the 'mv' call.
-                    case $1 in -z)
-                        cp -fP "$2/${file#/}" "$2/__f-$pid"
-                        _file_tmp=$2/__f-$pid
-                    esac
+                    # Copy the file to the destination directory with the
+                    # temporary name created above.
+                    cp -fP "$2$file" "$__tmp"
 
-                    # Atomically move the temporary file to the root
-                    # filesystem. The running processes will either get
+                    # Atomically move the temporary file to its final
+                    # destination. The running processes will either get
                     # the old file or the new one.
-                    mv -f "$_file_tmp" "$_file"
+                    mv -f "$__tmp" "$_file"
 
                     # Skip changing permissions of symlinks. This prevents
                     # errors when the symlink exists prior to the target.
                     [ -h "$_file" ] || chmod "$b$oct" "$_file"
                 }
         esac
-    done || :
+    done
 }
 
 pkg_remove_files() {
@@ -1142,7 +1138,7 @@ pkg_remove_files() {
         else
             rm -f "$_file"
         fi
-    done || :
+    done
 
     # Remove all broken directory symlinks.
     for sym do
@@ -1346,11 +1342,6 @@ pkg_install() {
 
     log "$pkg_name" "Installing package (${tar_file##*/})"
 
-    # Block being able to abort the script with Ctrl+C during installation.
-    # Removes all risk of the user aborting a package installation leaving
-    # an incomplete package installed.
-    trap '' INT
-
     # If the package is already installed (and this is an upgrade) make a
     # backup of the manifest and etcsums files.
     cp -f "$sys_db/$pkg_name/manifest" "$mak_dir/m" 2>/dev/null ||
@@ -1363,27 +1354,39 @@ pkg_install() {
     # going down the tree.
     sort "$tar_dir/$pkg_name/$pkg_db/$pkg_name/manifest" > "$mak_dir/if"
 
-    # Install the package's files by iterating over its manifest.
-    pkg_install_files -z "$tar_dir/$pkg_name" < "$mak_dir/if"
+    # Block being able to abort the script with Ctrl+C during installation.
+    # Removes all risk of the user aborting a package installation leaving
+    # an incomplete package installed.
+    trap '' INT
+    
+    {
+        # Install the package's files by iterating over its manifest.
+        pkg_install_files -z "$tar_dir/$pkg_name" < "$mak_dir/if"
 
-    # Handle /etc/ files in a special way (via a 3-way checksum) to determine
-    # how these files should be installed. Do we overwrite the existing file?
-    # Do we install it as $file.new to avoid deleting user configuration? etc.
-    #
-    # This is more or less similar to Arch Linux's Pacman with the user manually
-    # handling the .new files when and if they appear.
-    pkg_etc
+        # Handle /etc/ files in a special way (via a 3-way checksum) to 
+        # determine how these files should be installed. Do we overwrite the 
+        # existing file? Do we install it as $file.new to avoid deleting user 
+        # configuration? etc.
+        #
+        # This is more or less similar to Arch Linux's Pacman with the user 
+        # manually handling the .new files when and if they appear.
+        pkg_etc
 
-    # This is the aforementioned step removing any files from the old version of
-    # the package if the installation is an update. Each file type has to be
-    # specially handled to ensure no system breakage occurs.
-    grep -vFxf "$sys_db/$pkg_name/manifest" "$mak_dir/m" 2>/dev/null |
-    pkg_remove_files
+        # This is the aforementioned step removing any files from the old 
+        # version of the package if the installation is an update. Each file 
+        # type has to be specially handled to ensure no system breakage occurs.
+        grep -vFxf "$sys_db/$pkg_name/manifest" "$mak_dir/m" 2>/dev/null |
+        pkg_remove_files
 
-    # Install the package's files a second time to fix any mess caused by the
-    # above removal of the previous version of the package.
-    log "$pkg_name" "Verifying installation"
-    pkg_install_files -e "$tar_dir/$pkg_name" < "$mak_dir/if"
+        # Install the package's files a second time to fix any mess caused by 
+        # the above removal of the previous version of the package.
+        log "$pkg_name" "Verifying installation"
+        pkg_install_files -e "$tar_dir/$pkg_name" < "$mak_dir/if"
+
+    } || {
+        log "$pkg_name" "Failed to install package." "" "!>"
+        die "$pkg_name" "Filesystem now dirty, manual repair needed."
+    }
 
     # Reset 'trap' to its original value. Installation is done so we no longer
     # need to block 'Ctrl+C'.
