@@ -1477,12 +1477,23 @@ pkg_update() {
 
         pkg_find_version "${pkg##*/}"
 
+        # Detect repository orphans (installed packages with no
+        # associated repository).
+        case $repo_dir in */var/db/kiss/installed/*)
+            _repo_orp="$_repo_orp ${pkg##*/}"                
+        esac
+
         # Compare installed packages to repository packages.
         [ "$db_ver-$db_rel" = "$repo_ver-$repo_rel" ] || {
             printf '%s\n' "${pkg##*/} $db_ver-$db_rel ==> $repo_ver-$repo_rel"
             set -- "$@" "${pkg##*/}"
         }
     done
+
+    log "Checking for orphaned repository packages"
+    case $_repo_orp in *?*)
+        war "Packages without repository:$_repo_orp"
+    esac
 
     set -f
 
