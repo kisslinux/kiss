@@ -1105,7 +1105,8 @@ pkg_install_files() {
                     # destination. The running processes will either get
                     # the old file or the new one.
                     mv -f "$__tmp" "$_file"
-                }
+
+                } || return 1
         esac
     done
 }
