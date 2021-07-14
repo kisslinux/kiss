@@ -214,13 +214,13 @@ pkg_find() {
     # values in variables.
     case $2-$# in
         *-4)
-            # A package may also not be found due to a repository not being 
+            # A package may also not be found due to a repository not being
             # readable by the current user. Either way, we need to die here.
             return 1
         ;;
 
         -*)
-            repo_dir=$5 
+            repo_dir=$5
         ;;
 
         *)
@@ -1379,27 +1379,27 @@ pkg_install() {
     # Removes all risk of the user aborting a package installation leaving
     # an incomplete package installed.
     trap '' INT
-    
+
     {
         # Install the package's files by iterating over its manifest.
         pkg_install_files -z "$tar_dir/$pkg_name" < "$mak_dir/if"
 
-        # Handle /etc/ files in a special way (via a 3-way checksum) to 
-        # determine how these files should be installed. Do we overwrite the 
-        # existing file? Do we install it as $file.new to avoid deleting user 
+        # Handle /etc/ files in a special way (via a 3-way checksum) to
+        # determine how these files should be installed. Do we overwrite the
+        # existing file? Do we install it as $file.new to avoid deleting user
         # configuration? etc.
         #
-        # This is more or less similar to Arch Linux's Pacman with the user 
+        # This is more or less similar to Arch Linux's Pacman with the user
         # manually handling the .new files when and if they appear.
         pkg_etc
 
-        # This is the aforementioned step removing any files from the old 
-        # version of the package if the installation is an update. Each file 
+        # This is the aforementioned step removing any files from the old
+        # version of the package if the installation is an update. Each file
         # type has to be specially handled to ensure no system breakage occurs.
         grep -vFxf "$sys_db/$pkg_name/manifest" "$mak_dir/m" 2>/dev/null |
         pkg_remove_files
 
-        # Install the package's files a second time to fix any mess caused by 
+        # Install the package's files a second time to fix any mess caused by
         # the above removal of the previous version of the package.
         log "$pkg_name" "Verifying installation"
         pkg_install_files -e "$tar_dir/$pkg_name" < "$mak_dir/if"
@@ -1504,7 +1504,7 @@ pkg_update() {
         # Detect repository orphans (installed packages with no
         # associated repository).
         case $repo_dir in */var/db/kiss/installed/*)
-            _repo_orp="$_repo_orp ${pkg##*/}"                
+            _repo_orp="$_repo_orp ${pkg##*/}"
         esac
 
         # Compare installed packages to repository packages.
