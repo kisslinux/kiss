@@ -1370,19 +1370,25 @@ pkg_install() {
     cp -f "$sys_db/$pkg_name/etcsums"  "$mak_dir/c" 2>/dev/null ||
         : > "$mak_dir/c"
 
+    tar_man=$tar_dir/$pkg_name/$pkg_db/$pkg_name/manifest
+
     # Reverse the manifest file so that we start shallow and go deeper as we
     # iterate over each item. This is needed so that directories are created
     # going down the tree.
-    sort "$tar_dir/$pkg_name/$pkg_db/$pkg_name/manifest" > "$mak_dir/if"
+    sort "$tar_man" > "$mak_dir/if"
+
+    # Generate a list of files which exist in the currently installed manifest
+    # but not in the newer (to be installed) manifest.
+    ! grep -vFxf "$tar_man" "$mak_dir/m" > "$mak_dir/rm"
 
     # Block being able to abort the script with Ctrl+C during installation.
     # Removes all risk of the user aborting a package installation leaving
     # an incomplete package installed.
     trap '' INT
 
-    {
+    if
         # Install the package's files by iterating over its manifest.
-        pkg_install_files -z "$tar_dir/$pkg_name" < "$mak_dir/if"
+        pkg_install_files -z "$tar_dir/$pkg_name" < "$mak_dir/if" &&
 
         # Handle /etc/ files in a special way (via a 3-way checksum) to
         # determine how these files should be installed. Do we overwrite the
@@ -1391,32 +1397,31 @@ pkg_install() {
         #
         # This is more or less similar to Arch Linux's Pacman with the user
         # manually handling the .new files when and if they appear.
-        pkg_etc
+        pkg_etc &&
 
         # This is the aforementioned step removing any files from the old
         # version of the package if the installation is an update. Each file
         # type has to be specially handled to ensure no system breakage occurs.
-        grep -vFxf "$sys_db/$pkg_name/manifest" "$mak_dir/m" 2>/dev/null |
-        pkg_remove_files
+        pkg_remove_files < "$mak_dir/rm" &&
 
         # Install the package's files a second time to fix any mess caused by
         # the above removal of the previous version of the package.
-        log "$pkg_name" "Verifying installation"
         pkg_install_files -e "$tar_dir/$pkg_name" < "$mak_dir/if"
 
-    } || {
-        log "$pkg_name" "Failed to install package." "" "!>"
+    then
+        # Reset 'trap' to its original value. Installation is done so we no longer
+        # need to block 'Ctrl+C'.
+        trap pkg_clean EXIT INT
+
+        run_hook_pkg post-install "$pkg_name"
+        run_hook     post-install "$pkg_name" "$sys_db/$pkg_name"
+        log "$pkg_name" "Installed successfully"
+
+    else
+        pkg_clean
+        log "$pkg_name" "Failed to install package." ERROR
         die "$pkg_name" "Filesystem now dirty, manual repair needed."
-    }
-
-    # Reset 'trap' to its original value. Installation is done so we no longer
-    # need to block 'Ctrl+C'.
-    trap pkg_clean EXIT INT
-
-    run_hook_pkg post-install "$pkg_name"
-    run_hook     post-install "$pkg_name" "$sys_db/$pkg_name"
-
-    log "$pkg_name" "Installed successfully"
+    fi
 }
 
 pkg_update() {
