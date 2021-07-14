@@ -1082,7 +1082,7 @@ file_rwx() {
 
 pkg_install_files() {
     while read -r file; do
-        _file=$KISS_ROOT/${file#/}
+        _file=$KISS_ROOT$file
 
         # Copy files and create directories (preserving permissions),
         # skipping anything located in /etc/.
@@ -1105,8 +1105,7 @@ pkg_install_files() {
                 [ -d "$_file" ] || test "$1" "$_file" || {
                     # Construct a temporary filename which is a) unique and
                     # b) identifiable as related to the package manager.
-                    __tmp=$KISS_ROOT$file
-                    __tmp=${__tmp%/*}/__kiss-tmp-$pkg_name-${file##*/}-$pid
+                    __tmp=${_file%/*}/__kiss-tmp-$pkg_name-${file##*/}-$pid
 
                     # Copy the file to the destination directory with the
                     # temporary name created above.
