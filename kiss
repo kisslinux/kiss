@@ -278,10 +278,41 @@ pkg_cache() {
     [ -f "$2" ]
 }
 
+source_resolve_vars() {
+    # Replace all occurances of markers with their respective values
+    # if found in the source string.
+    _src_sub() { _src_res=${_src_res%"$1"*}${2}${_src_res##*"$1"}; }
+    _src_res=$1
+
+    # Split the version on '.' to obtain MAJOR, MINOR and PATCH.
+    # Fields beyond this are currently unsupported, the entire
+    # version string is still available via VERSION.
+    #
+    # Intentional, globbing disabled.
+    # shellcheck disable=2086
+    IFS=.+- read -r major minor patch ident <<EOF
+$repo_ver
+EOF
+
+    # Loop until no identifiers are found and all have been removed.
+    # This works backwards replacing each identifier with its value.
+    while :; do case $_src_res in
+        *VERSION*) _src_sub VERSION "$repo_ver" ;;
+          *MAJOR*) _src_sub MAJOR   "$major" ;;
+          *MINOR*) _src_sub MINOR   "$minor" ;;
+          *PATCH*) _src_sub PATCH   "$patch" ;;
+          *IDENT*) _src_sub IDENT   "$ident" ;;
+            *PKG*) _src_sub PKG     "${repo_dir##*/}" ;;
+                *) break
+    esac done
+}
+
 pkg_source_resolve() {
     # Given a line of input from the sources file, return an absolute
     # path to the source if it already exists, error if not.
-    set -- "$1" "${2%"${2##*[!/]}"}" "${3%"${3##*[!/]}"}" "$4"
+    source_resolve_vars "${2%"${2##*[!/]}"}"
+
+    set -- "$1" "$_src_res" "${3%"${3##*[!/]}"}" "$4"
 
     if [ -z "${2##\#*}" ]; then
         _res=
@@ -326,7 +357,7 @@ pkg_source_resolve() {
 pkg_source() {
     # Download any remote package sources. The existence of local files is
     # also checked.
-    pkg_find_die "$1"
+    pkg_find_version "$1"
 
     # Support packages without sources. Simply do nothing.
     [ -f "$repo_dir/sources" ] || return 0
