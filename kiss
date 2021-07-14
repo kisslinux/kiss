@@ -108,23 +108,21 @@ pkg_owner() {
 }
 
 run_hook() {
-    # Provide a default post-build hook to remove files and directories
-    # for things we don't support out of the box. One can simply define
-    # their own hook to override this behavior.
-    set -- "${1:-null}" "${2:-null}" "${3:-null}"
+    # Run all hooks in KISS_HOOK (a colon separated
+    # list of absolute file paths).
+    _type=${1:-null} _name=${2:-null} _path=${3:-null}
 
-    case ${KISS_HOOK:-}-$1 in
-        -post-build)
-            rm -rf "$3/usr/share/gettext" \
-                   "$3/usr/share/polkit-1" \
-                   "$3/usr/share/locale" \
-                   "$3/usr/share/info"
-        ;;
+    IFS=:
 
-        *?*-"$1")
-            "${KISS_HOOK:-}" "$1" "$2" "$3"
-        ;;
-    esac
+    # Intentional, globbing disabled.
+    # shellcheck disable=2086
+    set -- ${KISS_HOOK:-}
+
+    unset IFS
+
+    for hook do "$hook" "$_type" "$_name" "$_path" ||
+        die "$_name" "$_type hook failed: '$hook'"
+    done
 }
 
 run_hook_pkg() {
