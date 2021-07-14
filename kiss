@@ -835,10 +835,15 @@ pkg_build() {
         # Give the script a modified environment. Define CC and CXX giving them
         # the generic values cc and c++. Define KISS_ROOT sanitized to ensure
         # safe path joining in build files.
+        AR="${AR:-ar}" \
         CC="${CC:-cc}" \
         CXX="${CXX:-c++}" \
+        NM="${NM:-nm}" \
+        RANLIB="${RANLIB:-ranlib}" \
         DESTDIR="$pkg_dir/$1" \
+        GOPATH="$PWD/go" \
         KISS_ROOT="$KISS_ROOT" \
+        PREFIX=/usr \
         \
         "$repo_dir/build" "$pkg_dir/$1" "$repo_ver" 2>&1 || {
             log "$1" "Build failed"
