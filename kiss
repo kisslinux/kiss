@@ -721,6 +721,9 @@ pkg_tar() (
     esac > "$bin_dir/$1@$repo_ver-$repo_rel.tar.$KISS_COMPRESS"
 
     log "$1" "Successfully created tarball"
+
+    # type: post-package
+    # arg1: package name
     run_hook post-package "$1"
 )
 
@@ -788,6 +791,10 @@ pkg_build_all() {
         log "$pkg" "Building package ($((_build_cur+=1))/${_build_tot:=$#})"
 
         pkg_find_version "$pkg"
+
+        # type: pre-extract
+        # arg1: package name
+        # arg2: path to DESTDIR
         run_hook pre-extract "$pkg" "$pkg_dir/$pkg"
 
         pkg_extract  "$pkg"
@@ -822,7 +829,11 @@ pkg_build() {
     mkcd "$mak_dir/$1" "$pkg_dir/$1/$pkg_db"
 
     log "$1" "Starting build"
-    run_hook pre-build "$1" "$pkg_dir/$1"
+
+    # type: pre-build
+    # arg1: package name
+    # arg2: path to build directory
+    run_hook pre-build "$1" "$mak_dir/$1"
 
     # Attempt to create the log file early so any permissions errors are caught
     # before the build starts. 'tee' is run in a pipe and POSIX shell has no
@@ -848,7 +859,12 @@ pkg_build() {
         "$repo_dir/build" "$pkg_dir/$1" "$repo_ver" 2>&1 || {
             log "$1" "Build failed"
             log "$1" "Log stored to $log_dir/$1-$time-$pid"
-            run_hook build-fail "$pkg" "$pkg_dir/$1"
+
+            # type: build-fail
+            # arg1: package name
+            # arg2: path to build directory
+            run_hook build-fail "$pkg" "$mak_dir/$1"
+
             pkg_clean
             kill 0
         }
@@ -862,6 +878,10 @@ pkg_build() {
     cp -LRf "$repo_dir" "$pkg_dir/$1/$pkg_db/"
 
     log "$1" "Successfully built package"
+
+    # type: post-build
+    # arg1: package name
+    # arg2: path to DESTDIR
     run_hook post-build "$1" "$pkg_dir/$1"
 
     # Remove all .la files from package.
@@ -1291,6 +1311,9 @@ pkg_remove() {
     # incomplete package installed.
     trap '' INT
 
+    # type: pre-remove
+    # arg1: package name
+    # arg2: path to installed database
     run_hook_pkg pre-remove "$1"
     run_hook     pre-remove "$1" "$sys_db/$1"
 
@@ -1399,7 +1422,11 @@ pkg_install() {
         pkg_installable "$pkg_name" "$tar_dir/$pkg_name/$pkg_db/$pkg_name/depends"
     }
 
+    # type: pre-install
+    # arg1: package name
+    # arg2: path to extracted package
     run_hook pre-install "$pkg_name" "$tar_dir/$pkg_name"
+
     pkg_conflicts "$pkg_name"
 
     log "$pkg_name" "Installing package (${tar_file##*/})"
@@ -1454,8 +1481,12 @@ pkg_install() {
         # need to block 'Ctrl+C'.
         trap pkg_clean EXIT INT
 
+        # type: post-install
+        # arg1: package name
+        # arg2: path to installed package database
         run_hook_pkg post-install "$pkg_name"
         run_hook     post-install "$pkg_name" "$sys_db/$pkg_name"
+
         log "$pkg_name" "Installed successfully"
 
     else
@@ -1506,6 +1537,8 @@ pkg_update() {
         contains "$repos" "$PWD" || {
             repos="$repos $PWD "
 
+            # type: pre-update
+            # env:  PWD is path to repository
             run_hook pre-update
 
             # Display a tick if signing is enabled for this repository.
@@ -1537,6 +1570,8 @@ pkg_update() {
                 as_root git submodule update --remote --init -f
             fi
 
+            # type: pre-update
+            # env:  PWD is path to repository
             run_hook post-update
         }
     done
