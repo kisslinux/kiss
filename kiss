@@ -805,16 +805,16 @@ pkg_build() {
     # Call the build script, log the output to the terminal and to a file.
     # There's no PIPEFAIL in POSIX shell so we must resort to tricks like kill.
     {
-        set -a
-
         # Give the script a modified environment. Define CC and CXX giving them
         # the generic values cc and c++. Define KISS_ROOT sanitized to ensure
         # safe path joining in build files.
+        #
+        # shellcheck disable=2034
         CC="${CC:-cc}" \
         CXX="${CXX:-c++}" \
         DESTDIR="$pkg_dir/$1" \
         KISS_ROOT="$KISS_ROOT" \
-
+        \
         "$repo_dir/build" "$pkg_dir/$1" "$repo_ver" 2>&1 || {
             log "$1" "Build failed"
             log "$1" "Log stored to $log_dir/$1-$time-$pid"
@@ -822,8 +822,6 @@ pkg_build() {
             pkg_clean
             kill 0
         }
-
-        set +a
     } | tee "$log_dir/$1-$time-$pid"
 
     # Delete the log file if the build succeeded to prevent the directory
