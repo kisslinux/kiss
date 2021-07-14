@@ -111,7 +111,9 @@ run_hook() {
     # Provide a default post-build hook to remove files and directories
     # for things we don't support out of the box. One can simply define
     # their own hook to override this behavior.
-    case ${KISS_HOOK:--}$1 in
+    set -- "${1:-null}" "${2:-null}" "${3:-null}"
+
+    case $KISS_HOOK-$1 in
         -post-build)
             rm -rf "$3/usr/share/gettext" \
                    "$3/usr/share/polkit-1" \
@@ -119,8 +121,8 @@ run_hook() {
                    "$3/usr/share/info"
         ;;
 
-        [!-]*)
-            TYPE=${1:-null} PKG=${2:-null} DEST=${3:-null} . "$KISS_HOOK"
+        *?*-"$1")
+            "$KISS_HOOK" "$1" "$2" "$3"
         ;;
     esac
 }
@@ -130,6 +132,9 @@ run_hook_pkg() {
     if [ -x "$sys_db/$2/$1" ]; then
         log "$2" "Running $1 hook"
         "$sys_db/$2/$1"
+
+    elif [ -f "$sys_db/$2/$1" ]; then
+        war "$2" "skipping $1 hook: not executable"
     fi
 }
 
