@@ -808,8 +808,6 @@ pkg_build() {
         # Give the script a modified environment. Define CC and CXX giving them
         # the generic values cc and c++. Define KISS_ROOT sanitized to ensure
         # safe path joining in build files.
-        #
-        # shellcheck disable=2034
         CC="${CC:-cc}" \
         CXX="${CXX:-c++}" \
         DESTDIR="$pkg_dir/$1" \
