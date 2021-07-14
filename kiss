@@ -1102,7 +1102,14 @@ pkg_install_files() {
             *)
                 # Skip directories as they're likely symlinks in this case.
                 # Pure directories in manifests have a suffix of '/'.
-                [ -d "$_file" ] || test "$1" "$_file" || {
+                [ -d "$_file" ] || test "$1" "$_file" ||
+
+                if [ -h "$_file" ]; then
+                    # Copy the file to the destination directory overwriting
+                    # any existing file.
+                    cp -fP "$2$file" "${_file%/*}/."
+
+                else
                     # Construct a temporary filename which is a) unique and
                     # b) identifiable as related to the package manager.
                     __tmp=${_file%/*}/__kiss-tmp-$pkg_name-${file##*/}-$pid
@@ -1115,8 +1122,7 @@ pkg_install_files() {
                     # destination. The running processes will either get
                     # the old file or the new one.
                     mv -f "$__tmp" "$_file"
-
-                } || return 1
+                fi
         esac
     done
 }
