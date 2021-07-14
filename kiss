@@ -1502,7 +1502,7 @@ pkg_update() {
         contains "$repos" "$PWD" || {
             repos="$repos $PWD "
 
-            run_hook pre-update "$PWD"
+            run_hook pre-update
 
             # Display a tick if signing is enabled for this repository.
             case $(git config merge.verifySignatures) in
@@ -1533,7 +1533,7 @@ pkg_update() {
                 as_root git submodule update --remote --init -f
             fi
 
-            run_hook post-update "$PWD"
+            run_hook post-update
         }
     done
 
