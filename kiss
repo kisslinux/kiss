@@ -1117,14 +1117,14 @@ pkg_install_files() {
 
                     # Copy the file to the destination directory with the
                     # temporary name created above.
-                    cp -fP "$2$file" "$__tmp"
+                    cp -fP "$2$file" "$__tmp" &&
 
                     # Atomically move the temporary file to its final
                     # destination. The running processes will either get
                     # the old file or the new one.
                     mv -f "$__tmp" "$_file"
                 fi
-        esac
+        esac || return 1
     done
 }
 
