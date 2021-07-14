@@ -1379,7 +1379,7 @@ pkg_install() {
 
     # Generate a list of files which exist in the currently installed manifest
     # but not in the newer (to be installed) manifest.
-    ! grep -vFxf "$tar_man" "$mak_dir/m" > "$mak_dir/rm"
+    grep -vFxf "$tar_man" "$mak_dir/m" > "$mak_dir/rm" 2>/dev/null ||:
 
     # Block being able to abort the script with Ctrl+C during installation.
     # Removes all risk of the user aborting a package installation leaving
