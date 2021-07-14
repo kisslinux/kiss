@@ -1,9 +1,0 @@
-#!/bin/sh -e
-# List all system-wide hooks
-
-for hook in "$KISS_ROOT/var/db/kiss/hooks/"*; do
-    owner=$(kiss owns "$hook") 2>/dev/null ||:
-
-    printf '%s%s\n' "${owner:+"$owner "}" "${hook##*/}"
-done
-
