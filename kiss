@@ -1100,11 +1100,12 @@ pkg_install_files() {
             ;;
 
             *)
-                # Skip directories as they're likely symlinks in this case.
-                # Pure directories in manifests have a suffix of '/'.
-                [ -d "$_file" ] || test "$1" "$_file" ||
+                if [ -d "$_file" ] || test "$1" "$_file"; then
+                    # Skip directories as they're likely symlinks in this case.
+                    # Pure directories in manifests have a suffix of '/'.
+                    continue
 
-                if [ -h "$_file" ]; then
+                elif [ -h "$_file" ]; then
                     # Copy the file to the destination directory overwriting
                     # any existing file.
                     cp -fP "$2$file" "${_file%/*}/."
