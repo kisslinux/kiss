@@ -1,0 +1,7 @@
+#!/bin/sh -e
+# List all system-wide hooks
+
+for hook in "$KISS_ROOT/var/db/kiss/hooks/"*; do
+    printf '%s\n' "${hook##*/}"
+done
+
