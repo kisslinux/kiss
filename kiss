@@ -286,7 +286,7 @@ pkg_cache() {
 }
 
 source_resolve_vars() {
-    # Replace all occurances of markers with their respective values
+    # Replace all occurrences of markers with their respective values
     # if found in the source string.
     _src_sub() { _src_res=${_src_res%"$1"*}${2}${_src_res##*"$1"}; }
     _src_res=$1
