@@ -120,18 +120,10 @@ run_hook() {
 
     unset IFS
 
-    for hook do case $hook in
-        */*)
-            # Absolute path to hook.
-            "$hook" "$_type" "$_name" "$_path"
-        ;;
-
-        *)
-            # Hook in system-wide hook directory (/var/db/kiss/hooks).
-            # Hooks in this directory can be used via their basename.
-            "$sys_db/../hooks/$hook" "$_type" "$_name" "$_path"
-        ;;
-    esac || die "$_name" "$_type hook failed: '$hook'"; done
+    for hook do case $hook in *?*)
+        "$hook" "$_type" "$_name" "$_path" ||
+            die "$_name" "$_type hook failed: '$hook'"
+    esac done
 }
 
 run_hook_pkg() {
