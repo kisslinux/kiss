@@ -113,7 +113,7 @@ run_hook() {
     # their own hook to override this behavior.
     set -- "${1:-null}" "${2:-null}" "${3:-null}"
 
-    case $KISS_HOOK-$1 in
+    case ${KISS_HOOK:-}-$1 in
         -post-build)
             rm -rf "$3/usr/share/gettext" \
                    "$3/usr/share/polkit-1" \
@@ -122,7 +122,7 @@ run_hook() {
         ;;
 
         *?*-"$1")
-            "$KISS_HOOK" "$1" "$2" "$3"
+            "${KISS_HOOK:-}" "$1" "$2" "$3"
         ;;
     esac
 }
