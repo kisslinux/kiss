@@ -210,13 +210,24 @@ pkg_find() {
 
     unset IFS
 
-    # A package may also not be found due to a repository not being readable
-    # by the current user. Either way, we need to die here.
-    [ "$5" ] || return 1
-
     # Show all search results if called from 'kiss search', else store the
-    # value in a variable.
-    [ "$2" ] && { shift 4; printf '%s\n' "$@"; } || repo_dir=$5
+    # values in variables.
+    case $2-$# in
+        *-4)
+            # A package may also not be found due to a repository not being 
+            # readable by the current user. Either way, we need to die here.
+            return 1
+        ;;
+
+        -*)
+            repo_dir=$5 
+        ;;
+
+        *)
+            shift 4
+            printf '%s\n' "$@";
+        ;;
+    esac
 }
 
 pkg_list() {
