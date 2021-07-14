@@ -110,20 +110,13 @@ pkg_owner() {
 run_hook() {
     # Run all hooks in KISS_HOOK (a colon separated
     # list of absolute file paths).
-    _type=${1:-null} _name=${2:-null} _path=${3:-null}
-
     IFS=:
 
-    # Intentional, globbing disabled.
-    # shellcheck disable=2086
-    set -- ${KISS_HOOK:-}
+    for hook in ${KISS_HOOK:-}; do case $hook in *?*)
+        "$hook" "$@" || die "$1 hook failed: '$hook'"
+    esac done
 
     unset IFS
-
-    for hook do case $hook in *?*)
-        "$hook" "$_type" "$_name" "$_path" ||
-            die "$_name" "$_type hook failed: '$hook'"
-    esac done
 }
 
 run_hook_pkg() {
