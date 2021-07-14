@@ -1111,9 +1111,8 @@ pkg_swap() {
 }
 
 file_rwx() {
-    # Grab the octal permissions so that directory creation
-    # preserves permissions.
-    # See: [2] at top of script.
+    # Grab the octal permissions from 'ls -l' so that we can retain
+    # directory permissions and strip setuid/setgid if found.
     rwx=$(ls -ld "$1") oct='' o=0
 
     # Convert the output of 'ls' (rwxrwx---) to octal. This is simply
