@@ -175,7 +175,7 @@ pkg_lint() {
     [ "$repo_rel" ] ||
         die "$1" "Release field not found in version file"
 
-    [ -x "$repo_dir/build" ] ||
+    [ -x "$repo_dir/build" ] || [ -f "$repo_dir/build.in" ] ||
         die "$1" "Build file not found or not executable"
 
     [ -f "$repo_dir/sources" ] ||
@@ -210,13 +210,25 @@ pkg_find() {
 
     unset IFS
 
-    # A package may also not be found due to a repository not being readable
-    # by the current user. Either way, we need to die here.
-    [ "$5" ] || return 1
-
     # Show all search results if called from 'kiss search', else store the
-    # value in a variable.
-    [ "$2" ] && { shift 4; printf '%s\n' "$@"; } || repo_dir=$5
+    # values in variables.
+    case $2-$# in
+        *-4)
+            # A package may also not be found due to a repository not being 
+            # readable by the current user. Either way, we need to die here.
+            return 1
+        ;;
+
+        -*)
+            repo_dir=$5 
+            repo_build=$5/build
+        ;;
+
+        *)
+            shift 4
+            printf '%s\n' "$@";
+        ;;
+    esac
 }
 
 pkg_list() {
@@ -778,22 +790,57 @@ pkg_build_all() {
     }
 }
 
+pkg_build_gen() {
+    # Skip package if only source is /var/db/kiss/installed to preserve 
+    # configuration. This is only the case for repository orphans 
+    # (packages which are installed but exist in no repository).
+    case $repo_dir in "/$pkg_db/$1")
+        return 0
+    esac
+
+    # Prefer the usual build file if it exists. If neither exist,
+    # return here. Error handled by caller.
+    [ -f "$repo_build" ] || [ -f "$repo_build.in" ] || return 0
+
+    log "$1" "Generating build file from build.in"
+    repo_build=$mak_dir/kiss-build-$pid
+
+    # Convert comment character '#' to 'HASH_SYMBOL_KISS' so as to 
+    # not confuse the preprocessor.
+    sed 's/^\(\s*\)#/\1HASH_SYMBOL_KISS/' "$repo_dir/build.in" |
+
+    # Run the preprocessor on the file. This also adds the comment
+    # character back in.
+    "${CPP:-cpp}" -P -E -DHASH_SYMBOL_KISS=\# - |
+
+    # The preprocessor adds a space before each comment character
+    # which we need to remove.
+    sed 's/^ #/#/' > "$repo_build"
+
+    # Make the generated file executable. If we can drop the 
+    # second sed call we can use '-o' with cpp which will do this
+    # for us.
+    chmod +x "$repo_build"
+}
+
 pkg_build() {
     # Install built packages to a directory under the package name to
     # avoid collisions with other packages.
     mkcd "$mak_dir/$1" "$pkg_dir/$1/$pkg_db"
-
-    log "$1" "Starting build"
-    run_hook pre-build "$1" "$pkg_dir/$1"
 
     # Attempt to create the log file early so any permissions errors are caught
     # before the build starts. 'tee' is run in a pipe and POSIX shell has no
     # pipe-fail causing confusing behavior when tee fails.
     : > "$log_dir/$1-$time-$pid"
 
+    pkg_build_gen "$1"
+
+    log "$1" "Starting build"
+    run_hook pre-build "$1" "$pkg_dir/$1"
+
     # Call the build script, log the output to the terminal and to a file.
     # There's no PIPEFAIL in POSIX shell so we must resort to tricks like kill.
-    { "$repo_dir/build" "$pkg_dir/$1" "$repo_ver" 2>&1 || {
+    { "$repo_build" "$pkg_dir/$1" "$repo_ver" 2>&1 || {
         log "$1" "Build failed"
         log "$1" "Log stored to $log_dir/$1-$time-$pid"
         run_hook build-fail "$pkg" "$pkg_dir/$1"
@@ -807,6 +854,7 @@ pkg_build() {
 
     # Copy the repository files to the package directory.
     cp -LRf "$repo_dir" "$pkg_dir/$1/$pkg_db/"
+    cp -f "$repo_build" "$pkg_dir/$1/$pkg_db/$1/build"
 
     log "$1" "Successfully built package"
     run_hook post-build "$1" "$pkg_dir/$1"
