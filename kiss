@@ -291,7 +291,7 @@ source_resolve_vars() {
     _src_sub() { _src_res=${_src_res%"$1"*}${2}${_src_res##*"$1"}; }
     _src_res=$1
 
-    # Split the version on '.' to obtain MAJOR, MINOR and PATCH.
+    # Split the version on '.+-' to obtain MAJOR, MINOR and PATCH.
     # Fields beyond this are currently unsupported, the entire
     # version string is still available via VERSION.
     #
