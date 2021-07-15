@@ -441,7 +441,7 @@ pkg_extract() {
         case $_res in
             git+*)
                 # Split the source into URL + OBJECT (branch or commit).
-                url=${src##git+} com=${url##*[@#]} com=${com#${url%[#@]*}}
+                url=${_res##git+} com=${url##*[@#]} com=${com#${url%[#@]*}}
 
                 # This magic will shallow clone branches, commits or the
                 # regular repository. It correctly handles cases where a
