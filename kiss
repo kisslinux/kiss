@@ -289,6 +289,7 @@ source_resolve_vars() {
     # This works backwards replacing each identifier with its value.
     while :; do case $_src_res in
         *VERSION*) _src_sub VERSION "$repo_ver" ;;
+        *RELEASE*) _src_sub RELEASE "$repo_rel" ;;
           *MAJOR*) _src_sub MAJOR   "$repo_major" ;;
           *MINOR*) _src_sub MINOR   "$repo_minor" ;;
           *PATCH*) _src_sub PATCH   "$repo_patch" ;;
