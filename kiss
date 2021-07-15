@@ -185,7 +185,7 @@ pkg_find_version() {
     read -r repo_ver repo_rel 2>/dev/null < "$repo_dir/version" ||
         die "$1" "Failed to read version file ($repo_dir/version)"
 
-    case $2 in *?*)
+    case $2 in 1)
         # Split the version on '.+-' to obtain individual components.
         # Intentional, globbing disabled.
         # shellcheck disable=2086
