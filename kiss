@@ -186,10 +186,10 @@ pkg_find_version() {
         die "$1" "Failed to read version file ($repo_dir/version)"
 
     case $2 in 1)
-        # Split the version on '.+-' to obtain individual components.
+        # Split the version on '.+-_' to obtain individual components.
         # Intentional, globbing disabled.
         # shellcheck disable=2086
-        IFS=.+- read -r repo_major repo_minor repo_patch repo_ident <<EOF
+        IFS=.+-_ read -r repo_major repo_minor repo_patch repo_ident <<EOF
 $repo_ver
 EOF
     esac
