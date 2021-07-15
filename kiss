@@ -360,12 +360,12 @@ pkg_source() {
         pkg_source_resolve "$1" "$src" "$dest" "$2"
 
         case $_res in url+*)
-            log "$1" "Downloading $src"
+            log "$1" "Downloading ${_res##url+}"
             mkdir -p "$PWD/$dest"
 
-            curl -fLo "$_des" "$src" || {
+            curl -fLo "$_des" "${_res##url+}" || {
                 rm -f "$_des"
-                die "$1" "Failed to download $src"
+                die "$1" "Failed to download ${_res##url+}"
             }
         esac
     done < "$repo_dir/sources"
