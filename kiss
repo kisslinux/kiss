@@ -930,6 +930,7 @@ pkg_verify() {
     done 2>/dev/null < "$repo_dir/checksums"
 
     # Generate a new set of checksums to compare against.
+    mkdir -p "$mak_dir"
     pkg_checksums "$1" > "$mak_dir/v"
 
     # Check that the first column (separated by whitespace) match in both
