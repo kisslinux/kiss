@@ -722,8 +722,8 @@ pkg_tar() (
 
     log "$1" "Successfully created tarball"
 
-    # type: post-package
-    # arg1: package name
+    # arg1: post-package
+    # arg2: package name
     run_hook post-package "$1"
 )
 
@@ -792,9 +792,9 @@ pkg_build_all() {
 
         pkg_find_version "$pkg"
 
-        # type: pre-extract
-        # arg1: package name
-        # arg2: path to DESTDIR
+        # arg1: pre-extract
+        # arg2: package name
+        # arg3: path to DESTDIR
         run_hook pre-extract "$pkg" "$pkg_dir/$pkg"
 
         pkg_extract  "$pkg"
@@ -830,9 +830,9 @@ pkg_build() {
 
     log "$1" "Starting build"
 
-    # type: pre-build
-    # arg1: package name
-    # arg2: path to build directory
+    # arg1: pre-build
+    # arg2: package name
+    # arg3: path to build directory
     run_hook pre-build "$1" "$mak_dir/$1"
 
     # Attempt to create the log file early so any permissions errors are caught
@@ -860,9 +860,9 @@ pkg_build() {
             log "$1" "Build failed"
             log "$1" "Log stored to $log_dir/$1-$time-$pid"
 
-            # type: build-fail
-            # arg1: package name
-            # arg2: path to build directory
+            # arg1: build-fail
+            # arg2: package name
+            # arg3: path to build directory
             run_hook build-fail "$pkg" "$mak_dir/$1"
 
             pkg_clean
@@ -879,9 +879,9 @@ pkg_build() {
 
     log "$1" "Successfully built package"
 
-    # type: post-build
-    # arg1: package name
-    # arg2: path to DESTDIR
+    # arg1: post-build
+    # arg2: package name
+    # arg3: path to DESTDIR
     run_hook post-build "$1" "$pkg_dir/$1"
 
     # Remove all .la files from package.
@@ -1311,9 +1311,9 @@ pkg_remove() {
     # incomplete package installed.
     trap '' INT
 
-    # type: pre-remove
-    # arg1: package name
-    # arg2: path to installed database
+    # arg1: pre-remove
+    # arg2: package name
+    # arg3: path to installed database
     run_hook_pkg pre-remove "$1"
     run_hook     pre-remove "$1" "$sys_db/$1"
 
@@ -1422,9 +1422,9 @@ pkg_install() {
         pkg_installable "$pkg_name" "$tar_dir/$pkg_name/$pkg_db/$pkg_name/depends"
     }
 
-    # type: pre-install
-    # arg1: package name
-    # arg2: path to extracted package
+    # arg1: pre-install
+    # arg2: package name
+    # arg3: path to extracted package
     run_hook pre-install "$pkg_name" "$tar_dir/$pkg_name"
 
     pkg_conflicts "$pkg_name"
@@ -1481,9 +1481,9 @@ pkg_install() {
         # need to block 'Ctrl+C'.
         trap pkg_clean EXIT INT
 
-        # type: post-install
-        # arg1: package name
-        # arg2: path to installed package database
+        # arg1: post-install
+        # arg2: package name
+        # arg3: path to installed package database
         run_hook_pkg post-install "$pkg_name"
         run_hook     post-install "$pkg_name" "$sys_db/$pkg_name"
 
@@ -1537,7 +1537,7 @@ pkg_update() {
         contains "$repos" "$PWD" || {
             repos="$repos $PWD "
 
-            # type: pre-update
+            # arg1: pre-update
             # env:  PWD is path to repository
             run_hook pre-update
 
@@ -1570,7 +1570,7 @@ pkg_update() {
                 as_root git submodule update --remote --init -f
             fi
 
-            # type: pre-update
+            # arg1: pre-update
             # env:  PWD is path to repository
             run_hook post-update
         }
