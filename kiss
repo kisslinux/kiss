@@ -1570,7 +1570,7 @@ pkg_update() {
                 as_root git submodule update --remote --init -f
             fi
 
-            # arg1: pre-update
+            # arg1: post-update
             # env:  PWD is path to repository
             run_hook post-update
         }
