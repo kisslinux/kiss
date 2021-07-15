@@ -710,6 +710,8 @@ pkg_tar() (
     # across implementations.
     cd "$pkg_dir/$1"
 
+    _tar_file=$bin_dir/$1@$repo_ver-$repo_rel.tar.$KISS_COMPRESS
+
     # Create a tarball from the contents of the built package.
     tar cf - . | case $KISS_COMPRESS in
         bz2)  bzip2 -z ;;
@@ -718,13 +720,14 @@ pkg_tar() (
         lz)   lzip -z  ;;
         xz)   xz -zT0  ;;
         zst)  zstd -z  ;;
-    esac > "$bin_dir/$1@$repo_ver-$repo_rel.tar.$KISS_COMPRESS"
+    esac > "$_tar_file"
 
     log "$1" "Successfully created tarball"
 
     # arg1: post-package
     # arg2: package name
-    run_hook post-package "$1"
+    # arg3: path to tarball
+    run_hook post-package "$1" "$_tar_file"
 )
 
 pkg_build_all() {
