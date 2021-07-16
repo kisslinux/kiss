@@ -737,7 +737,6 @@ pkg_tar() (
 pkg_build_all() {
     # Build packages and turn them into packaged tarballs.
     # Order the argument list and filter out duplicates.
-    log "Resolving dependencies"
 
     # Mark packages passed on the command-line explicit.
     # Also resolve dependencies for all explicit packages.
