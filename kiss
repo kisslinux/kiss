@@ -1682,8 +1682,8 @@ pkg_update() {
 
 pkg_clean() {
     # Clean up on exit or error. This removes everything related to the build.
-    case ${KISS_DEBUG:-0}-${KISS_LVL:-0} in
-        0-0)
+    case ${KISS_DEBUG:-0}-${KISS_LVL:-1} in
+        0-1)
             # If we are exiting the top-level package manager process, wipe
             # the entire temporary directory.
             rm -rf "$proc"
@@ -1758,11 +1758,15 @@ args() {
                 KISS_COLOR="$KISS_COLOR" \
                 KISS_TMPDIR="$KISS_TMPDIR" \
                 KISS_PID="$KISS_PID" \
-                KISS_LVL="$((KISS_LVL + 1))" \
+                KISS_LVL="$KISS_LVL" \
                 "$0" "$action" "$@"
             return
         }
     esac
+
+    # Need to increment KISS_LVL here to ensure we don't wipe the cash
+    # early by non-asroot invocations.
+    export KISS_LVL=$((KISS_LVL + 1))
 
     # Actions can be abbreviated to their first letter. This saves keystrokes
     # once you memorize the commands.
