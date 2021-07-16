@@ -804,6 +804,12 @@ pkg_build_all() {
 
         pkg_find_version "$pkg"
 
+        # arg1: queue-status
+        # arg2: package name
+        # arg3: number in queue
+        # arg4: total in queue
+        run_hook queue "$pkg" "$((_build_cur += 1))" "$#"
+
         # arg1: pre-extract
         # arg2: package name
         # arg3: path to DESTDIR
