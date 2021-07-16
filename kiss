@@ -820,7 +820,7 @@ pkg_build_all() {
     for pkg do
         log "$pkg" "Building package ($((_build_cur+=1))/${_build_tot:=$#})"
 
-        pkg_find_version "$pkg"
+        pkg_find_version "$pkg" 1
 
         # arg1: pre-extract
         # arg2: package name
