@@ -504,7 +504,7 @@ places inside the utility. Hooks allow the user to modify behavior, add new
 features or conditionally do things on a per-package basis.
 
 This setting is controlled by the '$KISS_HOOK' environment variable which takes
-the full path to a POSIX shell script as its value.
+a colon separated list of absolute file paths to executables.
 
 Example:
 
