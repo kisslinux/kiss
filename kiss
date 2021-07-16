@@ -53,7 +53,7 @@ tmp_file() {
     # for access by the caller (allowing 3 files at once).
     _tmp_file_pre_pre=$_tmp_file_pre
     _tmp_file_pre=$_tmp_file
-    _tmp_file=$tmp_dir/$pid-$1-$2
+    _tmp_file=$tmp_dir/$KISS_PID-$1-$2
 
     : > "$_tmp_file" ||
         die "$1" "Failed to create temporary file"
@@ -400,7 +400,7 @@ pkg_extract_tar_hack() {
 
         # Move the directory to prevent naming conflicts between
         # the child and parent.
-        mv -f "$dir" "$pid-$dir"
+        mv -f "$dir" "$KISS_PID-$dir"
 
         # First attempt to move all files up a directory level,
         # if any files/directories fail (due to mv's lack of
@@ -413,16 +413,16 @@ pkg_extract_tar_hack() {
         #
         # Using only '$@' causes a single file from each
         # invocation to be left out of the list. Weird, right?
-        find "$pid-$dir/." ! -name . -prune \
+        find "$KISS_PID-$dir/." ! -name . -prune \
             -exec sh -c 'mv -f "$0" "$@" .' {} + 2>/dev/null ||
 
-        find "$pid-$dir/." ! -name . -prune \
+        find "$KISS_PID-$dir/." ! -name . -prune \
             -exec sh -c 'cp -fRp "$0" "$@" .' {} +
 
         # Remove the directory now that all files have been
         # transferred out of it. This can't be a simple 'rmdir'
         # as we may leave files in here if any were copied.
-        rm -rf "$pid-$dir"
+        rm -rf "$KISS_PID-$dir"
     done
 
     # Remove the tarball now that we are done with it.
@@ -856,7 +856,7 @@ pkg_build() {
     # Attempt to create the log file early so any permissions errors are caught
     # before the build starts. 'tee' is run in a pipe and POSIX shell has no
     # pipe-fail causing confusing behavior when tee fails.
-    : > "$log_dir/$1-$time-$pid"
+    : > "$log_dir/$1-$time-$KISS_PID"
 
     # Call the build script, log the output to the terminal and to a file.
     # There's no PIPEFAIL in POSIX shell so we must resort to tricks like kill.
@@ -881,7 +881,7 @@ pkg_build() {
         \
         "$repo_dir/build" "$pkg_dir/$1" "$repo_ver" 2>&1 || {
             log "$1" "Build failed"
-            log "$1" "Log stored to $log_dir/$1-$time-$pid"
+            log "$1" "Log stored to $log_dir/$1-$time-$KISS_PID"
 
             # arg1: build-fail
             # arg2: package name
@@ -891,11 +891,11 @@ pkg_build() {
             pkg_clean
             kill 0
         }
-    } | tee "$log_dir/$1-$time-$pid"
+    } | tee "$log_dir/$1-$time-$KISS_PID"
 
     # Delete the log file if the build succeeded to prevent the directory
     # from filling very quickly with useless logs.
-    [ "$KISS_KEEPLOG" = 1 ] || rm -f "$log_dir/$1-$time-$pid"
+    [ "$KISS_KEEPLOG" = 1 ] || rm -f "$log_dir/$1-$time-$KISS_PID"
 
     # Copy the repository files to the package directory.
     cp -LRf "$repo_dir" "$pkg_dir/$1/$pkg_db/"
@@ -1209,7 +1209,7 @@ pkg_install_files() {
                 else
                     # Construct a temporary filename which is a) unique and
                     # b) identifiable as related to the package manager.
-                    __tmp=${_file%/*}/__kiss-tmp-$pkg_name-${file##*/}-$pid
+                    __tmp=${_file%/*}/__kiss-tmp-$pkg_name-${file##*/}-$KISS_PID
 
                     # Copy the file to the destination directory with the
                     # temporary name created above.
@@ -1889,7 +1889,7 @@ create_tmp_dirs() {
 
     # Top-level Temporary cache directory.
     proc=${KISS_TMPDIR:="$cac_dir/proc"}
-    proc=${proc%"${proc##*[!/]}"}/$pid
+    proc=${proc%"${proc##*[!/]}"}/$KISS_PID
 
     # Temporary cache directories.
     mak_dir=$proc/build
@@ -1899,6 +1899,10 @@ create_tmp_dirs() {
 
     mkdir -p "$src_dir" "$log_dir" "$bin_dir" \
              "$mak_dir" "$pkg_dir" "$tar_dir" "$tmp_dir"
+
+    # Catch errors and ensure that build files and directories are cleaned
+    # up before we die. This occurs on 'Ctrl+C' as well as success and error.
+    trap pkg_clean EXIT INT
 }
 
 main() {
@@ -1919,18 +1923,9 @@ main() {
     newline="
 "
 
-    # The PID of the current shell process is used to isolate directories
-    # to each specific KISS instance. This allows multiple package manager
-    # instances to be run at once. Store the value in another variable so
-    # that it doesn't change beneath us.
-    pid=${KISS_PID:=$$}
-
-    # Catch errors and ensure that build files and directories are cleaned
-    # up before we die. This occurs on 'Ctrl+C' as well as success and error.
-    trap pkg_clean EXIT INT
-
-    # Default compression method.
+    # Defaults for environment variables.
     : "${KISS_COMPRESS:=gz}"
+    : "${KISS_PID:=$$}"
 
     # Figure out which 'sudo' command to use based on the user's choice or what
     # is available on the system.
