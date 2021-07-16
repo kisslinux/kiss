@@ -1721,7 +1721,7 @@ args() {
             # When no arguments are given on the command-line, use the basename of
             # the current directory as the package name and add the parent directory
             # to the running process' KISS_PATH.
-            case $# in 0)
+            case ${action%%"${action#?}"}-$# in [!l]-0)
                 export KISS_PATH=${PWD%/*}:$KISS_PATH
                 set -- "${PWD##*/}"
             esac
