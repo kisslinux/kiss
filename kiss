@@ -53,7 +53,7 @@ tmp_file() {
     # for access by the caller (allowing 3 files at once).
     _tmp_file_pre_pre=$_tmp_file_pre
     _tmp_file_pre=$_tmp_file
-    _tmp_file=$mak_dir/.$pid-$1-$2
+    _tmp_file=$tmp_dir/$pid-$1-$2
 
     : > "$_tmp_file" ||
         die "$1" "Failed to create temporary file"
@@ -395,15 +395,17 @@ pkg_extract_tar_hack() {
     # This is a portable shell implementation of GNU tar's
     # '--strip-components 1'. Use of this function denotes a
     # performance penalty.
-    decompress "$2" > "$tmp_dir/ktar" ||
+    tmp_file "$1" tarball
+
+    decompress "$2" > "$_tmp_file" ||
         die "$1" "Failed to decompress $2"
 
-    tar xf "$tmp_dir/ktar" ||
+    tar xf "$_tmp_file" ||
         die "$1" "Failed to extract $2"
 
     # Iterate over all directories in the first level of the
     # tarball's manifest.
-    tar tf "$tmp_dir/ktar" | while IFS=/ read -r dir _; do
+    tar tf "$_tmp_file" | while IFS=/ read -r dir _; do
         # Skip the directory if seen before.
         ! contains "$_seen" "$dir" || continue && _seen="$_seen $dir"
 
@@ -437,6 +439,9 @@ pkg_extract_tar_hack() {
         # as we may leave files in here if any were copied.
         rm -rf "$pid-$dir"
     done
+
+    # Remove the tarball now that we are done with it.
+    rm -f "$_tmp_file"
 }
 
 pkg_extract() {
@@ -605,6 +610,8 @@ pkg_fix_deps() {
 
     : >> depends
 
+    tmp_file "${PWD##*/}" fix-depends
+
     find "$pkg_dir/${PWD##*/}/" -type f 2>/dev/null |
 
     while read -r _fix_file; do
@@ -655,12 +662,12 @@ pkg_fix_deps() {
         done <<EOF || :
 $elf_buf
 EOF
-    done | sort -uk1,1 depends - > "$tmp_dir/.fixdeps"
+    done | sort -uk1,1 depends - > "$_tmp_file"
 
     # If the depends file was modified, show a diff and replace it.
-    if [ -s "$tmp_dir/.fixdeps" ]; then
-        diff -U 3 depends - < "$tmp_dir/.fixdeps" 2>/dev/null || :
-        mv -f "$tmp_dir/.fixdeps" depends
+    if [ -s "$_tmp_file" ]; then
+        diff -U 3 depends - < "$_tmp_file" 2>/dev/null || :
+        mv -f "$_tmp_file" depends
         pkg_manifest "${PWD##*/}"
     else
         rm -f depends
@@ -1679,7 +1686,7 @@ pkg_clean() {
         0-0)
             # If we are exiting the top-level package manager process, wipe
             # the entire temporary directory.
-            rm -rf "$tmp_dir"
+            rm -rf "$proc"
         ;;
 
         0-*)
@@ -1882,16 +1889,17 @@ create_tmp_dirs() {
     bin_dir=$cac_dir/bin
 
     # Top-level Temporary cache directory.
-    tmp_dir=${KISS_TMPDIR:="$cac_dir/proc"}
-    tmp_dir=${tmp_dir%"${tmp_dir##*[!/]}"}/$pid
+    proc=${KISS_TMPDIR:="$cac_dir/proc"}
+    proc=${proc%"${proc##*[!/]}"}/$pid
 
     # Temporary cache directories.
-    mak_dir=$tmp_dir/build
-    pkg_dir=$tmp_dir/pkg
-    tar_dir=$tmp_dir/extract
+    mak_dir=$proc/build
+    pkg_dir=$proc/pkg
+    tar_dir=$proc/extract
+    tmp_dir=$proc/tmp
 
     mkdir -p "$src_dir" "$log_dir" "$bin_dir" \
-             "$mak_dir" "$pkg_dir" "$tar_dir"
+             "$mak_dir" "$pkg_dir" "$tar_dir" "$tmp_dir"
 }
 
 main() {
