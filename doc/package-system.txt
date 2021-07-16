@@ -199,7 +199,8 @@ The first field should contain the software's upstream version and the second
 field should contain the version number of the repository files themselves.
 
 If the package is using a git source to pull down the latest commit, the
-version should be simply set to 'git'.
+version should be simply set to 'git'. If a specific commit hash is being
+used, the version should be set accordingly.
 
 +------------------------------------------------------------------------------+
 | version                                                                      |
@@ -214,6 +215,14 @@ version should be simply set to 'git'.
 +------------------------------------------------------------------------------+
 |                                                                              |
 |   git 1                                                                      |
+|                                                                              |
++------------------------------------------------------------------------------+
+
++------------------------------------------------------------------------------+
+| version (commit hash)                                                        |
++------------------------------------------------------------------------------+
+|                                                                              |
+|   7fd2c9bd80b1053852a9cc989205f7ee6b1f6d6f 1                                 |
 |                                                                              |
 +------------------------------------------------------------------------------+
 
