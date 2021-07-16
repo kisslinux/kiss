@@ -1741,6 +1741,10 @@ args() {
         ;;
     esac
 
+    # Need to increment KISS_LVL here to ensure we don't wipe the cache
+    # early by non-asroot invocations.
+    export KISS_LVL=$((KISS_LVL + 1))
+
     # Rerun the script as root with a fixed environment if needed. We sadly
     # can't run singular functions as root so this is needed.
     case $action in a|alternatives|i|install|r|remove)
@@ -1761,10 +1765,6 @@ args() {
             return
         }
     esac
-
-    # Need to increment KISS_LVL here to ensure we don't wipe the cache
-    # early by non-asroot invocations.
-    export KISS_LVL=$((KISS_LVL + 1))
 
     # Actions can be abbreviated to their first letter. This saves keystrokes
     # once you memorize the commands.
