@@ -930,6 +930,8 @@ pkg_checksums() {
     # Generate checksums for packages.
     #
     # NOTE: repo_dir comes from caller.
+    unset _hash
+
     while read -r src dest || [ "$src" ]; do
         pkg_source_resolve "$1" "$src" "$dest" >/dev/null
 
