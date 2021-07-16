@@ -381,38 +381,33 @@ pkg_extract_tar_hack() {
     # '--strip-components 1'. Use of this function denotes a
     # performance penalty.
     tmp_file "$1" tarball
+    tmp_file "$1" tarball-manifest
 
-    decompress "$2" > "$_tmp_file" ||
+    decompress "$2" > "$_tmp_file_pre" ||
         die "$1" "Failed to decompress $2"
 
-    tar xf "$_tmp_file" ||
+    tar xf "$_tmp_file_pre" ||
         die "$1" "Failed to extract $2"
 
+    tar tf "$_tmp_file_pre" > "$_tmp_file" ||
+        die "$1" "Failed to extract manifest"
+
     # Iterate over all directories in the first level of the
-    # tarball's manifest.
-    tar tf "$_tmp_file" | while IFS=/ read -r dir _; do
-        # Skip the directory if seen before.
+    # tarball's manifest. Each directory is moved up a level.
+    while IFS=/ read -r dir _; do case ${dir#.} in *?*)
+        # Skip duplicate directories.
         ! contains "$_seen" "$dir" || continue && _seen="$_seen $dir"
 
-        # Some tarballs contain './' as the top-level directory,
-        # we need to skip these occurances.
-        [ -d "${dir#.}" ] || continue
-
-        # Move the directory to prevent naming conflicts between
-        # the child and parent.
+        # Move the parent directory to prevent naming conflicts
+        # with the to-be-moved children.
         mv -f "$dir" "$KISS_PID-$dir"
 
-        # First attempt to move all files up a directory level,
-        # if any files/directories fail (due to mv's lack of
-        # directory merge capability), simply do the exercise
-        # again and copy-merge the remaining files/directories.
+        # Move all children up a directory level. If the mv command
+        # fails, fallback to copying the remainder of the files.
         #
         # We can't use '-exec {} +' with any arguments between
         # the '{}' and '+' as this is not POSIX. We must also
         # use '$0' and '$@' to reference all arguments.
-        #
-        # Using only '$@' causes a single file from each
-        # invocation to be left out of the list. Weird, right?
         find "$KISS_PID-$dir/." ! -name . -prune \
             -exec sh -c 'mv -f "$0" "$@" .' {} + 2>/dev/null ||
 
@@ -423,10 +418,10 @@ pkg_extract_tar_hack() {
         # transferred out of it. This can't be a simple 'rmdir'
         # as we may leave files in here if any were copied.
         rm -rf "$KISS_PID-$dir"
-    done
+    esac done < "$_tmp_file"
 
     # Remove the tarball now that we are done with it.
-    rm -f "$_tmp_file"
+    rm -f "$_tmp_file_pre"
 }
 
 pkg_extract() {
