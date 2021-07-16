@@ -1465,20 +1465,17 @@ pkg_install() {
 
     log "$pkg_name" "Installing package (${tar_file##*/})"
 
-    # Make a backup of any etcsums if they exist.
-    tmp_file_copy "$pkg_name" etcsums-copy "$sys_db/$pkg_name/etcsums"
-    _etc_sums=$_tmp_file
-
     # If the package is already installed (and this is an upgrade) make a
     # backup of the manifest and etcsums files.
     tmp_file_copy "$pkg_name" manifest-copy "$sys_db/$pkg_name/manifest"
+    tmp_file_copy "$pkg_name"  etcsums-copy "$sys_db/$pkg_name/etcsums"
     tmp_file      "$pkg_name" manifest-diff
 
     tar_man=$tar_dir/$pkg_name/$pkg_db/$pkg_name/manifest
 
     # Generate a list of files which exist in the currently installed manifest
     # but not in the newer (to be installed) manifest.
-    grep -vFxf "$tar_man" "$_tmp_file_pre" > "$_tmp_file" 2>/dev/null ||:
+    grep -vFxf "$tar_man" "$_tmp_file_pre_pre" > "$_tmp_file" 2>/dev/null ||:
 
     # Reverse the manifest file so that we start shallow and go deeper as we
     # iterate over each item. This is needed so that directories are created
@@ -1502,12 +1499,12 @@ pkg_install() {
         #
         # This is more or less similar to Arch Linux's Pacman with the user
         # manually handling the .new files when and if they appear.
-        pkg_etc "$pkg_name" "$_etc_sums" &&
+        pkg_etc "$pkg_name" "$_tmp_file_pre_pre" &&
 
         # This is the aforementioned step removing any files from the old
         # version of the package if the installation is an update. Each file
         # type has to be specially handled to ensure no system breakage occurs.
-        pkg_remove_files "$_etc_sums" < "$_tmp_file_pre" &&
+        pkg_remove_files "$_tmp_file_pre_pre" < "$_tmp_file_pre" &&
 
         # Install the package's files a second time to fix any mess caused by
         # the above removal of the previous version of the package.
