@@ -938,8 +938,7 @@ pkg_checksums() {
 
             # Store the generated checksums in a string for use internally
             # without the need for subshells.
-            _hash="$_hash${_hash:+"
-"}$hash"
+            _hash="$_hash${_hash:+"$newline"}$hash"
         esac
     done < "$repo_dir/sources" || die "$1" "Failed to generate checksums"
 }
@@ -1635,8 +1634,7 @@ pkg_update() {
         # Detect repository orphans (installed packages with no
         # associated repository).
         case $repo_dir in */var/db/kiss/installed/*)
-            _repo_orp="$_repo_orp
-${pkg##*/}"
+            _repo_orp="$_repo_orp$newline${pkg##*/}"
         esac
 
         # Compare installed packages to repository packages.
@@ -1921,6 +1919,10 @@ main() {
     # passed by the user on the command-line properly resolve to locations
     # in the filesystem.
     ppwd=$PWD
+
+    # Never know when you're gonna need one of these.
+    newline="
+"
 
     # The PID of the current shell process is used to isolate directories
     # to each specific KISS instance. This allows multiple package manager
