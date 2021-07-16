@@ -943,27 +943,25 @@ pkg_verify() {
 
     [ -f "$repo_dir/sources" ] || return 0
 
-    # Read the repository checksums into a list.
-    while read -r chk _ || [ "$chk" ]; do
-        set -- "$@" "$chk"
-    done 2>/dev/null < "$repo_dir/checksums"
-
-    tmp_file "$1" verify
-
     # Generate a new set of checksums to compare against.
-    pkg_checksums "$1" > "$_tmp_file"
+    pkg_checksums "$1" > /dev/null
+
+    # Intentional, globbing disabled.
+    # shellcheck disable=2038,2086
+    set -- $_hash
 
     # Check that the first column (separated by whitespace) match in both
     # checksum files. If any part of either file differs, mismatch. Abort.
-    while read -r new _; do shift
-        printf 'old %s\nnew %s\n' "${1:-missing}" "$new"
+    while read -r chk _ || [ "$1" ]; do
+        printf '%s\n%s\n' "- ${chk:-missing}" "+ ${1:-no source}"
 
-        case $new-${1:-null} in
-            "$1-$new"|"$new-SKIP") ;;
-
-            *) die "${repo_dir##*/}" "Checksum mismatch"
+        case $1-${chk:-null} in
+            "$chk-$1"|"$1-SKIP") ;;
+            "$_hash"-*|*) die "${repo_dir##*/}" "Checksum mismatch"
         esac
-    done < "$_tmp_file"
+
+        shift "$(($# != 0))"
+    done < "$repo_dir/checksums"
 }
 
 pkg_conflicts() {
