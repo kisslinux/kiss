@@ -1764,7 +1764,7 @@ args() {
         }
     esac
 
-    # Need to increment KISS_LVL here to ensure we don't wipe the cash
+    # Need to increment KISS_LVL here to ensure we don't wipe the cache
     # early by non-asroot invocations.
     export KISS_LVL=$((KISS_LVL + 1))
 
