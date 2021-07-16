@@ -760,7 +760,7 @@ pkg_build_all() {
     set -- $deps "$@"
 
     # Ask for confirmation if extra packages need to be built.
-    [ "$#" -ne "$explicit_cnt" ] || [ "$pkg_update" ] && prompt
+    [ "$#" = "$explicit_cnt" ] || prompt
 
     log "Checking for pre-built dependencies"
 
