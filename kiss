@@ -1357,7 +1357,7 @@ pkg_remove() {
     run_hook     pre-remove "$1" "$sys_db/$1"
 
     # Make a backup of any etcsums if they exist.
-    tmp_file_copy "$pkg_name" etcsums-copy "$sys_db/$pkg_name/etcsums"
+    tmp_file_copy "$1" etcsums-copy "$sys_db/$1/etcsums"
 
     log "$1" "Removing package"
     pkg_remove_files "$_tmp_file" < "$sys_db/$1/manifest"
