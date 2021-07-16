@@ -269,10 +269,8 @@ pkg_cache() {
     # method if found or first match of the below glob.
     pkg_find_version "$1"
 
-    set +f
-    set -f -- \
-        "$bin_dir/$1@$repo_ver-$repo_rel.tar.$KISS_COMPRESS" \
-        "$bin_dir/$1@$repo_ver-$repo_rel.tar."*
+    set +f -- "$bin_dir/$1@$repo_ver-$repo_rel.tar."
+    set -f -- "$1$KISS_COMPRESS" "$1"*
 
     tar_file=$1
 
