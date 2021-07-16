@@ -1641,7 +1641,10 @@ pkg_update() {
 
 pkg_clean() {
     # Clean up on exit or error. This removes everything related to the build.
-    [ "$KISS_DEBUG" = 1 ] || rm -rf "$tmp_dir"
+    # This only runs inside the top-level KISS process.
+    case ${KISS_DEBUG:-0}-${KISS_LVL:-0} in 0-0)
+        rm -rf "$tmp_dir"
+    esac
 }
 
 args() {
@@ -1703,6 +1706,7 @@ args() {
                 KISS_COLOR="$KISS_COLOR" \
                 KISS_TMPDIR="$KISS_TMPDIR" \
                 KISS_PID="$KISS_PID" \
+                KISS_LVL="$((KISS_LVL + 1))" \
                 "$0" "$action" "$@"
             return
         }
