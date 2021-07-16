@@ -593,9 +593,8 @@ pkg_fix_deps() {
     set +f
     set -f -- "$sys_db/"*/manifest
 
-    : >> depends
-
-    tmp_file "${PWD##*/}" fix-depends
+    tmp_file_copy "${PWD##*/}" depends depends
+    tmp_file      "${PWD##*/}" depends-fixed
 
     find "$pkg_dir/${PWD##*/}/" -type f 2>/dev/null |
 
@@ -647,16 +646,14 @@ pkg_fix_deps() {
         done <<EOF || :
 $elf_buf
 EOF
-    done | sort -uk1,1 depends - > "$_tmp_file"
+    done | sort -uk1,1 "$_tmp_file_pre" - > "$_tmp_file"
 
     # If the depends file was modified, show a diff and replace it.
-    if [ -s "$_tmp_file" ]; then
-        diff -U 3 depends - < "$_tmp_file" 2>/dev/null || :
+    ! [ -s "$_tmp_file" ] || {
+        diff -U 3 "$_tmp_file_pre" "$_tmp_file" 2>/dev/null || :
         mv -f "$_tmp_file" depends
         pkg_manifest "${PWD##*/}"
-    else
-        rm -f depends
-    fi
+    }
 }
 
 pkg_manifest() {
