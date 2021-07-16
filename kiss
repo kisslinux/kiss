@@ -1630,7 +1630,8 @@ pkg_update() {
         # Detect repository orphans (installed packages with no
         # associated repository).
         case $repo_dir in */var/db/kiss/installed/*)
-            _repo_orp="$_repo_orp ${pkg##*/}"
+            _repo_orp="$_repo_orp
+${pkg##*/}"
         esac
 
         # Compare installed packages to repository packages.
@@ -1642,7 +1643,7 @@ pkg_update() {
 
     log "Checking for orphaned repository packages"
     case $_repo_orp in *?*)
-        war "Packages without repository:$_repo_orp"
+        war "Packages without repository$_repo_orp"
     esac
 
     set -f
@@ -1652,9 +1653,7 @@ pkg_update() {
         *" kiss "*)
             log "Detected package manager update"
             log "The package manager will be updated first"
-
             prompt
-
             pkg_build_all kiss
 
             log "Updated the package manager"
@@ -1667,6 +1666,7 @@ pkg_update() {
 
         *)
             log "Packages to update: $*"
+            prompt
             pkg_order "$@"
 
             # Intentional, globbing disabled.
