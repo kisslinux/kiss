@@ -1607,6 +1607,7 @@ pkg_update() {
     esac
 
     set -f
+    pkg_update=1
 
     case " $* " in
         *" kiss "*)
@@ -1628,7 +1629,6 @@ pkg_update() {
 
         *)
             log "Packages to update: $*"
-            pkg_update=1
             pkg_order "$@"
 
             # Intentional, globbing disabled.
