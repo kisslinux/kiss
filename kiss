@@ -234,22 +234,11 @@ pkg_find() {
     unset IFS
 
     # Show all search results if called from 'kiss search', else store the
-    # values in variables.
+    # values in variables. If there are 4 arguments, no package has been found.
     case $2-$# in
-        *-4)
-            # A package may also not be found due to a repository not being
-            # readable by the current user. Either way, we need to die here.
-            return 1
-        ;;
-
-        -*)
-            repo_dir=$5
-        ;;
-
-        *)
-            shift 4
-            printf '%s\n' "$@";
-        ;;
+        *-4) return 1 ;;
+         -*) repo_dir=$5 ;;
+          *) shift 4; printf '%s\n' "$@"
     esac
 }
 
