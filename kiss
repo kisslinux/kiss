@@ -1617,7 +1617,6 @@ pkg_update() {
             prompt
 
             pkg_build_all kiss
-            args i kiss
 
             log "Updated the package manager"
             log "Re-run 'kiss update' to update your system"
