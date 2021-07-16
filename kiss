@@ -1702,28 +1702,28 @@ args() {
     # not be used here as they would conflict with kiss extensions.
     case $action in
         a|alternatives)
-            case $1 in *\**|*\!*|*\[*|*\]*|*/*)
-                die "Invalid argument: '!*[]/' ($1)"
+            case $1 in *\**|*\!*|*\[*|*\ *|*\]*|*/*)
+                die "Invalid argument: '!*[ ]/' ($1)"
             esac
         ;;
 
         b|build|c|checksum|d|download|i|install|l|list|r|remove)
-            case ${action%%"${action#?}"}-$* in
-                i-*\!*|i-*\**|i-*\[*|i-*\]*)
-                    die "Arguments contain invalid characters: '!*[]' ($*)"
+            for _arg do case ${action%%"${action#?}"}-$_arg in
+                i-*\!*|i-*\**|i-*\[*|i-*\ *|i-*\]*)
+                    die "Argument contains invalid characters: '!*[ ]' ('$_arg')"
                 ;;
 
-                [!i]-*\!*|[!i]-*\**|[!i]-*\[*|[!i]-*\]*|[!i]-*/*)
-                    die "Arguments contain invalid characters: '!*[]/' ($*)"
+                [!i]-*\!*|[!i]-*\**|[!i]-*\[*|[!i]-*\ *|[!i]-*\]*|[!i]-*/*)
+                    die "Argument contains invalid characters: '!*[ ]/' ('$_arg')"
                 ;;
+            esac done
 
-                [!l]-)
-                    # Add parent directory to repository list.
-                    export KISS_PATH=${PWD%/*}:$KISS_PATH
-
-                    # Use basename of current directory as package.
-                    set -- "${PWD##*/}"
-                ;;
+            # When no arguments are given on the command-line, use the basename of
+            # the current directory as the package name and add the parent directory
+            # to the running process' KISS_PATH.
+            case $# in 0)
+                export KISS_PATH=${PWD%/*}:$KISS_PATH
+                set -- "${PWD##*/}"
             esac
 
             # Order the argument list based on dependence.
