@@ -1304,6 +1304,7 @@ pkg_removable() {
 pkg_remove() {
     # Remove a package and all of its files. The '/etc' directory is handled
     # differently and configuration files are *not* overwritten.
+    [ -d "$sys_db/$1" ] || die "'$1' not installed"
 
     # Intended behavior.
     # shellcheck disable=2030,2031
