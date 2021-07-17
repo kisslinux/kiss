@@ -293,6 +293,8 @@ pkg_cache() {
 pkg_source_resolve() {
     # Given a line of input from the sources file, return an absolute
     # path to the source if it already exists, error if not.
+    [ "${2##\#*}" ] || { _res=; return; }
+
     fnr "${2%"${2##*[!/]}"}" \
         VERSION "$repo_ver" \
         RELEASE "$repo_rel" \
@@ -304,12 +306,8 @@ pkg_source_resolve() {
 
     set -- "$1" "$_fnr" "${3%"${3##*[!/]}"}" "$4"
 
-    if [ -z "${2##\#*}" ]; then
-        _res=
-        return
-
     # Git repository.
-    elif [ -z "${2##git+*}" ]; then
+    if [ -z "${2##git+*}" ]; then
         _res=$2
 
     # Remote source (cached).
