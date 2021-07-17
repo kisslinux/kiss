@@ -584,62 +584,81 @@ pkg_fix_deps() {
     tmp_file_copy "${PWD##*/}" depends depends
     tmp_file      "${PWD##*/}" depends-fixed
 
-    find "$pkg_dir/${PWD##*/}/" -type f 2>/dev/null |
+    while read -r _file; do case $_file in
+        # Look only in these locations for files of interest (libraries,
+        # programs, etc). This includes all subdirectories. Old behavior
+        # would run ldd on all files (upwards of 4000 for Python).
+        */sbin/?*|*/bin/?*|*/lib/?*|*/lib??/?*|*/lib???/?*|*/lib????/?*)
 
-    while read -r _fix_file; do
-        ldd_buf=$(ldd -- "$_fix_file" 2>/dev/null)        || continue
-        elf_buf=$("$cmd_elf" -d "$_fix_file" 2>/dev/null) || elf_buf=$ldd_buf
+        # The readelf mode requires ldd's output to resolve the library
+        # path for a given file. If ldd fails, silently skip the file.
+        ldd_buf=$(ldd -- "$_file" 2>/dev/null) || continue
 
-        while read -r line || [ "$line" ]; do
-            case $line in *NEEDED*\[*\] | *'=>'*)
-                # readelf: 0x0000 (NEEDED) Shared library: [libjson-c.so.5]
-                line=${line##*\[}
-                line=${line%%\]*}
+        # Attempt to get information from readelf. If this fails (or we
+        # are in ldd mode), do full ldd mode (which has the downside of
+        # listing dependencies of dependencies (and so on)).
+        elf_buf=$("$cmd_elf" -d "$_file" 2>/dev/null) || elf_buf=$ldd_buf
 
-                # Resolve library path.
-                # ldd: libjson-c.so.5 => /lib/libjson-c.so.5 ...
-                case $cmd_elf in
-                    *readelf) line=${ldd_buf#*"	$line => "} ;;
-                    *)        line=${line##*=> } ;;
-                esac
-                line=${line%% *}
+        # Iterate over the output of readelf or ldd, extract file names,
+        # resolve their paths and finally, figure out their owner.
+        while read -r lib; do case $lib in *NEEDED*\[*\] | *'=>'*)
+            # readelf: 0x0000 (NEEDED) Shared library: [libjson-c.so.5]
+            lib=${lib##*\[}
+            lib=${lib%%\]*}
 
-                # Skip files owned by libc and POSIX.
-                case ${line##*/} in
-                    ld-*           |\
-                    lib[cm].so*    |\
-                    libcrypt.so*   |\
-                    libdl.so*      |\
-                    libmvec.so*    |\
-                    libpthread.so* |\
-                    libresolv.so*  |\
-                    librt.so*      |\
-                    libtrace.so*   |\
-                    libutil.so*    |\
-                    libxnet.so*    |\
-                    ldd)
-                        continue
-                    ;;
-
-                    *)
-                        # Skip file if owned by current package
-                        pkg_owner -l "/${line#/}\$" "$PWD/manifest" &&
-                            continue
-
-                        pkg_owner -l "/${line#/}\$" "$@" &&
-                            printf '%s\n' "$pkg_owner"
-                    ;;
-                esac
+            # Resolve library path.
+            # ldd: libjson-c.so.5 => /lib/libjson-c.so.5 ...
+            case $cmd_elf in
+                *readelf) lib=${ldd_buf#*"	$lib => "} ;;
+                *)        lib=${lib##*=> } ;;
             esac
-        done <<EOF || :
+            lib=${lib%% *}
+
+            # Skip files owned by libc and POSIX.
+            case ${lib##*/} in
+                ld-*           |\
+                lib[cm].so*    |\
+                libcrypt.so*   |\
+                libdl.so*      |\
+                libmvec.so*    |\
+                libpthread.so* |\
+                libresolv.so*  |\
+                librt.so*      |\
+                libtrace.so*   |\
+                libutil.so*    |\
+                libxnet.so*    |\
+                ldd)
+                    continue
+            esac
+
+            # Skip file if owned by current package
+            ! pkg_owner -l "/${lib#/}\$" manifest ||
+                continue
+
+            ! pkg_owner -l "/${lib#/}\$" "$@" ||
+                printf '%s\n' "$pkg_owner"
+
+        esac done <<EOF || :
 $elf_buf
 EOF
-    done | sort -uk1,1 "$_tmp_file_pre" - > "$_tmp_file"
+    esac done < manifest |
+
+    # Sort the depends file (including the existing depends file) and
+    # remove any duplicate entries. This can't take into account comments
+    # so they remain rather than being replaced.
+    sort -uk1,1 "$_tmp_file_pre" - > "$_tmp_file"
 
     # If the depends file was modified, show a diff and replace it.
     ! [ -s "$_tmp_file" ] || {
         diff -U 3 "$_tmp_file_pre" "$_tmp_file" 2>/dev/null || :
+
+        # Replace the existing depends file if one exists, otherwise this
+        # just moves the file to its final resting place.
         mv -f "$_tmp_file" depends
+
+        # Generate a new manifest as we may be the creator of the depends
+        # file. This could otherwise be implemented by inserting a line
+        # at the correct place in the existing manifest.
         pkg_manifest "${PWD##*/}"
     }
 }
