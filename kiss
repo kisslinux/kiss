@@ -1041,11 +1041,9 @@ pkg_conflicts() {
     # Enable alternatives automatically if it is safe to do so.
     # This checks to see that the package that is about to be installed
     # doesn't overwrite anything it shouldn't in '/var/db/kiss/installed'.
-    grep -q ":/var/db/kiss/installed/" "$_tmp_file" || choice_auto=1
+    grep -q ":/var/db/kiss/installed/" "$_tmp_file" || safe=1
 
-    if [ "$KISS_CHOICE" != 0  ] &&
-       [ "$choice_auto"  = 1  ] &&
-       [ -s "$_tmp_file" ]; then
+    if [ "$KISS_CHOICE" != 0  ] && [ "$safe" = 1  ] && [ -s "$_tmp_file" ]; then
         # This is a novel way of offering an "alternatives" system.
         # It is entirely dynamic and all "choices" are created and
         # destroyed on the fly.
