@@ -1864,10 +1864,6 @@ create_tmp_dirs() {
 
     mkdir -p "$src_dir" "$log_dir" "$bin_dir" \
              "$mak_dir" "$pkg_dir" "$tar_dir" "$tmp_dir"
-
-    # Catch errors and ensure that build files and directories are cleaned
-    # up before we die. This occurs on 'Ctrl+C' as well as success and error.
-    trap pkg_clean EXIT INT
 }
 
 main() {
@@ -1917,6 +1913,11 @@ main() {
     uid=$(id -u)
 
     create_tmp_dirs
+
+    # Catch errors and ensure that build files and directories are cleaned
+    # up before we die. This occurs on 'Ctrl+C' as well as success and error.
+    trap pkg_clean EXIT INT
+
     args "$@"
 }
 
