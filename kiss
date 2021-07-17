@@ -1650,20 +1650,11 @@ pkg_update() {
 
 pkg_clean() {
     # Clean up on exit or error. This removes everything related to the build.
+    # If _KISS_LVL is (1) we are the top-level process - the entire cache will
+    # be removed. If _KISS_LVL is any other value, remove only the tar directory.
     case ${KISS_DEBUG:-0}-${_KISS_LVL:-1} in
-        0-1)
-            # If we are exiting the top-level package manager process, wipe
-            # the entire temporary directory.
-            rm -rf "$proc"
-        ;;
-
-        0-*)
-            # If we are exiting a nested package manager process, wipe only
-            # the tar temporary directory. Files in this directory may not
-            # be owned by user of the top-level process and therefore cannot
-            # be removed.
-            rm -rf "$tar_dir"
-        ;;
+        0-1) rm -rf "$proc" ;;
+        0-*) rm -rf "$tar_dir"
     esac
 }
 
