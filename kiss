@@ -668,10 +668,8 @@ pkg_manifest() {
     find . ! -path . -type d -exec printf '%s/\n' {} + \
         -o \( ! -type d -a ! -name \*.la -a ! -name charset.alias \) -print |
 
-    # sort: Sort the output in *reverse*. Directories appear *after* their
-    #       contents.
-    # sed:  Remove the first character in each line (./dir -> /dir) and
-    #       remove all lines which only contain '.'.
+    # Sort the output in reverse. Directories appear after their contents.
+    # Remove the first character in each line (./dir -> /dir) and
     sort -r | sed ss.ss > "$PWD/$pkg_db/$1/manifest"
 
     cd "$OLDPWD"
