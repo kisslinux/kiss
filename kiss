@@ -744,7 +744,7 @@ pkg_etcsums() {
     done > "$pkg_dir/$1/$pkg_db/$1/etcsums"
 }
 
-pkg_tar() (
+pkg_tar() {
     # Create a tarball from the built package's files. This tarball also
     # contains the package's database entry.
     #
@@ -767,13 +767,15 @@ pkg_tar() (
         zst)  zstd -z  ;;
     esac > "$_tar_file"
 
+    cd "$OLDPWD"
+
     log "$1" "Successfully created tarball"
 
     # arg1: post-package
     # arg2: package name
     # arg3: path to tarball
     run_hook post-package "$1" "$_tar_file"
-)
+}
 
 pkg_build_all() {
     # Build packages and turn them into packaged tarballs.
