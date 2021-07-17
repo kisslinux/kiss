@@ -751,11 +751,11 @@ pkg_tar() (
     # NOTE: repo_ comes from caller.
     log "$1" "Creating tarball"
 
+    _tar_file=$bin_dir/$1@$repo_ver-$repo_rel.tar.$KISS_COMPRESS
+
     # Use 'cd' to avoid needing tar's '-C' flag which may not be portable
     # across implementations.
     cd "$pkg_dir/$1"
-
-    _tar_file=$bin_dir/$1@$repo_ver-$repo_rel.tar.$KISS_COMPRESS
 
     # Create a tarball from the contents of the built package.
     tar cf - . | case $KISS_COMPRESS in
