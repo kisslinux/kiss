@@ -960,6 +960,9 @@ pkg_verify() {
     # shellcheck disable=2038,2086
     set -- $_hash
 
+    # Only read checksums if we generated some.
+    ! [ "$1" ] ||
+
     # Check that the first column (separated by whitespace) match in both
     # checksum files. If any part of either file differs, mismatch. Abort.
     while read -r chk _ || [ "$1" ]; do
