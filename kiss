@@ -1150,6 +1150,7 @@ file_rwx() {
 
 pkg_install_files() {
     # Copy files and create directories (preserving permissions).
+    # The 'test $1' will run with '-z' for overwrite and '-e' for verify.
     while { read -r file && _file=$KISS_ROOT$file; } do case $file in
         /etc/*[!/])
             # Handle /etc/ files in a special way (via a 3-way checksum) to
