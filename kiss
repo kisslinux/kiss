@@ -386,9 +386,8 @@ pkg_extract_tar_hack() {
 
     # Iterate over all directories in the first level of the
     # tarball's manifest. Each directory is moved up a level.
-    while IFS=/ read -r dir _; do case ${dir#.} in *?*)
-        # Skip duplicate directories.
-        ! contains "$_seen" "$dir" || continue && _seen="$_seen $dir"
+    while IFS=/ read -r dir _; do contains "$_seen" "${dir#.}" || {
+        _seen="$_seen $dir"
 
         # Move the parent directory to prevent naming conflicts
         # with the to-be-moved children.
@@ -410,7 +409,7 @@ pkg_extract_tar_hack() {
         # transferred out of it. This can't be a simple 'rmdir'
         # as we may leave files in here if any were copied.
         rm -rf "$KISS_PID-$dir"
-    esac done < "$_tmp_file"
+    } done < "$_tmp_file"
 
     # Remove the tarball now that we are done with it.
     rm -f "$_tmp_file_pre"
