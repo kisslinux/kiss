@@ -1276,7 +1276,7 @@ pkg_etc() {
 
         # All other cases.
         *)
-            war "$1" "saving /$1 as /$1.new"
+            war "$_pkg" "saving $1 as $1.new"
             new=.new
         ;;
     esac
