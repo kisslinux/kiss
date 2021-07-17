@@ -1121,6 +1121,9 @@ file_rwx() {
 
     # Convert the output of 'ls' (rwxrwx---) to octal. This is simply
     # a 1-9 loop with the second digit being the value of the field.
+    #
+    # NOTE: This drops setgid/setuid permissions and does not include
+    # them in the conversion. This is intentional.
     for c in 14 22 31 44 52 61 74 82 91; do
         rwx=${rwx#?}
 
