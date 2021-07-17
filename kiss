@@ -368,23 +368,38 @@ pkg_source() {
     done < "$repo_dir/sources"
 }
 
-pkg_extract_tar_hack() {
+pkg_source_git() {
+    # This magic will shallow clone branches, commits or the
+    # regular repository. It correctly handles cases where a
+    # shallow clone is not possible.
+    log "$repo_name" "Cloning ${1##git+}"
+
+    # Split the source into URL + OBJECT (branch or commit).
+    url=${1##git+} com=${url##*[@#]} com=${com#${url%[#@]*}}
+
+    git init
+    git remote add origin "${url%[#@]*}"
+    git fetch -t --filter=tree:0 origin "$com" || git fetch -t
+    git -c advice.detachedHead=0 checkout "${com:-FETCH_HEAD}"
+}
+
+pkg_source_tar_hack() {
     # This is a portable shell implementation of GNU tar's
     # '--strip-components 1'. Use of this function denotes a
     # performance penalty.
-    tmp_file "$1" tarball
-    tmp_file "$1" tarball-manifest
+    tmp_file "$repo_name" tarball
+    tmp_file "$repo_name" tarball-manifest
 
     unset _seen
 
-    decompress "$2" > "$_tmp_file_pre" ||
-        die "$1" "Failed to decompress $2"
+    decompress "$1" > "$_tmp_file_pre" ||
+        die "$repo_name" "Failed to decompress $1"
 
     tar xf "$_tmp_file_pre" ||
-        die "$1" "Failed to extract $2"
+        die "$repo_name" "Failed to extract $1"
 
     tar tf "$_tmp_file_pre" > "$_tmp_file" ||
-        die "$1" "Failed to extract manifest"
+        die "$repo_name" "Failed to extract manifest"
 
     # Iterate over all directories in the first level of the
     # tarball's manifest. Each directory is moved up a level.
@@ -437,30 +452,20 @@ pkg_extract() {
             mkcd "$mak_dir/$1/$dest"
         esac
 
-        case $_res in '') ;;
+        case $_res in
             git+*)
-                # Split the source into URL + OBJECT (branch or commit).
-                url=${_res##git+} com=${url##*[@#]} com=${com#${url%[#@]*}}
-
-                # This magic will shallow clone branches, commits or the
-                # regular repository. It correctly handles cases where a
-                # shallow clone is not possible.
-                log "$1" "Cloning ${url%[#@]*}"
-                git init
-                git remote add origin "${url%[#@]*}"
-                git fetch -t --filter=tree:0 origin "$com" || git fetch -t
-                git -c advice.detachedHead=0 checkout "${com:-FETCH_HEAD}"
+                pkg_source_git "$_res"
             ;;
 
             *.tar|*.tar.??|*.tar.???|*.tar.????|*.t?z)
-                pkg_extract_tar_hack "$1" "$_res"
+                pkg_source_tar_hack "$_res"
             ;;
 
             *.zip)
                 unzip "$_res"
             ;;
 
-            *)
+            *?*)
                 cp -Rf "$_res" .
             ;;
         esac
