@@ -352,7 +352,7 @@ pkg_source() {
     # Support packages without sources. Simply do nothing.
     [ -f "$repo_dir/sources" ] || return 0
 
-    log "$1" "Checking sources"
+    log "$1" "Reading sources"
     mkcd "$src_dir/$1"
 
     while read -r src dest || [ "$src" ]; do
@@ -955,7 +955,7 @@ pkg_verify() {
     # of checksums and then comparing those with the old set.
     #
     # NOTE: repo_dir comes from caller.
-    log "$1" "Checking sources"
+    log "$1" "Verifying sources"
 
     [ -f "$repo_dir/sources" ] || return 0
 
@@ -1750,9 +1750,8 @@ args() {
         ;;
 
         c|checksum)
-            for pkg do pkg_source "$pkg" c; done
             for pkg do
-                pkg_find_version_split "$pkg"
+                pkg_source "$pkg" c
 
                 [ -f "$repo_dir/sources" ] || {
                     log "$pkg" "No sources file, skipping checksums"
