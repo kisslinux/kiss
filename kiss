@@ -1211,9 +1211,8 @@ pkg_remove_files() {
     while read -r file; do
         case $file in /etc/?*[!/])
             sh256 "$KISS_ROOT/$file" >/dev/null
-            sum_old=$(grep -F "${hash:-null}" "$1")
 
-            [ "${hash:-null}" = "$sum_old" ] || {
+            grep -qF "${hash:-null}" "$1" || {
                 printf 'Skipping %s (modified)\n' "$file"
                 continue
             }
