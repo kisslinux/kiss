@@ -656,8 +656,10 @@ pkg_manifest() {
     cd "${2:-$pkg_dir}/$1"
 
     # Create a list of all files and directories. Append '/' to the end of
-    # directories so they can be easily filtered out later.
-    find . -type d -exec printf '%s/\n' {} + -o ! -type d -print |
+    # directories so they can be easily filtered out later. Also filter out
+    # all libtool .la files and charset.alias.
+    find . -type d -exec printf '%s/\n' {} + \
+        -o \( ! -type d -a ! -name \*.la -a ! -name charset.alias \) -print |
 
     # sort: Sort the output in *reverse*. Directories appear *after* their
     #       contents.
@@ -892,13 +894,6 @@ pkg_build() {
     # arg2: package name
     # arg3: path to DESTDIR
     run_hook post-build "$1" "$pkg_dir/$1"
-
-    # Remove all .la files from package.
-    find "$pkg_dir/$1/usr/lib" \
-        -name \*.la -exec rm -f {} + 2>/dev/null || :
-
-    # Remove unneeded file from all packages.
-    rm -f "$pkg_dir/$1/usr/lib/charset.alias"
 
     # Ensure manifest is added to manfiest.
     : > "$pkg_dir/$1/$pkg_db/$1/manifest"
