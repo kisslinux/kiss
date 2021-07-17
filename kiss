@@ -443,7 +443,7 @@ pkg_extract() {
             mkcd "$mak_dir/$1/$dest"
         esac
 
-        case $_res in
+        case $_res in '') ;;
             git+*)
                 # Split the source into URL + OBJECT (branch or commit).
                 url=${_res##git+} com=${url##*[@#]} com=${com#${url%[#@]*}}
@@ -464,10 +464,6 @@ pkg_extract() {
 
             *.zip)
                 unzip "$_res"
-            ;;
-
-            '')
-                # Blank lines / Comments.
             ;;
 
             *)
@@ -659,11 +655,9 @@ pkg_manifest() {
 
     cd "${2:-$pkg_dir}/$1"
 
-    # find: Print all files and directories and append '/' to directories.
-    {
-        find . -type d -exec printf '%s/\n' {} +
-        find . ! -type d -print
-    } |
+    # Create a list of all files and directories. Append '/' to the end of
+    # directories so they can be easily filtered out later.
+    find . -type d -exec printf '%s/\n' {} + -o ! -type d -print |
 
     # sort: Sort the output in *reverse*. Directories appear *after* their
     #       contents.
