@@ -1115,15 +1115,13 @@ pkg_swap() {
 }
 
 file_rwx() {
-    # Grab the octal permissions from 'ls -l' so that we can retain
-    # directory permissions and strip setuid/setgid if found.
-    rwx=$(ls -ld "$1") oct='' o=0
-
     # Convert the output of 'ls' (rwxrwx---) to octal. This is simply
     # a 1-9 loop with the second digit being the value of the field.
     #
     # NOTE: This drops setgid/setuid permissions and does not include
     # them in the conversion. This is intentional.
+    rwx=$(ls -ld "$1") oct='' o=0
+
     for c in 14 22 31 44 52 61 74 82 91; do
         rwx=${rwx#?}
 
