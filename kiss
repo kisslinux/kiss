@@ -129,13 +129,13 @@ file_owner() {
 }
 
 pkg_owner() {
-    [ "$3" ] || { set +f; set -f -- "$1" "$2" "$sys_db"/*/manifest; }
+    [ "$2" ] || { set +f; set -f -- "$1" "$sys_db"/*/manifest; }
 
-    pkg_owner=$(grep "$@")
-    pkg_owner=${pkg_owner%/*}
-    pkg_owner=${pkg_owner##*/}
+    _owns=$(grep -l "$@")
+    _owns=${_owns%/*}
+    _owns=${_owns##*/}
 
-    [ "$pkg_owner" ]
+    [ "$_owns" ]
 }
 
 run_hook() {
@@ -641,11 +641,11 @@ pkg_fix_deps() {
             esac
 
             # Skip file if owned by current package
-            ! pkg_owner -l "/${lib#/}\$" manifest ||
+            ! pkg_owner "/${lib#/}\$" manifest ||
                 continue
 
-            ! pkg_owner -l "/${lib#/}\$" "$@" ||
-                printf '%s\n' "$pkg_owner"
+            ! pkg_owner "/${lib#/}\$" "$@" ||
+                printf '%s\n' "$_owns"
 
         esac done <<EOF || :
 $elf_buf
@@ -1110,15 +1110,8 @@ pkg_swap() {
         die "Alternative '$1 ${2:-null}' doesn't exist"
 
     if [ -f "$KISS_ROOT$2" ]; then
-        # Figure out which package owns the file we are going to swap in the
-        # system then extract the name from the path spat out by grep.
-        _owns=$(set +f; grep -lFx "$2" "$sys_db/"*/manifest) || :
-        _owns=${_owns%/*}
-        _owns=${_owns##*/}
-
-        # Ensure that the file we're going to swap is actually owned by a
-        # package. If it is not, we have to die here.
-        [ "$_owns" ] || die "File '$2' exists on filesystem but isn't owned"
+        pkg_owner "/${2#/}\$" ||
+            die "File '$2' exists on filesystem but isn't owned"
 
         log "Swapping '$2' from '$_owns' to '$1'"
 
