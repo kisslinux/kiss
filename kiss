@@ -1757,7 +1757,7 @@ args() {
         r|remove)   for pkg in $redro; do pkg_remove "$pkg"; done ;;
         s|search)   for pkg do pkg_find "$pkg" all; done ;;
         u|update)   pkg_update ;;
-        v|version)  printf '5.5.6\n' ;;
+        v|version)  printf '5.5.7\n' ;;
 
         '')
             log 'kiss [a|b|c|d|i|l|r|s|u|v] [pkg]...'
