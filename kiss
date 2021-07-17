@@ -655,6 +655,12 @@ pkg_manifest() {
 
     cd "${2:-$pkg_dir}/$1"
 
+    # Ensure manifest is added to manfiest.
+    : > "$PWD/$pkg_db/$1/manifest"
+
+    # Ensure etcsums is added to manifest if /etc exists in package.
+    ! [ -d "$PWD/etc" ] || : > "$PWD/$pkg_db/$1/etcsums"
+
     # Create a list of all files and directories. Append '/' to the end of
     # directories so they can be easily filtered out later. Also filter out
     # all libtool .la files and charset.alias.
@@ -894,12 +900,6 @@ pkg_build() {
     # arg2: package name
     # arg3: path to DESTDIR
     run_hook post-build "$1" "$pkg_dir/$1"
-
-    # Ensure manifest is added to manfiest.
-    : > "$pkg_dir/$1/$pkg_db/$1/manifest"
-
-    # Ensure etcsums is added to manifest if /etc/ exists in package.
-    ! [ -d "$pkg_dir/$1/etc" ] || : > "$pkg_dir/$1/$pkg_db/$1/etcsums"
 }
 
 pkg_checksums() {
