@@ -129,15 +129,11 @@ file_owner() {
 }
 
 pkg_owner() {
-    set +f
-
-    [ "$3" ] || set -- "$1" "$2" "$sys_db"/*/manifest
+    [ "$3" ] || { set +f; set -f -- "$1" "$2" "$sys_db"/*/manifest; }
 
     pkg_owner=$(grep "$@")
     pkg_owner=${pkg_owner%/*}
     pkg_owner=${pkg_owner##*/}
-
-    set -f
 
     [ "$pkg_owner" ]
 }
