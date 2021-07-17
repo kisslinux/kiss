@@ -1346,10 +1346,10 @@ pkg_installable() {
 
     while read -r dep dep_type || [ "$dep" ]; do
         case $dep-$dep_type in [!\#]?*)
-            [ -d "$sys_db/$dep" ] || {
-                printf '%s %s\n' "$dep" "$dep_type"
-                set -- "$1" "$2" "$(($3 + 1))"
-            }
+            ! [ -d "$sys_db/$dep" ] || continue
+
+            printf '%s %s\n' "$dep" "$dep_type"
+            set -- "$1" "$2" "$(($3 + 1))"
         esac
     done < "$2"
 
