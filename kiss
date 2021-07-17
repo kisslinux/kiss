@@ -423,11 +423,12 @@ pkg_extract() {
     # local repository files.
     #
     # NOTE: repo_dir comes from caller.
-
-    # Support packages without sources. Simply do nothing.
-    [ -f "$repo_dir/sources" ] || return 0
-
     log "$1" "Extracting sources"
+
+    # arg1: pre-extract
+    # arg2: package name
+    # arg3: path to DESTDIR
+    run_hook pre-extract "$pkg" "$pkg_dir/$pkg"
 
     while read -r src dest || [ "$src" ]; do
         pkg_source_resolve "$1" "$src" "$dest" >/dev/null
@@ -819,7 +820,8 @@ pkg_build_all() {
 
     for pkg do
         pkg_source "$pkg"
-        pkg_verify "$pkg"
+
+        ! [ -f "$repo_dir/sources" ] || pkg_verify "$pkg"
     done
 
     # Finally build and create tarballs for all passed packages and
@@ -835,12 +837,8 @@ pkg_build_all() {
         # arg4: total in queue
         run_hook queue "$pkg" "$((_build_cur += 1))" "$#"
 
-        # arg1: pre-extract
-        # arg2: package name
-        # arg3: path to DESTDIR
-        run_hook pre-extract "$pkg" "$pkg_dir/$pkg"
+        ! [ -f "$repo_dir/sources" ] || pkg_extract  "$pkg"
 
-        pkg_extract  "$pkg"
         pkg_build    "$pkg"
         pkg_strip    "$pkg"
         pkg_manifest "$pkg"
@@ -956,8 +954,6 @@ pkg_verify() {
     #
     # NOTE: repo_dir comes from caller.
     log "$1" "Verifying sources"
-
-    [ -f "$repo_dir/sources" ] || return 0
 
     # Generate a new set of checksums to compare against.
     pkg_checksums "$1" > /dev/null
@@ -1753,20 +1749,20 @@ args() {
             for pkg do
                 pkg_source "$pkg" c
 
-                [ -f "$repo_dir/sources" ] || {
-                    log "$pkg" "No sources file, skipping checksums"
-                    continue
-                }
+                [ -f "$repo_dir/sources" ] || continue
 
                 pkg_checksums "$pkg"
 
-                [ "$_hash" ] || {
-                    log "$pkg" "No sources needing checksums"
-                    continue
-                }
+                case $_hash in
+                    '')
+                        log "$pkg" "No sources needing checksums"
+                    ;;
 
-                printf '%s\n' "$_hash" > "$repo_dir/checksums"
-                log "$pkg" "Generated checksums"
+                    *)
+                        printf '%s\n' "$_hash" > "$repo_dir/checksums"
+                        log "$pkg" "Generated checksums"
+                    ;;
+                esac
             done
         ;;
 
