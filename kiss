@@ -80,6 +80,20 @@ mkcd() {
     mkdir -p "$@" && cd "$1"
 }
 
+fnr() {
+    # Replace all occurrences of substrings with substrings. This
+    # function takes pairs of arguments iterating two at a time
+    # until everything has been replaced.
+    _fnr=$1
+    shift 1
+
+    while :; do case $_fnr-$# in
+        *"$1"*) _fnr=${_fnr%"$1"*}${2}${_fnr##*"$1"} ;;
+           *-2) break ;;
+             *) shift 2
+    esac done
+}
+
 as_root() {
     case $uid/${user:=root}/${cmd_su##*/} in
         0/root/*)
@@ -237,7 +251,7 @@ pkg_find() {
     # values in variables. If there are 4 arguments, no package has been found.
     case $2-$# in
         *-4) return 1 ;;
-         -*) repo_dir=$5 ;;
+         -*) repo_dir=$5 repo_name=${5##*/} ;;
           *) shift 4; printf '%s\n' "$@"
     esac
 }
@@ -283,32 +297,19 @@ pkg_cache() {
     [ -f "$2" ]
 }
 
-source_resolve_vars() {
-    # Replace all occurrences of markers with their respective values
-    # if found in the source string.
-    _src_sub() { _src_res=${_src_res%"$1"*}${2}${_src_res##*"$1"}; }
-    _src_res=$1
-
-    # Loop until no identifiers are found and all have been removed.
-    # This works backwards replacing each identifier with its value.
-    while :; do case $_src_res in
-        *VERSION*) _src_sub VERSION "$repo_ver" ;;
-        *RELEASE*) _src_sub RELEASE "$repo_rel" ;;
-          *MAJOR*) _src_sub MAJOR   "$repo_major" ;;
-          *MINOR*) _src_sub MINOR   "$repo_minor" ;;
-          *PATCH*) _src_sub PATCH   "$repo_patch" ;;
-          *IDENT*) _src_sub IDENT   "$repo_ident" ;;
-            *PKG*) _src_sub PKG     "${repo_dir##*/}" ;;
-                *) break
-    esac done
-}
-
 pkg_source_resolve() {
     # Given a line of input from the sources file, return an absolute
     # path to the source if it already exists, error if not.
-    source_resolve_vars "${2%"${2##*[!/]}"}"
+    fnr "${2%"${2##*[!/]}"}" \
+        VERSION "$repo_ver" \
+        RELEASE "$repo_rel" \
+          MAJOR "$repo_major" \
+          MINOR "$repo_minor" \
+          PATCH "$repo_patch" \
+          IDENT "$repo_ident" \
+            PKG "$repo_name"
 
-    set -- "$1" "$_src_res" "${3%"${3##*[!/]}"}" "$4"
+    set -- "$1" "$_fnr" "${3%"${3##*[!/]}"}" "$4"
 
     if [ -z "${2##\#*}" ]; then
         _res=
@@ -960,7 +961,7 @@ pkg_verify() {
 
         case $1-${chk:-null} in
             "$chk-$1"|"$1-SKIP") ;;
-            "$_hash"-*|*) die "${repo_dir##*/}" "Checksum mismatch"
+            "$_hash"-*|*) die "$repo_name" "Checksum mismatch"
         esac
 
         shift "$(($# != 0))"
@@ -1058,12 +1059,12 @@ pkg_conflicts() {
 
             # Construct the file name of the "db" entry of the
             # conflicting file. (pkg_name>usr>bin>ls)
-            con_name=$(printf %s "$con" | sed 's|/|>|g')
+            fnr "$con" '/' '>'
 
             # Move the conflicting file to the choices directory
             # and name it according to the format above.
             mv -f "$tar_dir/$p_name$con" \
-                  "$tar_dir/$p_name/$cho_db/$p_name$con_name" 2>/dev/null || {
+                  "$tar_dir/$p_name/$cho_db/$p_name$_fnr" 2>/dev/null || {
                 log "File must be in ${con%/*} and not a symlink to it"
                 log "This usually occurs when a binary is installed to"
                 log "/sbin instead of /usr/bin (example)"
@@ -1090,40 +1091,34 @@ pkg_swap() {
     # Swap between package alternatives.
     pkg_list "$1" >/dev/null
 
-    alt=$(printf %s "$1$2" | sed 's|/|>|g')
-    cd "$sys_db/../choices"
+    fnr "$1$2" '/' '>'
 
-    [ -f "$alt" ] || [ -h "$alt" ] ||
+    [ -f "$sys_ch/$_fnr" ] || [ -h "$sys_ch/$_fnr" ] ||
         die "Alternative '$1 $2' doesn't exist"
 
-    if [ -f "$2" ]; then
-        # Figure out which package owns the file we are going to swap for
-        # another package's. Print the full path to the manifest file which
-        # contains the match to our search.
-        pkg_owns=$(set +f; grep -lFx "$2" "$sys_db/"*/manifest) || :
-
-        # Extract the package name from the path above.
-        pkg_owns=${pkg_owns%/*}
-        pkg_owns=${pkg_owns##*/}
+    if [ -f "$KISS_ROOT$2" ]; then
+        # Figure out which package owns the file we are going to swap in the
+        # system then extract the name from the path spat out by grep.
+        _owns=$(set +f; grep -lFx "$2" "$sys_db/"*/manifest) || :
+        _owns=${_owns%/*}
+        _owns=${_owns##*/}
 
         # Ensure that the file we're going to swap is actually owned by a
         # package. If it is not, we have to die here.
-        [ "$pkg_owns" ] || die "File '$2' exists on filesystem but isn't owned"
+        [ "$_owns" ] || die "File '$2' exists on filesystem but isn't owned"
 
-        log "Swapping '$2' from '$pkg_owns' to '$1'"
+        log "Swapping '$2' from '$_owns' to '$1'"
 
         # Convert the current owner to an alternative and rewrite its manifest
         # file to reflect this.
-        cp -Pf "$KISS_ROOT/$2" "$pkg_owns>${alt#*>}"
-
-        pkg_manifest_replace "$pkg_owns" "$2" "/$cho_db/$pkg_owns>${alt#*>}"
+        cp -Pf "$KISS_ROOT$2" "$sys_ch/$_owns>${_fnr#*>}"
+        pkg_manifest_replace "$_owns" "$2" "/$cho_db/$_owns>${_fnr#*>}"
     fi
 
     # Convert the desired alternative to a real file and rewrite the manifest
     # file to reflect this. The reverse of above.
-    mv -f "$alt" "$KISS_ROOT/$2"
-
-    pkg_manifest_replace "$1" "/$cho_db/$alt" "$2"
+    mv -f "$sys_ch/$_fnr" "$KISS_ROOT/$2"
+    pkg_manifest_replace "$1" "/$cho_db/$_fnr" "$2"
 }
 
 file_rwx() {
@@ -1751,9 +1746,10 @@ args() {
             else
                 # Go over each alternative and format the file
                 # name for listing. (pkg_name>usr>bin>ls)
-                set +f; for pkg in "$sys_db/../choices"/*; do
-                    printf '%s\n' "${pkg##*/}"
-                done | sed 's|>| /|; s|>|/|g; /\*/d'
+                set +f; for pkg in "$sys_ch/"*; do
+                    fnr "${pkg##*/}" '>' '/'
+                    printf '%s %s\n' "${_fnr%%/*}" "/${_fnr#*/}"
+                done
             fi
         ;;
 
@@ -1849,7 +1845,7 @@ create_tmp_dirs() {
 
     # System package database.
     sys_db=$KISS_ROOT/${pkg_db:=var/db/kiss/installed}
-    cho_db=${pkg_db%%/installed}/choices
+    sys_ch=$KISS_ROOT/${cho_db:=var/db/kiss/choices}
 
     # Top-level cache directory.
     cac_dir=${XDG_CACHE_HOME:-"${HOME%"${HOME##*[!/]}"}/.cache"}
