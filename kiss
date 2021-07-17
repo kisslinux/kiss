@@ -985,10 +985,11 @@ pkg_verify() {
 
 pkg_conflicts() {
     # Check to see if a package conflicts with another.
-    log "$1" "Checking for package conflicts"
+    # _pkg comes from the caller.
+    log "$_pkg" "Checking for package conflicts"
 
-    tmp_file "$1" manifest-files
-    tmp_file "$1" found-conflicts
+    tmp_file "$_pkg" manifest-files
+    tmp_file "$_pkg" found-conflicts
 
     # Filter the tarball's manifest and select only files. Resolve all
     # symlinks in file paths as well.
@@ -1004,10 +1005,9 @@ pkg_conflicts() {
         # resolved to their real locations.
         printf '%s\n' "${PWD#"$KISS_ROOT"}/${file##*/}"
 
-    esac done < "$PWD/$pkg_db/$1/manifest" > "$_tmp_file_pre"
+    esac done < "$PWD/$pkg_db/$_pkg/manifest" > "$_tmp_file_pre"
 
-    cd "$tar_dir/$1"
-    p_name=$1
+    cd "$tar_dir/$_pkg"
     set +f
     set -f "$sys_db"/*/manifest
 
@@ -1018,7 +1018,7 @@ pkg_conflicts() {
     for manifest do
         shift
 
-        case $manifest in "$sys_db/$p_name/manifest")
+        case $manifest in "$sys_db/$_pkg/manifest")
             continue
         esac
 
@@ -1075,22 +1075,22 @@ pkg_conflicts() {
 
             # Move the conflicting file to the choices directory
             # and name it according to the format above.
-            mv -f "$PWD$con" "$PWD/$cho_db/$p_name$_fnr" 2>/dev/null || {
+            mv -f "$PWD$con" "$PWD/$cho_db/$_pkg$_fnr" 2>/dev/null || {
                 log "File must be in ${con%/*} and not a symlink to it"
                 log "This usually occurs when a binary is installed to"
                 die "/sbin instead of /usr/bin (example)"
             }
         done < "$_tmp_file"
 
-        log "$p_name" "Converted all conflicts to choices (kiss a)"
+        log "$_pkg" "Converted all conflicts to choices (kiss a)"
 
         # Rewrite the package's manifest to update its location
         # to its new spot (and name) in the choices directory.
-        pkg_manifest "$p_name" "$tar_dir"
+        pkg_manifest "$_pkg" "$tar_dir"
 
     elif [ -s "$_tmp_file" ]; then
-        log "Package '$p_name' conflicts with another package" "" "!>"
-        log "Run 'KISS_CHOICE=1 kiss i $p_name' to add conflicts" "" "!>"
+        log "Package '$_pkg' conflicts with another package" "" "!>"
+        log "Run 'KISS_CHOICE=1 kiss i $_pkg' to add conflicts" "" "!>"
         die "as alternatives." "" "!>"
     fi
 }
@@ -1434,7 +1434,7 @@ pkg_install() {
     # arg3: path to extracted package
     run_hook pre-install "$_pkg" "$PWD"
 
-    pkg_conflicts "$_pkg"
+    pkg_conflicts
 
     log "$_pkg" "Installing package (${tar_file##*/})"
 
