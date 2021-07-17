@@ -820,13 +820,11 @@ pkg_build_all() {
         fi
     done
 
-    [ "$pkg_update" ] || {
+    case $pkg_update in '')
         # Intentional, globbing disabled.
         # shellcheck disable=2046,2086
-        set -- $explicit
-
-        ! prompt "Install built packages? [$*]" || (args i "$@")
-    }
+        ! prompt "Install built packages? [$explicit]" || (args i $explicit)
+    esac
 }
 
 pkg_build() {
