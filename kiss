@@ -584,6 +584,8 @@ pkg_fix_deps() {
     tmp_file_copy "${PWD##*/}" depends depends
     tmp_file      "${PWD##*/}" depends-fixed
 
+    # False positive (not a write).
+    # shellcheck disable=2094
     while read -r _file; do case $_file in
         # Look only in these locations for files of interest (libraries,
         # programs, etc). This includes all subdirectories. Old behavior
