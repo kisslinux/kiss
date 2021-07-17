@@ -1157,7 +1157,18 @@ pkg_install_files() {
         #
         # The 'test' will run with '-e' for no-overwrite and '-z'
         # for overwrite.
-        case $file in /etc/*) ;;
+        case $file in
+            /etc/*[!/])
+                # Handle /etc/ files in a special way (via a 3-way checksum) to
+                # determine how these files should be installed. Do we overwrite
+                # the existing file? Do we install it as $file.new to avoid
+                # deleting user configuration? etc.
+                #
+                # This is more or less similar to Arch Linux's Pacman with the
+                # user manually handling the .new files when and if they appear.
+                test "$1" "$_file" || pkg_etc "$file" "$_tmp_file_pre_pre"
+            ;;
+
             */)
                 # Skip directories if they already exist in the file system.
                 # (Think /usr/bin, /usr/lib, etc).
@@ -1194,6 +1205,8 @@ pkg_install_files() {
                 fi
         esac || return 1
     done
+
+    unset _etc_cnt
 }
 
 pkg_remove_files() {
@@ -1238,59 +1251,46 @@ pkg_remove_files() {
     done
 }
 
-pkg_etc() (
-    [ -d "$tar_dir/$1/etc" ] || return 0
+pkg_etc() {
+    _etc_cnt=$((_etc_cnt + 1))
 
-    cd "$tar_dir/$1"
+    # Generate checksums from tarball.
+    sh256 "$tar_dir/$_pkg$1"  >/dev/null
+    sum_new=$hash
 
-    # Create all directories beforehand.
-    find etc -type d | while read -r dir; do
-        mkdir -p "$KISS_ROOT/$dir"
-    done
+    # Generate checksums from system.
+    sh256 "$KISS_ROOT$1"  >/dev/null
+    sum_sys=$hash
 
-    # Handle files in /etc/ based on a 3-way checksum check.
-    find etc ! -type d | sort | while read -r file; do
-        i=$((i + 1))
+    # Extract checksums from system etcsums.
+    sum_old=$(awk "NR == $_etc_cnt" "$2") >/dev/null 2>&1 ||:
 
-        { sh256 "$file";            sum_new=$hash
-          sh256 "$KISS_ROOT/$file"; sum_sys=$hash
-          sum_old=$(awk "NR == $i" "$2"); } >/dev/null 2>&1 || :
+    # Compare the three checksums to determine what to do.
+    case ${sum_old:-null}${sum_sys:-null}${sum_new} in
+        # old = Y, sys = X, new = Y
+        "${sum_new}${sum_sys}${sum_old}")
+            return 0
+        ;;
 
-        log "$1" "Doing 3-way handshake for $file"
-        printf '%s\n' "Previous: ${sum_old:-null}"
-        printf '%s\n' "System:   ${sum_sys:-null}"
-        printf '%s\n' "New:      ${sum_new:-null}"
+        # old = X, sys = X, new = X
+        # old = X, sys = Y, new = Y
+        # old = X, sys = X, new = Y
+        "${sum_old}${sum_old}${sum_old}"|\
+        "${sum_old:-null}${sum_sys}${sum_sys}"|\
+        "${sum_sys}${sum_old}"*)
+            new=
+        ;;
 
-        # Use a case statement to easily compare three strings at
-        # the same time. Pretty nifty.
-        case ${sum_old:-null}${sum_sys:-null}${sum_new} in
-            # old = Y, sys = X, new = Y
-            "${sum_new}${sum_sys}${sum_old}")
-                log "Skipping $file"
-                continue
-            ;;
+        # All other cases.
+        *)
+            war "$1" "saving /$1 as /$1.new"
+            new=.new
+        ;;
+    esac
 
-            # old = X, sys = X, new = X
-            # old = X, sys = Y, new = Y
-            # old = X, sys = X, new = Y
-            "${sum_old}${sum_old}${sum_old}"|\
-            "${sum_old:-null}${sum_sys}${sum_sys}"|\
-            "${sum_sys}${sum_old}"*)
-                log "Installing $file"
-                new=
-            ;;
-
-            # All other cases.
-            *)
-                war "$1" "saving /$file as /$file.new"
-                new=.new
-            ;;
-        esac
-
-        cp -fPp "$file" "$KISS_ROOT/${file}${new}"
-        chown root:root "$KISS_ROOT/${file}${new}" 2>/dev/null
-    done || :
-)
+    cp -fPp "$tar_dir/$_pkg/$1" "$KISS_ROOT$1$new"
+    chown root:root "$KISS_ROOT$1$new" 2>/dev/null ||:
+}
 
 pkg_removable() {
     # Check if a package is removable and die if it is not.
@@ -1460,15 +1460,6 @@ pkg_install() {
     if
         # Install the package's files by iterating over its manifest.
         pkg_install_files -z "$PWD" < "$_tmp_file" &&
-
-        # Handle /etc/ files in a special way (via a 3-way checksum) to
-        # determine how these files should be installed. Do we overwrite the
-        # existing file? Do we install it as $file.new to avoid deleting user
-        # configuration? etc.
-        #
-        # This is more or less similar to Arch Linux's Pacman with the user
-        # manually handling the .new files when and if they appear.
-        pkg_etc "$_pkg" "$_tmp_file_pre_pre" &&
 
         # This is the aforementioned step removing any files from the old
         # version of the package if the installation is an update. Each file
