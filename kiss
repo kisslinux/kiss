@@ -992,10 +992,7 @@ pkg_conflicts() {
 
     # Filter the tarball's manifest and select only files. Resolve all
     # symlinks in file paths as well.
-    while read -r file; do
-        # Skip all directories.
-        case $file in */) continue; esac
-
+    while read -r file; do case $file in *[!/])
         file=$KISS_ROOT/${file#/}
 
         # Attempt to resolve symlinks by using 'cd'.
@@ -1006,7 +1003,8 @@ pkg_conflicts() {
         # Print the file with all symlinks in its path
         # resolved to their real locations.
         printf '%s\n' "${PWD#"$KISS_ROOT"}/${file##*/}"
-    done < "$tar_dir/$1/$pkg_db/$1/manifest" > "$_tmp_file_pre"
+
+    esac done < "$PWD/$pkg_db/$1/manifest" > "$_tmp_file_pre"
 
     cd "$tar_dir/$1"
     p_name=$1
