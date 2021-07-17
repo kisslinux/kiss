@@ -1349,6 +1349,7 @@ pkg_installable() {
             ! [ -d "$sys_db/$dep" ] || continue
 
             printf '%s %s\n' "$dep" "$dep_type"
+
             set -- "$1" "$2" "$(($3 + 1))"
         esac
     done < "$2"
@@ -1530,11 +1531,10 @@ pkg_update() {
             # env:  PWD is path to repository
             run_hook pre-update
 
-            # Display a tick if signing is enabled for this repository.
-            case $(git config merge.verifySignatures) in
-                true) log "$PWD" "[signed] " ;;
-                *)    log "$PWD" " " ;;
-            esac
+            # Display whether or not signature verification is enabled.
+            _sig=$(git config --get --default false merge.verifySignatures)
+
+            log "$PWD" "[verify: $_sig]"
 
             if [ -w "$PWD" ] && [ "$uid" != 0 ]; then
                 git pull
