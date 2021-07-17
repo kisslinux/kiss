@@ -691,6 +691,22 @@ pkg_manifest_validate() {
     esac
 }
 
+pkg_manifest_replace() {
+    # Replace the matching line in the manifest with the desired replacement.
+    # This used to be a 'sed' call which turned out to be a little
+    # error-prone in some cases. This new method is a tad slower but ensures
+    # we never wipe the file due to a command error.
+    tmp_file "$1" "manifest-replace-${2##*/}"
+
+    while read -r line; do
+        case $line in "$2") line=$3; esac
+
+        printf '%s\n' "$line"
+    done < "$sys_db/$1/manifest" | sort -r > "$_tmp_file"
+
+    mv -f "$_tmp_file" "$sys_db/$1/manifest"
+}
+
 pkg_etcsums() {
     # Generate checksums for each configuration file in the package's /etc/
     # directory for use in "smart" handling of these files.
@@ -1038,7 +1054,7 @@ pkg_conflicts() {
 
             # Create the "choices" directory inside of the tarball.
             # This directory will store the conflicting file.
-            mkdir -p "$tar_dir/$p_name/${cho_dir:=var/db/kiss/choices}"
+            mkdir -p "$tar_dir/$p_name/$cho_db"
 
             # Construct the file name of the "db" entry of the
             # conflicting file. (pkg_name>usr>bin>ls)
@@ -1047,7 +1063,7 @@ pkg_conflicts() {
             # Move the conflicting file to the choices directory
             # and name it according to the format above.
             mv -f "$tar_dir/$p_name$con" \
-                  "$tar_dir/$p_name/$cho_dir/$p_name$con_name" 2>/dev/null || {
+                  "$tar_dir/$p_name/$cho_db/$p_name$con_name" 2>/dev/null || {
                 log "File must be in ${con%/*} and not a symlink to it"
                 log "This usually occurs when a binary is installed to"
                 log "/sbin instead of /usr/bin (example)"
@@ -1095,44 +1111,19 @@ pkg_swap() {
         [ "$pkg_owns" ] || die "File '$2' exists on filesystem but isn't owned"
 
         log "Swapping '$2' from '$pkg_owns' to '$1'"
-        tmp_file "$pkg_owns" from-alt
 
         # Convert the current owner to an alternative and rewrite its manifest
         # file to reflect this.
         cp -Pf "$KISS_ROOT/$2" "$pkg_owns>${alt#*>}"
 
-        # Replace the matching line in the manifest with the desired replacement.
-        # This used to be a 'sed' call which turned out to be a little
-        # error-prone in some cases. This new method is a tad slower but ensures
-        # we never wipe the file due to a command error.
-        while read -r line; do
-            case $line in
-                "$2") printf '%s\n' "${PWD#"$KISS_ROOT"}/$pkg_owns>${alt#*>}" ;;
-                   *) printf '%s\n' "$line" ;;
-            esac
-        done < "../installed/$pkg_owns/manifest" | sort -r > "$_tmp_file"
-
-        mv -f "$_tmp_file" "../installed/$pkg_owns/manifest"
+        pkg_manifest_replace "$pkg_owns" "$2" "/$cho_db/$pkg_owns>${alt#*>}"
     fi
 
     # Convert the desired alternative to a real file and rewrite the manifest
     # file to reflect this. The reverse of above.
     mv -f "$alt" "$KISS_ROOT/$2"
 
-    tmp_file "$pkg_owns" to-alt
-
-    # Replace the matching line in the manifest with the desired replacement.
-    # This used to be a 'sed' call which turned out to be a little error-prone
-    # in some cases. This new method is a tad slower but ensures we never wipe
-    # the file due to a command error.
-    while read -r line; do
-        case $line in
-            "${PWD#"$KISS_ROOT"}/$alt") printf '%s\n' "$2" ;;
-                                     *) printf '%s\n' "$line" ;;
-        esac
-    done < "../installed/$1/manifest" | sort -r > "$_tmp_file"
-
-    mv -f "$_tmp_file" "../installed/$1/manifest"
+    pkg_manifest_replace "$1" "/$cho_db/$alt" "$2"
 }
 
 file_rwx() {
@@ -1858,6 +1849,7 @@ create_tmp_dirs() {
 
     # System package database.
     sys_db=$KISS_ROOT/${pkg_db:=var/db/kiss/installed}
+    cho_db=${pkg_db%%/installed}/choices
 
     # Top-level cache directory.
     cac_dir=${XDG_CACHE_HOME:-"${HOME%"${HOME##*[!/]}"}/.cache"}
