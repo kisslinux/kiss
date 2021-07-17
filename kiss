@@ -185,7 +185,7 @@ sh256() {
     # All utilities must match 'sha256sum' output.
     #
     # Example: '<checksum>  <file>'
-    hash=
+    unset hash
 
     if [ ! -d "$1" ] && [ -e "$1" ]; then
         hash=$(
@@ -288,13 +288,9 @@ pkg_cache() {
 
     tar_file=$1
 
-    # Found tarball matching KISS_COMPRESS.
-    ! [ -f "$1" ] || return 0
-
-    tar_file=$2
-
-    # Use result of glob.
-    [ -f "$2" ]
+    # If the first match does not exist, use the second. If neither exist,
+    # this function returns 1 and the caller handles the error.
+    [ -f "$1" ] || { tar_file=$2; [ -f "$2" ]; }
 }
 
 pkg_source_resolve() {
