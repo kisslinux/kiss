@@ -234,6 +234,10 @@ EOF
 }
 
 pkg_find() {
+    _pkg_find "$@" || die "'$1' not found"
+}
+
+_pkg_find() {
     # Figure out which repository a package belongs to by searching for
     # directories matching the package name in $KISS_PATH/*.
     set -- "$1" "$2" "$3" "${4:-"$KISS_PATH"}"
@@ -253,7 +257,7 @@ pkg_find() {
     # Show all search results if called from 'kiss search', else store the
     # values in variables. If there are 4 arguments, no package has been found.
     case $2-$# in
-        *-4) die "'$1' not found" ;;
+        *-4) return 1 ;;
          -*) repo_dir=$5 repo_name=${5##*/} ;;
           *) shift 4; printf '%s\n' "$@"
     esac
@@ -488,7 +492,7 @@ pkg_depends() {
             die "Circular dependency detected $1 <> ${4##* }"
         esac
 
-        ! "${6:-pkg_find}" "$1" || ! [ -e "$repo_dir/depends" ] ||
+        ! "${6:-_pkg_find}" "$1" || ! [ -e "$repo_dir/depends" ] ||
 
         # Recurse through the dependencies of the child packages.
         while read -r dep dep_type || [ "$dep" ]; do
@@ -1180,7 +1184,7 @@ pkg_install_files() {
                 else
                     # Construct a temporary filename which is a) unique and
                     # b) identifiable as related to the package manager.
-                    __tmp=${_file%/*}/__kiss-tmp-$pkg_name-${file##*/}-$KISS_PID
+                    __tmp=${_file%/*}/__kiss-tmp-$_pkg-${file##*/}-$KISS_PID
 
                     # Copy the file to the destination directory with the
                     # temporary name created above.
@@ -1349,17 +1353,11 @@ pkg_installable() {
     ! [ -f "$2" ] ||
 
     while read -r dep dep_type || [ "$dep" ]; do
-        case $dep-$dep_type in
-            \#*-*)
-                continue
-            ;;
-
-            *-)
-                [ -d "$sys_db/$dep" ] || {
-                    printf '%s %s\n' "$dep" "$dep_type"
-                    set -- "$1" "$2" "$(($3 + 1))"
-                }
-            ;;
+        case $dep-$dep_type in [!\#]?*)
+            [ -d "$sys_db/$dep" ] || {
+                printf '%s %s\n' "$dep" "$dep_type"
+                set -- "$1" "$2" "$(($3 + 1))"
+            }
         esac
     done < "$2"
 
@@ -1402,17 +1400,17 @@ pkg_install() {
             [ -f "$1" ] || die "File '$1' does not exist"
 
             tar_file=$1
-            pkg_name=${1##*/}
-            pkg_name=${pkg_name%@*}
+            _pkg=${1##*/}
+            _pkg=${_pkg%@*}
         ;;
 
         *)
             pkg_cache "$1" || die "$1" "Not yet built"
-            pkg_name=$1
+            _pkg=$1
         ;;
     esac
 
-    mkcd "$tar_dir/$pkg_name"
+    mkcd "$tar_dir/$_pkg"
 
     # The tarball is extracted to a temporary directory where its contents are
     # then "installed" to the filesystem. Running this step as soon as possible
@@ -1423,29 +1421,29 @@ pkg_install() {
     # Naively assume that the existence of a manifest file is all that
     # determines a valid KISS package from an invalid one. This should be a
     # fine assumption to make in 99.99% of cases.
-    [ -f "./$pkg_db/$pkg_name/manifest" ] || die "Not a valid KISS package"
+    [ -f "$PWD/$pkg_db/$_pkg/manifest" ] || die "Not a valid KISS package"
 
     [ "$KISS_FORCE" = 1 ] || {
-        pkg_manifest_validate "$pkg_name"
-        pkg_installable "$pkg_name" "$tar_dir/$pkg_name/$pkg_db/$pkg_name/depends"
+        pkg_manifest_validate "$_pkg"
+        pkg_installable "$_pkg" "$PWD/$pkg_db/$_pkg/depends"
     }
 
     # arg1: pre-install
     # arg2: package name
     # arg3: path to extracted package
-    run_hook pre-install "$pkg_name" "$tar_dir/$pkg_name"
+    run_hook pre-install "$_pkg" "$PWD"
 
-    pkg_conflicts "$pkg_name"
+    pkg_conflicts "$_pkg"
 
-    log "$pkg_name" "Installing package (${tar_file##*/})"
+    log "$_pkg" "Installing package (${tar_file##*/})"
 
     # If the package is already installed (and this is an upgrade) make a
     # backup of the manifest and etcsums files.
-    tmp_file_copy "$pkg_name" manifest-copy "$sys_db/$pkg_name/manifest"
-    tmp_file_copy "$pkg_name"  etcsums-copy "$sys_db/$pkg_name/etcsums"
-    tmp_file      "$pkg_name" manifest-diff
+    tmp_file_copy "$_pkg" manifest-copy "$sys_db/$_pkg/manifest"
+    tmp_file_copy "$_pkg"  etcsums-copy "$sys_db/$_pkg/etcsums"
+    tmp_file      "$_pkg" manifest-diff
 
-    tar_man=$tar_dir/$pkg_name/$pkg_db/$pkg_name/manifest
+    tar_man=$PWD/$pkg_db/$_pkg/manifest
 
     # Generate a list of files which exist in the currently installed manifest
     # but not in the newer (to be installed) manifest.
@@ -1454,7 +1452,7 @@ pkg_install() {
     # Reverse the manifest file so that we start shallow and go deeper as we
     # iterate over each item. This is needed so that directories are created
     # going down the tree.
-    tmp_file "$pkg_name" manifest-reverse
+    tmp_file "$_pkg" manifest-reverse
     sort "$tar_man" > "$_tmp_file"
 
     # Block being able to abort the script with Ctrl+C during installation.
@@ -1464,7 +1462,7 @@ pkg_install() {
 
     if
         # Install the package's files by iterating over its manifest.
-        pkg_install_files -z "$tar_dir/$pkg_name" < "$_tmp_file" &&
+        pkg_install_files -z "$PWD" < "$_tmp_file" &&
 
         # Handle /etc/ files in a special way (via a 3-way checksum) to
         # determine how these files should be installed. Do we overwrite the
@@ -1473,7 +1471,7 @@ pkg_install() {
         #
         # This is more or less similar to Arch Linux's Pacman with the user
         # manually handling the .new files when and if they appear.
-        pkg_etc "$pkg_name" "$_tmp_file_pre_pre" &&
+        pkg_etc "$_pkg" "$_tmp_file_pre_pre" &&
 
         # This is the aforementioned step removing any files from the old
         # version of the package if the installation is an update. Each file
@@ -1482,7 +1480,7 @@ pkg_install() {
 
         # Install the package's files a second time to fix any mess caused by
         # the above removal of the previous version of the package.
-        pkg_install_files -e "$tar_dir/$pkg_name" < "$_tmp_file"
+        pkg_install_files -e "$PWD" < "$_tmp_file"
 
     then
         # Reset 'trap' to its original value. Installation is done so we no longer
@@ -1492,15 +1490,15 @@ pkg_install() {
         # arg1: post-install
         # arg2: package name
         # arg3: path to installed package database
-        run_hook_pkg post-install "$pkg_name"
-        run_hook     post-install "$pkg_name" "$sys_db/$pkg_name"
+        run_hook_pkg post-install "$_pkg"
+        run_hook     post-install "$_pkg" "$sys_db/$_pkg"
 
-        log "$pkg_name" "Installed successfully"
+        log "$_pkg" "Installed successfully"
 
     else
         pkg_clean
-        log "$pkg_name" "Failed to install package." ERROR
-        die "$pkg_name" "Filesystem now dirty, manual repair needed."
+        log "$_pkg" "Failed to install package." ERROR
+        die "$_pkg" "Filesystem now dirty, manual repair needed."
     fi
 }
 
