@@ -665,14 +665,14 @@ pkg_manifest() {
     # Create a list of all files and directories. Append '/' to the end of
     # directories so they can be easily filtered out later. Also filter out
     # all libtool .la files and charset.alias.
-    find . -type d -exec printf '%s/\n' {} + \
+    find . ! -path . -type d -exec printf '%s/\n' {} + \
         -o \( ! -type d -a ! -name \*.la -a ! -name charset.alias \) -print |
 
     # sort: Sort the output in *reverse*. Directories appear *after* their
     #       contents.
     # sed:  Remove the first character in each line (./dir -> /dir) and
     #       remove all lines which only contain '.'.
-    sort -r | sed '/^\.\/$/d;ss.ss' > "$PWD/$pkg_db/$1/manifest"
+    sort -r | sed ss.ss > "$PWD/$pkg_db/$1/manifest"
 
     cd "$OLDPWD"
 }
