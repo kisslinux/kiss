@@ -1619,6 +1619,7 @@ pkg_update() {
         *" kiss "*)
             log "Detected package manager update"
             log "The package manager will be updated first"
+
             prompt
             pkg_build_all kiss
 
@@ -1632,6 +1633,7 @@ pkg_update() {
 
         *)
             log "Packages to update: $*"
+
             prompt
             pkg_order "$@"
 
