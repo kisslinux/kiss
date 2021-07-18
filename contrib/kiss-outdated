@@ -284,5 +284,5 @@ for repo do
     }
 
     main "$repo"
-    cd "$OLDPWD"
+    cd "$OLDPWD" || exit 1
 done
