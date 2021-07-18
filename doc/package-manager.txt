@@ -5,9 +5,6 @@ The KISS package manager is a self-contained POSIX shell script which is written
 in a highly portable way. It should run in anywhere with a POSIX shell and
 POSIX compliant coreutils.
 
-The package manager is merely an implementation of the package format, its
-requirements and some added sugar on top.
-
 Source: $/kisslinux/kiss
 
 
@@ -100,6 +97,7 @@ kept to a minimum (though we must also remain realistic).
 | Binutils             |                                            |          |
 |----------------------+--------------------------------------------+----------|
 | ldd                  | Dependency Fixer                           | No [6]   |
+| readelf              | Dependency Fixer (better edition)          | No [6]   |
 | strip                | Binary Stripping                           | No [6]   |
 |                      |                                            |          |
 +----------------------+--------------------------------------------+----------+
@@ -150,7 +148,8 @@ kept to a minimum (though we must also remain realistic).
     This makes our usage of 'strip' non-POSIX. That being said, our usage is
     compatible with these 'strip' implementations.
 
-    strips: binutils, elfutils, elftoolchain, llvm, etc.
+    strip   binutils, elfutils, elftoolchain, llvm, etc.
+    readelf Just needs -d flag.
 
 
 
@@ -158,7 +157,7 @@ kept to a minimum (though we must also remain realistic).
 ________________________________________________________________________________
 
 
-    [3.1] Runtime dependency detector built around 'ldd'
+    [3.1] Runtime dependency detector built around 'ldd'/'readelf'
     ____________________________________________________________________________
 
     Dynamic dependencies brought in by build systems (which are missing from the
