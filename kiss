@@ -68,7 +68,7 @@ tmp_file_copy() {
 }
 
 prompt() {
-    [ "$1" ] && log "$1"
+    ! null "$1" && log "$1"
 
     log "Continue?: Press Enter to continue or Ctrl+C to abort"
 
@@ -81,7 +81,7 @@ mkcd() {
 }
 
 null() {
-    case $1 in '') return 1 ;; *) return 0; esac
+    case $1 in '') return 0 ;; *) return 1; esac
 }
 
 fnr() {
@@ -331,7 +331,7 @@ pkg_source_resolve() {
     set -- "$1" "$_fnr" "${3%"${3##*[!/]}"}" "$4"
 
     # Git repository.
-    if ! null "${2##git+*}"; then
+    if null "${2##git+*}"; then
         _res=$2
 
     # Remote source (cached).
@@ -339,7 +339,7 @@ pkg_source_resolve() {
         _res=$src_dir/$1/${3:+"$3/"}${2##*/}
 
     # Remote source.
-    elif ! null "${2##*://*}"; then
+    elif null "${2##*://*}"; then
         _res=url+$2
         _des=$src_dir/$1/${3:+"$3/"}${2##*/}
 
@@ -502,7 +502,7 @@ pkg_depends() {
     # dependencies are listed first and then the parents in reverse order.
     contains "$deps" "$1" || {
         # Filter out non-explicit, already installed packages.
-        ! null "$3" || null "$2" || contains "$explicit" "$1" ||
+        null "$3" || ! null "$2" || contains "$explicit" "$1" ||
             ! [ -d "$sys_db/$1" ] || return
 
         # Detect circular dependencies and bail out.
@@ -1707,7 +1707,7 @@ args() {
     # Rerun the script as root with a fixed environment if needed. We sadly
     # can't run singular functions as root so this is needed.
     case $action in a|alternatives|i|install|r|remove)
-        ! null "$1" || [ -w "$KISS_ROOT/" ] || [ "$uid" = 0 ] || {
+        null "$1" || [ -w "$KISS_ROOT/" ] || [ "$uid" = 0 ] || {
             as_root env \
                 HOME="$HOME" \
                 XDG_CACHE_HOME="$XDG_CACHE_HOME" \
