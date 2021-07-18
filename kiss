@@ -910,7 +910,6 @@ pkg_build() {
         DESTDIR="$pkg_dir/$1" \
         GOPATH="$PWD/go" \
         KISS_ROOT="$KISS_ROOT" \
-        PREFIX=/usr \
         \
         "$repo_dir/build" "$pkg_dir/$1" "$repo_ver" 2>&1 || {
             log "$1" "Build failed"
