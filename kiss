@@ -212,7 +212,9 @@ sh256() {
     esac; shift; done
 
     printf '%s\n' "$@"
+    IFS="$newline"
     hash=$*
+    unset IFS
 }
 
 pkg_lint() {
@@ -1268,8 +1270,8 @@ pkg_etc() {
 
     sh256 "$tar_dir/$_pkg$1" "$KISS_ROOT$1" >/dev/null
 
-    sum_new=${hash%% *}
-    sum_sys=${hash#* }
+    sum_new=${hash%%"$newline"*}
+    sum_sys=${hash#*"$newline"}
     sum_old=$(awk "NR == $_etc_cnt" "$2") >/dev/null 2>&1 ||:
 
     # Compare the three checksums to determine what to do.
