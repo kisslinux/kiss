@@ -191,6 +191,11 @@ sh256() {
         [ -d "$f" ] || [ ! -e "$f" ] || set -- "$@" "$f"
     done
 
+    # Nothing to do.
+    case $# in 0)
+        return
+    esac
+
     # Set the arguments based on found sha256 utility.
     case ${cmd_sha##*/} in
         openssl) set -- dgst -sha256 -r "$@" ;;
@@ -974,12 +979,12 @@ pkg_checksums() {
     while read -r src dest || [ "$src" ]; do
         pkg_source_resolve "$repo_name" "$src" "$dest" >/dev/null
 
-        case $_res in */*[!.])
+        case $_res in git+*) ;; */*[!.])
             set -- "$@" "$_res"
         esac
     done < "$repo_dir/sources"
 
-    null "$1" || sh256 "$@"
+    sh256 "$@"
 }
 
 pkg_verify() {
@@ -997,7 +1002,7 @@ pkg_verify() {
     set -- $hash
 
     # Only read checksums if we generated some.
-    ! [ "$1" ] ||
+    null "$1" ||
 
     # Check that the first column (separated by whitespace) match in both
     # checksum files. If any part of either file differs, mismatch. Abort.
