@@ -181,20 +181,38 @@ sh256() {
     # All utilities must match 'sha256sum' output.
     #
     # Example: '<checksum>  <file>'
-    unset hash
 
-    if [ ! -d "$1" ] && [ -e "$1" ]; then
-        hash=$(
-            openssl dgst -sha256 -r "$1" ||
-            sha256sum               "$1" ||
-            sha256 -r               "$1" ||
-            shasum -a 256           "$1" ||
-            digest -a sha256        "$1"
-        ) 2>/dev/null || die "Failed to generate checksums for '$1'"
+    # Filter out directories and anything which does not exist.
+    for f do shift
+        [ -d "$f" ] || [ ! -e "$f" ] || set -- "$@" "$f"
+    done
 
-        hash=${hash%% *}
-        printf '%s\n' "$hash"
-    fi
+    # Set the arguments based on found sha256 utility.
+    case ${cmd_sha##*/} in
+        openssl) set -- dgst -sha256 -r "$@" ;;
+         sha256) set -- -r "$@" ;;
+         shasum) set -- -a 256 "$@" ;;
+         digest) set -- -a sha256 "$@" ;;
+    esac
+
+    # This is now one call to the checksums command rather than
+    # one per file. We also display errors now rather than not
+    # (due to old runtime detection method).
+    hash=$("$cmd_sha" "$@") || die "Failed to generate checksums"
+
+    # Intentional, globbing disabled.
+    # shellcheck disable=2046,2086
+    set -- $hash
+
+    # As the output is '<hash>  <file>' and the above list is
+    # split on whitespace; we need to pop every 2nd element.
+    for sum do case ${_i:-0} in
+        0) _i=1; set -- "$@" "$sum" ;;
+        1) _i=0
+    esac; shift; done
+
+    printf '%s\n' "$@"
+    hash=$*
 }
 
 pkg_lint() {
@@ -584,8 +602,6 @@ pkg_fix_deps() {
     # dependencies pulled in by the package's build suite.
     log "$1" "looking for dependencies (using ${cmd_elf##*/})"
 
-    cd "$pkg_dir/$1/$pkg_db/$1"
-
     tmp_file_copy "$1" depends depends
     tmp_file      "$1" depends-fixed
 
@@ -734,15 +750,17 @@ pkg_manifest_replace() {
 pkg_etcsums() {
     # Generate checksums for each configuration file in the package's /etc/
     # directory for use in "smart" handling of these files.
-    log "$1" "Generating etcsums"
+    log "$repo_name" "Generating etcsums"
 
-    ! [ -d "$pkg_dir/$1/etc" ] ||
+    # Minor optimization - skip packages without /etc/.
+    [ -d "$pkg_dir/$repo_name/etc" ] || return 0
 
-    # This can't be a simple 'find -exec' as 'sh256' is a shell function
-    # and not a real command of any kind. This is the shell equivalent.
-    find "$pkg_dir/$1/etc" ! -type d | sort | while read -r line; do
-        sh256 "$line"
-    done > "$pkg_dir/$1/$pkg_db/$1/etcsums"
+    # Create a list of all files in etc but do it in reverse.
+    while read -r etc; do case $etc in /etc/*[!/])
+        set -- "$pkg_dir/$repo_name/$etc" "$@"
+    esac done < manifest
+
+    sh256 "$@" > etcsums
 }
 
 pkg_tar() {
@@ -854,8 +872,11 @@ pkg_build_all() {
         pkg_build    "$pkg"
         pkg_manifest "$pkg"
         pkg_strip    "$pkg"
+
+        cd "$pkg_dir/$pkg/$pkg_db/$pkg"
+
         pkg_fix_deps "$pkg"
-        pkg_etcsums  "$pkg"
+        pkg_etcsums
         pkg_tar      "$pkg"
 
         if [ "$pkg_update" ] || ! contains "$explicit" "$pkg"; then
@@ -943,20 +964,16 @@ pkg_build() {
 pkg_checksums() {
     # Generate checksums for packages.
     #
-    # NOTE: repo_dir comes from caller.
-    unset _hash
-
+    # NOTE: repo_ comes from caller.
     while read -r src dest || [ "$src" ]; do
-        pkg_source_resolve "$1" "$src" "$dest" >/dev/null
+        pkg_source_resolve "$repo_name" "$src" "$dest" >/dev/null
 
         case $_res in */*[!.])
-            sh256 "$_res"
-
-            # Store the generated checksums in a string for use internally
-            # without the need for subshells.
-            _hash="$_hash${_hash:+"$newline"}$hash"
+            set -- "$@" "$_res"
         esac
-    done < "$repo_dir/sources" || die "$1" "Failed to generate checksums"
+    done < "$repo_dir/sources"
+
+    sh256 "$@"
 }
 
 pkg_verify() {
@@ -964,14 +981,14 @@ pkg_verify() {
     # of checksums and then comparing those with the old set.
     #
     # NOTE: repo_dir comes from caller.
-    log "$1" "Verifying sources"
+    log "$repo_name" "Verifying sources"
 
     # Generate a new set of checksums to compare against.
-    pkg_checksums "$1" > /dev/null
+    pkg_checksums >/dev/null
 
     # Intentional, globbing disabled.
     # shellcheck disable=2038,2086
-    set -- $_hash
+    set -- $hash
 
     # Only read checksums if we generated some.
     ! [ "$1" ] ||
@@ -983,7 +1000,7 @@ pkg_verify() {
 
         case $1-${chk:-null} in
             "$chk-$1"|"$1-SKIP") ;;
-            "$_hash"-*|*) die "$repo_name" "Checksum mismatch"
+            "$hash"-*|*) die "$repo_name" "Checksum mismatch"
         esac
 
         shift "$(($# != 0))"
@@ -1210,6 +1227,7 @@ pkg_remove_files() {
     # functions allows us to stop duplicating code.
     while read -r file; do
         case $file in /etc/?*[!/])
+            # TODO: One call to sh256 for all etc files.
             sh256 "$KISS_ROOT/$file" >/dev/null
 
             grep -qF "${hash:-null}" "$1" || {
@@ -1248,15 +1266,10 @@ pkg_remove_files() {
 pkg_etc() {
     _etc_cnt=$((_etc_cnt + 1))
 
-    # Generate checksums from tarball.
-    sh256 "$tar_dir/$_pkg$1"  >/dev/null
-    sum_new=$hash
+    sh256 "$tar_dir/$_pkg$1" "$KISS_ROOT$1" >/dev/null
 
-    # Generate checksums from system.
-    sh256 "$KISS_ROOT$1"  >/dev/null
-    sum_sys=$hash
-
-    # Extract checksums from system etcsums.
+    sum_new=${hash%% *}
+    sum_sys=${hash#* }
     sum_old=$(awk "NR == $_etc_cnt" "$2") >/dev/null 2>&1 ||:
 
     # Compare the three checksums to determine what to do.
@@ -1734,15 +1747,15 @@ args() {
 
                 [ -f "$repo_dir/sources" ] || continue
 
-                pkg_checksums "$pkg"
+                pkg_checksums
 
-                case $_hash in
+                case $hash in
                     '')
                         log "$pkg" "No sources needing checksums"
                     ;;
 
                     *)
-                        printf '%s\n' "$_hash" > "$repo_dir/checksums"
+                        printf '%s\n' "$hash" > "$repo_dir/checksums"
                         log "$pkg" "Generated checksums"
                     ;;
                 esac
@@ -1881,6 +1894,15 @@ main() {
         command -v eu-readelf   ||
         command -v llvm-readelf
     )"} || cmd_elf=ldd
+
+    # Figure out which sha256 utility is available.
+    cmd_sha=$(
+        command -v openssl   ||
+        command -v sha256sum ||
+        command -v sha256    ||
+        command -v shasum    ||
+        command -v digest
+    ) || die "No sha256 utility found"
 
     # Store the date and time of script invocation to be used as the name of
     # the log files the package manager creates uring builds.
