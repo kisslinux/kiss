@@ -230,16 +230,6 @@ repology_name() {
 }
 
 main() {
-    [ "$1" ] || {
-        printf 'usage: kiss outdated /path/to/repo\n' >&2
-        exit 1
-    }
-
-    cd "$1" 2>/dev/null || {
-        printf 'repository %s is inaccessible\n' "$1" >&2
-        exit 1
-    }
-
     printf '\n[Checking repology.org for outdated packages in %s]\n\n' "$1" >&2
 
     for pkg in */; do
@@ -282,4 +272,17 @@ main() {
     done
 }
 
-main "$@"
+for repo do
+    [ "$repo" ] || {
+        printf 'usage: kiss outdated /path/to/repo\n' >&2
+        exit 1
+    }
+
+    cd "$repo" 2>/dev/null || {
+        printf 'repository %s is inaccessible\n' "$repo" >&2
+        exit 1
+    }
+
+    main "$repo"
+    cd "$OLDPWD"
+done
