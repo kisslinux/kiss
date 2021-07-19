@@ -105,40 +105,32 @@ fnr() {
     esac done
 }
 
-as_root() {
-    case $uid/${user:=root}/${cmd_su##*/} in
-        0/root/*)
-            "$@"
-        ;;
+am_owner() {
+    # Figure out if we need to change users to operate on
+    # a given file or directory.
+    inf=$(ls -ld "$1") ||
+        die "Failed to file information for '$1'"
 
-        */doas|*/sudo|*/ssu)
-            log "Using '$cmd_su' (to become $user)"
+    # Split the ls output into fields.
+    # Intentional, globbing disabled.
+    # shellcheck disable=2046,2086
+    set -- "$1" $inf
 
-            "$cmd_su" -u "$user" -- "$@"
-        ;;
+    user=$4
 
-        */su)
-            log "Using 'su' (to become $user)
-Note: su will ask for password every time.
-      Use doas, sudo or ssu for more control."
+    uid=$(id -u "$user") ||
+        die "Invalid user '$user' for '$1'"
 
-            "$cmd_su" -c "$* <&3" "$user" 3<&0 </dev/tty
-        ;;
-
-        *)
-            die "Invalid KISS_SU value: '$cmd_su' (valid: doas, sudo, ssu, su)"
-        ;;
-    esac
+    equ "$oid/$uid" "$uid/$oid"
 }
 
-file_owner() {
-    # Intentional, globbing disabled.
-    # shellcheck disable=2046
-    set -- $(ls -ld "$1")
+as_user() {
+    printf 'Using '%s' (to become %s)\n' "$cmd_su" "$user"
 
-    user=${3:-root}
-
-    id -u "$user" >/dev/null 2>&1 || user=root
+    case ${cmd_su##*/} in
+        su) "$cmd_su" -c "$* <&3" "$user" 3<&0 </dev/tty ;;
+         *) "$cmd_su" -u "$user" -- "$@"
+    esac
 }
 
 pkg_owner() {
@@ -1564,29 +1556,13 @@ pkg_update() {
 
             log "$PWD" "[verify: $_sig]"
 
-            if [ -w "$PWD" ] && ! equ "$uid" 0; then
+            if ! am_owner "$PWD"; then
+                log "$PWD" "Need '$user' to update"
+                as_user git pull
+                as_user git submodule update --remote --init -f
+            else
                 git pull
                 git submodule update --remote --init -f
-
-            else
-                equ "$uid" 0 || log "$PWD" "Need root to update"
-
-                # Find out the owner of the repository and spawn
-                # git as this user below.
-                #
-                # This prevents 'git' from changing the original
-                # ownership of files and directories in the rare
-                # case that the repository is owned by a 3rd user.
-                file_owner "$PWD"
-
-                # We're in a repository which is owned by a 3rd
-                # user. Not root or the current user.
-                equ "$user" root || log "Dropping to $user for pull"
-
-                as_root git pull
-                as_root git submodule update --remote --init -f
-
-                unset user
             fi
 
             # arg1: post-update
@@ -1719,8 +1695,8 @@ args() {
     # Intended behavior.
     # shellcheck disable=2030,2031
     case $action in a|alternatives|i|install|r|remove)
-        ! ok "$1" || [ -w "$KISS_ROOT/" ] || equ "$uid" 0 || {
-            as_root env \
+        if ok "$1" && ! am_owner "$KISS_ROOT/"; then
+            as_user env \
                 HOME="$HOME" \
                 XDG_CACHE_HOME="$XDG_CACHE_HOME" \
                 KISS_COMPRESS="$KISS_COMPRESS" \
@@ -1734,7 +1710,7 @@ args() {
                 _KISS_LVL="$_KISS_LVL" \
                 "$0" "$action" "$@"
             return
-        }
+        fi
     esac
 
     # Actions can be abbreviated to their first letter. This saves keystrokes
@@ -1899,12 +1875,7 @@ main() {
 
     # Figure out which 'sudo' command to use based on the user's choice or what
     # is available on the system.
-    cmd_su=${KISS_SU:-"$(
-        command -v sudo ||
-        command -v doas ||
-        command -v ssu  ||
-        command -v su
-    )"} || cmd_su=su
+    cmd_su=${KISS_SU:-su}
 
     # Figure out which utility is available to dump elf information.
     cmd_elf=${KISS_ELF:-"$(
@@ -1928,7 +1899,7 @@ main() {
 
     # Make note of the user's current ID to do root checks later on.
     # This is used enough to warrant a place here.
-    uid=$(id -u)
+    oid=$(id -u)
 
     create_tmp_dirs
 
