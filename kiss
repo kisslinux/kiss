@@ -118,8 +118,6 @@ am_owner() {
         die "Failed to file information for '$1'"
 
     # Split the ls output into fields.
-    # Intentional, globbing disabled.
-    # shellcheck disable=2046,2086
     read -r _ _ user _ <<EOF
 $inf
 EOF
