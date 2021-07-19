@@ -338,7 +338,7 @@ pkg_source_resolve() {
           IDENT "$repo_ident" \
             PKG "$repo_name"
 
-    set -- "$1" "$_fnr" "${3%"${3##*[!/]}"}"
+    set -- "$1" "$_fnr" "${3%"${3##*[!/]}"}" "$4"
 
     # Git repository.
     if null "${2##git+*}"; then
@@ -372,6 +372,8 @@ pkg_source_resolve() {
     else
         die "$1" "No local file '$_res'"
     fi
+
+    ok "$4" || printf 'found %s\n' "$_res"
 }
 
 pkg_source() {
@@ -387,8 +389,6 @@ pkg_source() {
 
     while read -r src dest || ok "$src"; do
         pkg_source_resolve "$1" "$src" "$dest" "$2"
-
-        printf 'found %s\n' "$_res"
 
         case $_res in url+*)
             log "$1" "Downloading ${_res##url+}"
