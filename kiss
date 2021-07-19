@@ -242,13 +242,6 @@ sh256() {
     unset IFS
 }
 
-pkg_lint() {
-    pkg_find_version "$1"
-
-    [ -x "$repo_dir/build" ] ||
-        die "$1" "Build file not found or not executable"
-}
-
 pkg_find_version() {
     ver_pre=$repo_ver
     rel_pre=$repo_rel
@@ -260,6 +253,10 @@ pkg_find_version() {
 
     ok "$repo_rel" ||
         die "$1" "Release field not found in version file"
+
+    # This belongs somewhere else, for now it can live here.
+    [ -x "$repo_dir/build" ] ||
+        die "$pkg" "Build file not found or not executable"
 }
 
 pkg_find_version_split() {
@@ -533,7 +530,7 @@ pkg_depends() {
             die "Circular dependency detected $1 <> ${4##* }"
         esac
 
-        ! "${6:-_pkg_find}" "$1" || ! [ -e "$repo_dir/depends" ] ||
+        ! _pkg_find "$1" || ! [ -e "$repo_dir/depends" ] ||
 
         # Recurse through the dependencies of the child packages.
         while read -r dep dep_type || ok "$dep"; do
@@ -829,7 +826,7 @@ pkg_build_all() {
     # Mark packages passed on the command-line explicit.
     # Also resolve dependencies for all explicit packages.
     for pkg do
-        pkg_depends "$pkg" expl filter '' '' pkg_lint
+        pkg_depends "$pkg" expl filter
         explicit="$explicit $pkg "
     done
 
