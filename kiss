@@ -1042,18 +1042,12 @@ pkg_conflicts() {
     set +f
     set -f "$sys_db"/*/manifest
 
-    # Generate a list of all installed package manifests and remove the
-    # current package from the list. This is the simplest method of
-    # dropping an item from the argument list. The one downside is that
-    # it cannot live in a function due to scoping of arguments.
-    for manifest do
-        shift
+    # Remove the current package from the manifest list.
+    fnr "$*" "$sys_db/$_pkg/manifest" ""
 
-        ! equ "$manifest" "$sys_db/$_pkg/manifest" ||
-            continue
-
-        set -- "$@" "$manifest"
-    done
+    # Intentional, globbing disabled.
+    # shellcheck disable=2046,2086
+    set -- $_fnr
 
     # Return here if there is nothing to check conflicts against.
     ! equ "$#" 0 || return 0
