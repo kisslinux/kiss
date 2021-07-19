@@ -569,7 +569,7 @@ pkg_order() {
 
     # Filter the list, only keeping explicit packages. The purpose of these
     # two loops is to order the argument list based on dependence.
-    for pkg in $deps; do case " $* " in *" $pkg "* | *" ${pkg##"$ppwd/"} "*)
+    for pkg in $deps; do case " $* " in *" $pkg "*|*" ${pkg##"$ppwd/"} "*)
         order="$order $pkg"
         redro="$pkg $redro"
     esac done
@@ -655,7 +655,7 @@ pkg_fix_deps() {
 
         # Iterate over the output of readelf or ldd, extract file names,
         # resolve their paths and finally, figure out their owner.
-        while read -r lib; do case $lib in *NEEDED*\[*\] | *'=>'*)
+        while read -r lib; do case $lib in *NEEDED*\[*\]|*'=>'*)
             # readelf: 0x0000 (NEEDED) Shared library: [libjson-c.so.5]
             lib=${lib##*\[}
             lib=${lib%%\]*}
