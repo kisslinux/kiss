@@ -195,10 +195,7 @@ sh256() {
         [ -d "$f" ] || [ ! -e "$f" ] || set -- "$@" "$f"
     done
 
-    # Nothing to do.
-    case $# in 0)
-        return
-    esac
+    ! equ "$#" 0 || return 0
 
     # Set the arguments based on found sha256 utility.
     case ${cmd_sha##*/} in
@@ -482,9 +479,7 @@ pkg_extract() {
         pkg_source_resolve "$1" "$src" "$dest" >/dev/null
 
         # Create the source's directories if not null.
-        case $_res in *?*)
-            mkcd "$mak_dir/$1/$dest"
-        esac
+        ! ok "$_res" || mkcd "$mak_dir/$1/$dest"
 
         case $_res in
             git+*)
@@ -754,7 +749,7 @@ pkg_manifest_replace() {
     tmp_file "$1" "manifest-replace-${2##*/}"
 
     while read -r line; do
-        case $line in "$2") line=$3; esac
+        ! equ "$line" "$2" || line=$3
 
         printf '%s\n' "$line"
     done < "$sys_db/$1/manifest" | sort -r > "$_tmp_file"
@@ -1057,9 +1052,8 @@ pkg_conflicts() {
     for manifest do
         shift
 
-        case $manifest in "$sys_db/$_pkg/manifest")
+        ! equ "$manifest" "$sys_db/$_pkg/manifest" ||
             continue
-        esac
 
         set -- "$@" "$manifest"
     done
