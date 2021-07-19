@@ -1208,7 +1208,7 @@ pkg_install_files() {
                 #
                 # This is more or less similar to Arch Linux's Pacman with the
                 # user manually handling the .new files when and if they appear.
-                pkg_etc "$_tmp_file_pre_pre" || continue
+                pkg_etc || continue
             esac
 
             if [ -h "$_file" ]; then
@@ -1231,8 +1231,6 @@ pkg_install_files() {
                 mv -f "$__tmp" "$_file"
             fi
     esac || return 1; done
-
-    unset _etc_cnt
 }
 
 pkg_remove_files() {
@@ -1277,13 +1275,12 @@ pkg_remove_files() {
 }
 
 pkg_etc() {
-    _etc_cnt=$((_etc_cnt + 1))
-
     sh256 "$tar_dir/$_pkg$file" "$KISS_ROOT$file" >/dev/null
 
     sum_new=${hash%%"$newline"*}
     sum_sys=${hash#*"$newline"}
-    sum_old=$(awk "NR == $_etc_cnt" "$1") >/dev/null 2>&1 ||:
+
+    read -r sum_old <&3 2>&1 ||:
 
     # Compare the three checksums to determine what to do.
     case ${sum_old:-null}${sum_sys:-null}${sum_new} in
@@ -1480,7 +1477,7 @@ pkg_install() {
 
     if
         # Install the package's files by iterating over its manifest.
-        pkg_install_files -z "$PWD" < "$_tmp_file" &&
+        pkg_install_files -z "$PWD" < "$_tmp_file" 3< "$_tmp_file_pre_pre" &&
 
         # This is the aforementioned step removing any files from the old
         # version of the package if the installation is an update. Each file
@@ -1489,7 +1486,7 @@ pkg_install() {
 
         # Install the package's files a second time to fix any mess caused by
         # the above removal of the previous version of the package.
-        pkg_install_files -e "$PWD" < "$_tmp_file"
+        pkg_install_files -e "$PWD" < "$_tmp_file" 3< "$_tmp_file_pre_pre"
 
     then
         # Reset 'trap' to its original value. Installation is done so we no longer
