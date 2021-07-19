@@ -45,10 +45,14 @@ contains() {
 }
 
 equ() {
+    # Check if a string is equal to enother.
+    # This replaces '[ "$var" = str ]' and '[ "$var" != str ]'.
     case $1 in "$2") return 0 ;; *) return 1; esac
 }
 
 ok() {
+    # Check if a string is non-null.
+    # This replaces '[ "$var" ]', '[ -n "$var" ]' and '[ -z "$var" ]'.
     case $1 in '') return 1 ;; *) return 0; esac
 }
 
