@@ -120,14 +120,11 @@ am_owner() {
     # Split the ls output into fields.
     # Intentional, globbing disabled.
     # shellcheck disable=2046,2086
-    set -- "$1" $inf
+    read -r _ _ user _ <<EOF
+$inf
+EOF
 
-    user=$4
-
-    uid=$(id -u "$user") ||
-        die "Invalid user '$user' for '$1'"
-
-    equ "$oid/$uid" "$uid/$oid"
+    equ "$LOGNAME/$user" "$user/$LOGNAME"
 }
 
 as_user() {
@@ -1885,6 +1882,7 @@ main() {
     # Defaults for environment variables.
     : "${KISS_COMPRESS:=gz}"
     : "${KISS_PID:=$$}"
+    : "${LOGNAME:?POSIX requires LOGNAME be set}"
 
     # Figure out which 'sudo' command to use based on the user's choice or what
     # is available on the system.
@@ -1909,10 +1907,6 @@ main() {
     # Store the date and time of script invocation to be used as the name of
     # the log files the package manager creates uring builds.
     time=$(date +%Y-%m-%d-%H:%M)
-
-    # Make note of the user's current ID to do root checks later on.
-    # This is used enough to warrant a place here.
-    oid=$(id -u)
 
     create_tmp_dirs
 
