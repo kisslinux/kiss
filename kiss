@@ -733,7 +733,7 @@ pkg_manifest() {
     # Sort the output in reverse. Directories appear after their contents.
     sort -r > "$_tmp_file"
 
-    # Remove the first character in each line (./dir -> /dir).
+    # Remove the prefix from each line.
     while read -r file; do
         printf '%s\n' "${file#"$2/$1"}"
     done < "$_tmp_file" > "$2/$1/$pkg_db/$1/manifest"
