@@ -1744,16 +1744,13 @@ args() {
 
                 pkg_checksums
 
-                case $hash in
-                    '')
-                        log "$pkg" "No sources needing checksums"
-                    ;;
+                if ok "$hash"; then
+                    printf '%s\n' "$hash" > "$repo_dir/checksums"
+                    log "$pkg" "Generated checksums"
 
-                    *)
-                        printf '%s\n' "$hash" > "$repo_dir/checksums"
-                        log "$pkg" "Generated checksums"
-                    ;;
-                esac
+                else
+                    log "$pkg" "No sources needing checksums"
+                fi
             done
         ;;
 
