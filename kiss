@@ -536,7 +536,7 @@ pkg_depends() {
         while read -r dep dep_type || ok "$dep"; do
             ok "${dep##\#*}" || continue
 
-            pkg_depends "$dep" '' "$3" "$4 $1" "$dep_type" "$6"
+            pkg_depends "$dep" '' "$3" "$4 $1" "$dep_type"
         done < "$repo_dir/depends" || :
 
         # Add parent to dependencies list.
