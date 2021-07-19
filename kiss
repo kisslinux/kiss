@@ -1804,11 +1804,19 @@ args() {
                 esac
             done
 
+            IFS=\#$IFS
+
             # Print each extension, grab its description from the second line
             # in the file and align the output based on the above max.
             for path do
-                printf "%b->%b %-${max}s " "$c1" "$c3" "${path#*/kiss-}"
-                sed -n 's/^# *//;2p' "$path"
+                # Open the extension as a file descriptor.
+                exec 3< "$path"
+
+                # Grab the second line in the extension.
+                { read -r _ && read -r _ cmt; } <&3
+
+                printf "%b->%b %-${max}s %s\\n" \
+                    "$c1" "$c3" "${path#*/kiss-}" "$cmt"
             done >&2
         ;;
 
