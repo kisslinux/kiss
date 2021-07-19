@@ -1232,7 +1232,6 @@ pkg_remove_files() {
     # functions allows us to stop duplicating code.
     while read -r file; do
         case $file in /etc/?*[!/])
-            # TODO: One call to sh256 for all etc files.
             sh256 "$KISS_ROOT/$file" >/dev/null
 
             grep -qF "${hash:-null}" "$1" || {
