@@ -225,8 +225,9 @@ sh256() {
     esac; shift; done
 
     printf '%s\n' "$@"
-    IFS="$newline"
-    hash=$*
+
+    # Convert the list items to a newline separated string.
+    IFS=$newline hash=$*
     unset IFS
 }
 
@@ -1647,25 +1648,26 @@ args() {
     # not be used here as they would conflict with kiss extensions.
     case $action in
         a|alternatives)
-            case $1 in *\**|*\!*|*\[*|*\ *|*\]*|*/*)
-                die "Invalid argument: '!*[ ]/' ($1)"
+            case $1 in *\**|*\!*|*\[*|*\ *|*\]*|*/*|*"$newline"*)
+                die "Invalid argument: '!*[ ]/\\n' ($1)"
             esac
         ;;
 
         b|build|c|checksum|d|download|i|install|l|list|r|remove)
             for _arg do case ${action%%"${action#?}"}-$_arg in
-                i-*\!*|i-*\**|i-*\[*|i-*\ *|i-*\]*)
-                    die "Argument contains invalid characters: '!*[ ]' ('$_arg')"
+                i-*\!*|i-*\**|i-*\[*|i-*\ *|i-*\]*|i-*"$newline"*)
+                    die "Invalid argument: '!*[ ]\\n' ('$_arg')"
                 ;;
 
-                [!i]-*\!*|[!i]-*\**|[!i]-*\[*|[!i]-*\ *|[!i]-*\]*|[!i]-*/*)
-                    die "Argument contains invalid characters: '!*[ ]/' ('$_arg')"
+                [!i]-*\!*|[!i]-*\**|[!i]-*\[*|[!i]-*\ *|\
+                [!i]-*\]*|[!i]-*/*|[!i]-*"$newline"*)
+                    die "Invalid argument: '!*[ ]/\\n' ('$_arg')"
                 ;;
             esac done
 
-            # When no arguments are given on the command-line, use the basename of
-            # the current directory as the package name and add the parent directory
-            # to the running process' KISS_PATH.
+            # When no arguments are given on the command-line, use the basename
+            # of the current directory as the package name and add the parent
+            # directory to the running process' KISS_PATH.
             case ${action%%"${action#?}"}-$# in [!l]-0)
                 export KISS_PATH=${PWD%/*}:$KISS_PATH
                 set -- "${PWD##*/}"
