@@ -131,7 +131,7 @@ as_user() {
     printf 'Using '%s' (to become %s)\n' "$cmd_su" "$user"
 
     case ${cmd_su##*/} in
-        su) "$cmd_su" -c "$* <&3" - "$user" 3<&0 </dev/tty ;;
+        su) "$cmd_su" -c "$* <&3" "$user" 3<&0 </dev/tty ;;
          *) "$cmd_su" -u "$user" -- "$@"
     esac
 }
@@ -1696,6 +1696,7 @@ args() {
     case $action in a|alternatives|i|install|r|remove)
         if ok "$1" && ! am_owner "$KISS_ROOT/"; then
             as_user env \
+                LOGNAME="$user" \
                 HOME="$HOME" \
                 XDG_CACHE_HOME="$XDG_CACHE_HOME" \
                 KISS_COMPRESS="$KISS_COMPRESS" \
