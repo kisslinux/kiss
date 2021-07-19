@@ -716,22 +716,22 @@ pkg_manifest() {
     # packages, checking for package conflicts and for general debugging.
     log "$1" "Generating manifest"
 
-    # Ensure manifest is added to manfiest.
-    : > "$2/$1/$pkg_db/$1/manifest"
-
-    # Ensure etcsums is added to manifest if /etc exists in package.
-    ! [ -d "$2/$1/etc" ] || : > "$2/$1/$pkg_db/$1/etcsums"
-
     tmp_file "$1" manifest
 
     # Create a list of all files and directories. Append '/' to the end of
     # directories so they can be easily filtered out later. Also filter out
     # all libtool .la files and charset.alias.
-    find "$2/$1" ! -path "$2/$1" -type d -exec printf '%s/\n' {} + \
-        -o \( ! -type d -a ! -name \*.la -a ! -name charset.alias \) -print |
+    {
+        printf '%s\n' "$2/$1/$pkg_db/$1/manifest"
+
+        ! [ -d "$2/$1/etc" ] ||
+            printf '%s\n' "$2/$1/$pkg_db/$1/etcsums"
+
+        find "$2/$1" ! -path "$2/$1" -type d -exec printf '%s/\n' {} + \
+            -o \( ! -type d -a ! -name \*.la -a ! -name charset.alias \) -print
 
     # Sort the output in reverse. Directories appear after their contents.
-    sort -r > "$_tmp_file"
+    } | sort -ur > "$_tmp_file"
 
     # Remove the prefix from each line.
     while read -r file; do
