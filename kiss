@@ -1241,13 +1241,13 @@ pkg_remove_files() {
         case $file in /etc/?*[!/])
             sh256 "$KISS_ROOT/$file" >/dev/null
 
-            read -r sum_pkg <&3 2>/dev/null ||:
+            read -r sum_pkg <&3 ||:
 
             equ "$hash" "$sum_pkg" || {
                 printf 'Skipping %s (modified)\n' "$file"
                 continue
             }
-        esac 2>/dev/null || :
+        esac
 
         _file=${KISS_ROOT:+"$KISS_ROOT/"}${file%%/}
 
@@ -1266,9 +1266,6 @@ pkg_remove_files() {
             rm -f "$_file"
         fi
     done
-
-    # First argument needs to be dropped.
-    shift
 
     # Remove all broken directory symlinks.
     for sym do
