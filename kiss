@@ -67,8 +67,7 @@ tmp_file() {
     _tmp_file_pre=$_tmp_file
     _tmp_file=$tmp_dir/$KISS_PID-$1-$2
 
-    : > "$_tmp_file" ||
-        die "$1" "Failed to create temporary file"
+    : > "$_tmp_file" || die "$1" "Failed to create temporary file"
 }
 
 tmp_file_copy() {
@@ -114,13 +113,15 @@ as_root() {
 
         */doas|*/sudo|*/ssu)
             log "Using '$cmd_su' (to become $user)"
+
             "$cmd_su" -u "$user" -- "$@"
         ;;
 
         */su)
-            log "Using 'su' (to become $user)"
-            printf 'Note: su will ask for password every time.\n%s\n' \
-                   '      Use doas, sudo or ssu for more control.'
+            log "Using 'su' (to become $user)
+Note: su will ask for password every time.
+      Use doas, sudo or ssu for more control."
+
             "$cmd_su" -c "$* <&3" "$user" 3<&0 </dev/tty
         ;;
 
