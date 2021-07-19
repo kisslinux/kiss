@@ -1241,7 +1241,9 @@ pkg_remove_files() {
         case $file in /etc/?*[!/])
             sh256 "$KISS_ROOT/$file" >/dev/null
 
-            grep -qF "${hash:-null}" "$1" || {
+            read -r sum_pkg <&3 2>/dev/null ||:
+
+            equ "$hash" "$sum_pkg" || {
                 printf 'Skipping %s (modified)\n' "$file"
                 continue
             }
@@ -1280,7 +1282,7 @@ pkg_etc() {
     sum_new=${hash%%"$newline"*}
     sum_sys=${hash#*"$newline"}
 
-    read -r sum_old <&3 2>&1 ||:
+    read -r sum_old <&3 2>/dev/null ||:
 
     # Compare the three checksums to determine what to do.
     case ${sum_old:-null}${sum_sys:-null}${sum_new} in
@@ -1345,7 +1347,7 @@ pkg_remove() {
     tmp_file_copy "$1" etcsums-copy "$sys_db/$1/etcsums"
 
     log "$1" "Removing package"
-    pkg_remove_files "$_tmp_file" < "$sys_db/$1/manifest"
+    pkg_remove_files < "$sys_db/$1/manifest" 3< "$_tmp_file"
 
     # Reset 'trap' to its original value. Removal is done so
     # we no longer need to block 'Ctrl+C'.
@@ -1482,7 +1484,7 @@ pkg_install() {
         # This is the aforementioned step removing any files from the old
         # version of the package if the installation is an update. Each file
         # type has to be specially handled to ensure no system breakage occurs.
-        pkg_remove_files "$_tmp_file_pre_pre" < "$_tmp_file_pre" &&
+        pkg_remove_files < "$_tmp_file_pre" 3< "$_tmp_file_pre_pre" &&
 
         # Install the package's files a second time to fix any mess caused by
         # the above removal of the previous version of the package.
