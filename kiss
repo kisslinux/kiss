@@ -52,12 +52,14 @@ equ() {
 
 ok() {
     # Check if a string is non-null.
-    # This replaces '[ "$var" ]', '[ -n "$var" ]' and '[ -z "$var" ]'.
+    # This replaces '[ "$var" ]', '[ -n "$var" ]'.
     case $1 in '') return 1 ;; *) return 0; esac
 }
 
 null() {
-    ! ok "$1"
+    # Check if a string is non-null.
+    # This replaces '[ -z "$var" ]'.
+    case $1 in '') return 0 ;; *) return 1; esac
 }
 
 tmp_file() {
