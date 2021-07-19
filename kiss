@@ -838,7 +838,7 @@ pkg_build_all() {
     set -- $deps "$@"
 
     # Ask for confirmation if extra packages need to be built.
-    equ "$#" "$explicit_cnt" ] || prompt
+    equ "$#" "$explicit_cnt" || prompt
 
     log "Checking for pre-built dependencies"
 
@@ -958,7 +958,7 @@ pkg_build() {
 
     # Delete the log file if the build succeeded to prevent the directory
     # from filling very quickly with useless logs.
-    equ "$KISS_KEEPLOG" 1 ] || rm -f "$log_dir/$1-$time-$KISS_PID"
+    equ "$KISS_KEEPLOG" 1 || rm -f "$log_dir/$1-$time-$KISS_PID"
 
     # Copy the repository files to the package directory.
     cp -LRf "$repo_dir" "$pkg_dir/$1/$pkg_db/"
@@ -1438,6 +1438,8 @@ pkg_install() {
     # fine assumption to make in 99.99% of cases.
     [ -f "$PWD/$pkg_db/$_pkg/manifest" ] || die "Not a valid KISS package"
 
+    # Intended behavior.
+    # shellcheck disable=2030,2031
     equ "$KISS_FORCE" 1 || {
         pkg_manifest_validate "$_pkg"
         pkg_installable "$_pkg" "$PWD/$pkg_db/$_pkg/depends"
@@ -1708,6 +1710,9 @@ args() {
 
     # Rerun the script as root with a fixed environment if needed. We sadly
     # can't run singular functions as root so this is needed.
+    #
+    # Intended behavior.
+    # shellcheck disable=2030,2031
     case $action in a|alternatives|i|install|r|remove)
         ! ok "$1" || [ -w "$KISS_ROOT/" ] || equ "$uid" 0 || {
             as_root env \
