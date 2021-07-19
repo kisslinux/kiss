@@ -29,8 +29,8 @@ repology_name() {
     )
 
     case $remote in
-        baselayout)
-            remote=baselayout-kiss
+        baseinit|baselayout|kiss)
+            remote=-
         ;;
 
         clang)
@@ -98,6 +98,10 @@ repology_name() {
             remote=tar
         ;;
 
+        eiwd)
+            remote=iwd
+        ;;
+
         hack)
             # It might be nice to adopt Repology's naming scheme for
             # fonts as it also makes them self-documenting and easy
@@ -109,13 +113,6 @@ repology_name() {
             # TODO: Report to repology.org?
             # Package split.
             remote=harfbuzz
-        ;;
-
-        kiss)
-            remote=kiss-package-manager
-
-            # Temporary.
-            remote=kiss-unclassified
         ;;
 
         liberation-fonts)
