@@ -142,11 +142,25 @@ as_user() {
 pkg_owner() {
     ok "$2" || { set +f; set -f -- "$1" "$sys_db"/*/manifest; }
 
-    _owns=$(grep -l "$@")
+    _owns=$(grep -lxF "$@")
     _owns=${_owns%/*}
     _owns=${_owns##*/}
 
     ok "$_owns"
+}
+
+resolve_path() {
+    _rpath=$KISS_ROOT/${1#/}
+
+    # Attempt to resolve symlinks by using 'cd'.
+    # If this fails, fallback to the file's parent
+    # directory.
+    cd -P "${_rpath%/*}" 2>/dev/null || PWD=${_rpath%/*}
+
+    # Final resolved path.
+    _rpath=${PWD#"$KISS_ROOT"}/${_rpath##*/}
+
+    cd "$OLDPWD"
 }
 
 run_hook() {
@@ -671,11 +685,13 @@ pkg_fix_deps() {
                     continue
             esac
 
+            resolve_path "$lib"
+
             # Skip file if owned by current package
-            ! pkg_owner "/${lib#/}\$" manifest ||
+            ! pkg_owner -e "$_rpath" manifest ||
                 continue
 
-            ! pkg_owner "/${lib#/}\$" "$@" ||
+            ! pkg_owner -e "$_rpath" "$@" ||
                 printf '%s\n' "$_owns"
 
         esac done <<EOF || :
@@ -1032,17 +1048,9 @@ pkg_conflicts() {
     # Filter the tarball's manifest and select only files. Resolve all
     # symlinks in file paths as well.
     while read -r file; do case $file in *[!/])
-        file=$KISS_ROOT/${file#/}
+        resolve_path "$file"
 
-        # Attempt to resolve symlinks by using 'cd'.
-        # If this fails, fallback to the file's parent
-        # directory.
-        cd -P "${file%/*}" 2>/dev/null || PWD=${file%/*}
-
-        # Print the file with all symlinks in its path
-        # resolved to their real locations.
-        printf '%s\n' "${PWD#"$KISS_ROOT"}/${file##*/}"
-
+        printf '%s\n' "$_rpath"
     esac done < "$PWD/$pkg_db/$_pkg/manifest" > "$_tmp_file_pre"
 
     cd "$tar_dir/$_pkg"
@@ -1134,7 +1142,7 @@ pkg_swap() {
         die "Alternative '$1 ${2:-null}' doesn't exist"
 
     if [ -f "$KISS_ROOT$2" ]; then
-        pkg_owner "/${2#/}\$" ||
+        pkg_owner "/${2#/}" ||
             die "File '$2' exists on filesystem but isn't owned"
 
         log "Swapping '$2' from '$_owns' to '$1'"
