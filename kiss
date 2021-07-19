@@ -247,9 +247,6 @@ pkg_lint() {
 
     [ -x "$repo_dir/build" ] ||
         die "$1" "Build file not found or not executable"
-
-    [ -f "$repo_dir/sources" ] ||
-        war "$1" "Sources file not found"
 }
 
 pkg_find_version() {
