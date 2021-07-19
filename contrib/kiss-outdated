@@ -115,6 +115,10 @@ repology_name() {
             remote=harfbuzz
         ;;
 
+        libelf)
+            remote=elfutils
+        ;;
+
         liberation-fonts)
             remote=fonts:liberation
         ;;
