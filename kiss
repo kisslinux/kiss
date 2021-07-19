@@ -1364,7 +1364,7 @@ pkg_installable() {
     ! [ -f "$2" ] ||
 
     while read -r dep dep_type || ok "$dep"; do
-        case $dep-$dep_type in [!\#]?*)
+        case "$dep $dep_type" in [!\#]?*\ )
             ! [ -d "$sys_db/$dep" ] || continue
 
             printf '%s %s\n' "$dep" "$dep_type"
