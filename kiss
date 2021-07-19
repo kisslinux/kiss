@@ -44,6 +44,14 @@ contains() {
     case " $1 " in *" $2 "*) return 0; esac; return 1
 }
 
+equ() {
+    case $1 in "$2") return 0 ;; *) return 1; esac
+}
+
+ok() {
+    case $1 in '') return 1 ;; *) return 0; esac
+}
+
 tmp_file() {
     # Create a uniquely named temporary file and store its absolute path
     # in a variable (_tmp_file).
@@ -68,20 +76,16 @@ tmp_file_copy() {
 }
 
 prompt() {
-    ! null "$1" && log "$1"
+    ! ok "$1" || log "$1"
 
     log "Continue?: Press Enter to continue or Ctrl+C to abort"
 
     # korn-shell does not exit on interrupt of read.
-    [ "$KISS_PROMPT" = 0 ] || read -r _ || exit 1
+    equ "$KISS_PROMPT" 0 || read -r _ || exit 1
 }
 
 mkcd() {
     mkdir -p "$@" && cd "$1"
-}
-
-null() {
-    case $1 in '') return 0 ;; *) return 1; esac
 }
 
 fnr() {
@@ -133,13 +137,13 @@ file_owner() {
 }
 
 pkg_owner() {
-    [ "$2" ] || { set +f; set -f -- "$1" "$sys_db"/*/manifest; }
+    ok "$2" || { set +f; set -f -- "$1" "$sys_db"/*/manifest; }
 
     _owns=$(grep -l "$@")
     _owns=${_owns%/*}
     _owns=${_owns##*/}
 
-    [ "$_owns" ]
+    ok "$_owns"
 }
 
 run_hook() {
@@ -229,9 +233,6 @@ sh256() {
 pkg_lint() {
     pkg_find_version "$1"
 
-    [ "$repo_rel" ] ||
-        die "$1" "Release field not found in version file"
-
     [ -x "$repo_dir/build" ] ||
         die "$1" "Build file not found or not executable"
 
@@ -247,6 +248,9 @@ pkg_find_version() {
 
     read -r repo_ver repo_rel 2>/dev/null < "$repo_dir/version" ||
         die "$1" "Failed to read version file ($repo_dir/version)"
+
+    ok "$repo_rel" ||
+        die "$1" "Release field not found in version file"
 }
 
 pkg_find_version_split() {
@@ -294,7 +298,7 @@ pkg_list_version() {
 
     # Optional arguments can be passed to check for specific packages. If no
     # arguments are passed, list all.
-    [ "$1" ] || { set +f; set -f -- "$sys_db"/*; }
+    ok "$1" || { set +f; set -f -- "$sys_db"/*; }
 
     # Loop over each package and print its name and version.
     for _list_pkg do
@@ -322,7 +326,7 @@ pkg_cache() {
 pkg_source_resolve() {
     # Given a line of input from the sources file, return an absolute
     # path to the source if it already exists, error if not.
-    [ "${2##\#*}" ] || { _res=; return; }
+    ok "${2##\#*}" || { _res=; return; }
 
     fnr "${2%"${2##*[!/]}"}" \
         VERSION "$repo_ver" \
@@ -333,10 +337,10 @@ pkg_source_resolve() {
           IDENT "$repo_ident" \
             PKG "$repo_name"
 
-    set -- "$1" "$_fnr" "${3%"${3##*[!/]}"}" "$4"
+    set -- "$1" "$_fnr" "${3%"${3##*[!/]}"}"
 
     # Git repository.
-    if null "${2##git+*}"; then
+    if ! ok "${2##git+*}"; then
         _res=$2
 
     # Remote source (cached).
@@ -344,7 +348,7 @@ pkg_source_resolve() {
         _res=$src_dir/$1/${3:+"$3/"}${2##*/}
 
     # Remote source.
-    elif null "${2##*://*}"; then
+    elif ! ok "${2##*://*}"; then
         _res=url+$2
         _des=$src_dir/$1/${3:+"$3/"}${2##*/}
 
@@ -365,10 +369,8 @@ pkg_source_resolve() {
         _res=/${2##/}
 
     else
-        die "$1" "No local file '$src'"
+        die "$1" "No local file '$_res'"
     fi
-
-    [ "$4" ] || printf 'found %s\n' "$_res"
 }
 
 pkg_source() {
@@ -382,8 +384,10 @@ pkg_source() {
     log "$1" "Reading sources"
     mkcd "$src_dir/$1"
 
-    while read -r src dest || [ "$src" ]; do
+    while read -r src dest || ok "$src"; do
         pkg_source_resolve "$1" "$src" "$dest" "$2"
+
+        printf 'found %s\n' "$_res"
 
         case $_res in url+*)
             log "$1" "Downloading ${_res##url+}"
@@ -474,7 +478,7 @@ pkg_extract() {
     # arg3: path to DESTDIR
     run_hook pre-extract "$pkg" "$pkg_dir/$pkg"
 
-    while read -r src dest || [ "$src" ]; do
+    while read -r src dest || ok "$src"; do
         pkg_source_resolve "$1" "$src" "$dest" >/dev/null
 
         # Create the source's directories if not null.
@@ -507,7 +511,7 @@ pkg_depends() {
     # dependencies are listed first and then the parents in reverse order.
     contains "$deps" "$1" || {
         # Filter out non-explicit, already installed packages.
-        null "$3" || ! null "$2" || contains "$explicit" "$1" ||
+        ! ok "$3" || ok "$2" || contains "$explicit" "$1" ||
             ! [ -d "$sys_db/$1" ] || return
 
         # Detect circular dependencies and bail out.
@@ -525,14 +529,14 @@ pkg_depends() {
         ! "${6:-_pkg_find}" "$1" || ! [ -e "$repo_dir/depends" ] ||
 
         # Recurse through the dependencies of the child packages.
-        while read -r dep dep_type || [ "$dep" ]; do
-            [ "${dep##\#*}" ] || continue
+        while read -r dep dep_type || ok "$dep"; do
+            ok "${dep##\#*}" || continue
 
             pkg_depends "$dep" '' "$3" "$4 $1" "$dep_type" "$6"
         done < "$repo_dir/depends" || :
 
         # Add parent to dependencies list.
-        if [ "$2" != expl ] || { [ "$5" = make ] && ! pkg_cache "$1"; }; then
+        if ! equ "$2" expl || { equ "$5" make && ! pkg_cache "$1"; }; then
             deps="$deps $1"
         fi
     }
@@ -563,7 +567,7 @@ pkg_order() {
 pkg_strip() {
     # Strip package binaries and libraries. This saves space on the system as
     # well as on the tarballs we ship for installation.
-    [ -f "$mak_dir/$pkg/nostrip" ] || [ "$KISS_STRIP" = 0 ] && return
+    [ -f "$mak_dir/$pkg/nostrip" ] || equ "$KISS_STRIP" 0 && return
 
     log "$1" "Stripping binaries and libraries"
 
@@ -820,7 +824,7 @@ pkg_build_all() {
 
     # If this is an update, don't always build explicitly passsed packages
     # and instead install pre-built binaries if they exist.
-    [ "$pkg_update" ] || explicit_build=$explicit
+    ok "$pkg_update" || explicit_build=$explicit
 
     set --
 
@@ -839,7 +843,7 @@ pkg_build_all() {
     set -- $deps "$@"
 
     # Ask for confirmation if extra packages need to be built.
-    [ "$#" = "$explicit_cnt" ] || prompt
+    equ "$#" "$explicit_cnt" ] || prompt
 
     log "Checking for pre-built dependencies"
 
@@ -890,7 +894,7 @@ pkg_build_all() {
         pkg_etcsums
         pkg_tar      "$pkg"
 
-        if [ "$pkg_update" ] || ! contains "$explicit" "$pkg"; then
+        if ok "$pkg_update" || ! contains "$explicit" "$pkg"; then
             log "$pkg" "Needed as a dependency or has an update, installing"
 
             # Intended behavior.
@@ -959,7 +963,7 @@ pkg_build() {
 
     # Delete the log file if the build succeeded to prevent the directory
     # from filling very quickly with useless logs.
-    [ "$KISS_KEEPLOG" = 1 ] || rm -f "$log_dir/$1-$time-$KISS_PID"
+    equ "$KISS_KEEPLOG" 1 ] || rm -f "$log_dir/$1-$time-$KISS_PID"
 
     # Copy the repository files to the package directory.
     cp -LRf "$repo_dir" "$pkg_dir/$1/$pkg_db/"
@@ -976,7 +980,7 @@ pkg_checksums() {
     # Generate checksums for packages.
     #
     # NOTE: repo_ comes from caller.
-    while read -r src dest || [ "$src" ]; do
+    while read -r src dest || ok "$src"; do
         pkg_source_resolve "$repo_name" "$src" "$dest" >/dev/null
 
         case $_res in git+*) ;; */*[!.])
@@ -1002,11 +1006,11 @@ pkg_verify() {
     set -- $hash
 
     # Only read checksums if we generated some.
-    null "$1" ||
+    ! ok "$1" ||
 
     # Check that the first column (separated by whitespace) match in both
     # checksum files. If any part of either file differs, mismatch. Abort.
-    while read -r chk _ || [ "$1" ]; do
+    while read -r chk _ || ok "$1"; do
         printf '%s\n%s\n' "- ${chk:-missing}" "+ ${1:-no source}"
 
         case $1-${chk:-null} in
@@ -1061,7 +1065,7 @@ pkg_conflicts() {
     done
 
     # Return here if there is nothing to check conflicts against.
-    [ "$#" != 0 ] || return 0
+    ! equ "$#" 0 || return 0
 
     # Store the list of found conflicts in a file as we'll be using the
     # information multiple times. Storing things in the cache dir allows
@@ -1073,7 +1077,7 @@ pkg_conflicts() {
     # doesn't overwrite anything it shouldn't in '/var/db/kiss/installed'.
     grep -q ":/var/db/kiss/installed/" "$_tmp_file" || safe=1
 
-    if [ "$KISS_CHOICE" != 0  ] && [ "$safe" = 1  ] && [ -s "$_tmp_file" ]; then
+    if ! equ "$KISS_CHOICE" 1 && equ "$safe" 1 && [ -s "$_tmp_file" ]; then
         # This is a novel way of offering an "alternatives" system.
         # It is entirely dynamic and all "choices" are created and
         # destroyed on the fly.
@@ -1332,7 +1336,7 @@ pkg_remove() {
 
     # Intended behavior.
     # shellcheck disable=2030,2031
-    [ "${KISS_FORCE:=0}" = 1 ] || pkg_removable "$1"
+    equ "$KISS_FORCE" 1  || pkg_removable "$1"
 
     # Block being able to abort the script with 'Ctrl+C' during removal.
     # Removes all risk of the user aborting a package removal leaving an
@@ -1368,7 +1372,7 @@ pkg_installable() {
     # shellcheck disable=2094
     ! [ -f "$2" ] ||
 
-    while read -r dep dep_type || [ "$dep" ]; do
+    while read -r dep dep_type || ok "$dep"; do
         case $dep-$dep_type in [!\#]?*)
             ! [ -d "$sys_db/$dep" ] || continue
 
@@ -1440,7 +1444,7 @@ pkg_install() {
     # fine assumption to make in 99.99% of cases.
     [ -f "$PWD/$pkg_db/$_pkg/manifest" ] || die "Not a valid KISS package"
 
-    [ "$KISS_FORCE" = 1 ] || {
+    equ "$KISS_FORCE" 1 || {
         pkg_manifest_validate "$_pkg"
         pkg_installable "$_pkg" "$PWD/$pkg_db/$_pkg/depends"
     }
@@ -1523,8 +1527,7 @@ pkg_update() {
 
     # Update each repository in '$KISS_PATH'.
     for repo do
-        # Handle null repositories (KISS_PATH=repo:::::repo).
-        [ "$repo" ] || continue
+        ok "$repo" || continue
 
         [ -d "$repo" ] || {
             log "$repo" " "
@@ -1560,12 +1563,12 @@ pkg_update() {
 
             log "$PWD" "[verify: $_sig]"
 
-            if [ -w "$PWD" ] && [ "$uid" != 0 ]; then
+            if [ -w "$PWD" ] && ! equ "$uid" 0; then
                 git pull
                 git submodule update --remote --init -f
 
             else
-                [ "$uid" = 0 ] || log "$PWD" "Need root to update"
+                equ "$uid" 0 || log "$PWD" "Need root to update"
 
                 # Find out the owner of the repository and spawn
                 # git as this user below.
@@ -1577,7 +1580,7 @@ pkg_update() {
 
                 # We're in a repository which is owned by a 3rd
                 # user. Not root or the current user.
-                [ "$user" = root ] || log "Dropping to $user for pull"
+                equ "$user" root || log "Dropping to $user for pull"
 
                 as_root git pull
                 as_root git submodule update --remote --init -f
@@ -1606,7 +1609,7 @@ pkg_update() {
         esac
 
         # Compare installed packages to repository packages.
-        [ "$ver_pre-$rel_pre" = "$repo_ver-$repo_rel" ] || {
+        equ "$ver_pre-$rel_pre" "$repo_ver-$repo_rel" || {
             printf '%s\n' "${pkg##*/} $ver_pre-$rel_pre ==> $repo_ver-$repo_rel"
             set -- "$@" "${pkg##*/}"
         }
@@ -1712,7 +1715,7 @@ args() {
     # Rerun the script as root with a fixed environment if needed. We sadly
     # can't run singular functions as root so this is needed.
     case $action in a|alternatives|i|install|r|remove)
-        null "$1" || [ -w "$KISS_ROOT/" ] || [ "$uid" = 0 ] || {
+        ! ok "$1" || [ -w "$KISS_ROOT/" ] || equ "$uid" 0 || {
             as_root env \
                 HOME="$HOME" \
                 XDG_CACHE_HOME="$XDG_CACHE_HOME" \
@@ -1734,12 +1737,12 @@ args() {
     # once you memorize the commands.
     case $action in
         a|alternatives)
-            if [ "$1" = - ]; then
+            if equ "$1" -; then
                 while read -r pkg path; do
                     pkg_swap "$pkg" "$path"
                 done
 
-            elif [ "$1" ]; then
+            elif ok "$1"; then
                 pkg_swap "$@"
 
             else
@@ -1874,7 +1877,7 @@ main() {
 
     # Color can be disabled via the environment variable KISS_COLOR. Colors are
     # also automatically disabled if output is being used in a pipe/redirection.
-    [ "$KISS_COLOR" = 0 ] || ! [ -t 2 ] ||
+    equ "$KISS_COLOR" 0 || ! [ -t 2 ] ||
         c1='\033[1;33m' c2='\033[1;34m' c3='\033[m'
 
     # Store the original working directory to ensure that relative paths
