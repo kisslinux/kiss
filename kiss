@@ -1177,17 +1177,6 @@ pkg_install_files() {
     # Copy files and create directories (preserving permissions).
     # The 'test $1' will run with '-z' for overwrite and '-e' for verify.
     while { read -r file && _file=$KISS_ROOT$file; } do case $file in
-        /etc/*[!/])
-            # Handle /etc/ files in a special way (via a 3-way checksum) to
-            # determine how these files should be installed. Do we overwrite
-            # the existing file? Do we install it as $file.new to avoid
-            # deleting user configuration? etc.
-            #
-            # This is more or less similar to Arch Linux's Pacman with the
-            # user manually handling the .new files when and if they appear.
-            test "$1" "$_file" || pkg_etc "$file" "$_tmp_file_pre_pre"
-        ;;
-
         */)
             # Skip directories if they already exist in the file system.
             # (Think /usr/bin, /usr/lib, etc).
@@ -1198,12 +1187,22 @@ pkg_install_files() {
         ;;
 
         *)
-            if [ -d "$_file" ] || test "$1" "$_file"; then
-                # Skip directories as they're likely symlinks in this case.
-                # Pure directories in manifests have a suffix of '/'.
+            # Skip directories and files which exist in verify mode.
+            [ -d "$_file" ] || ! test "$1" "$_file" ||
                 continue
 
-            elif [ -h "$_file" ]; then
+            case $file in /etc/*[!/])
+                # Handle /etc/ files in a special way (via a 3-way checksum) to
+                # determine how these files should be installed. Do we overwrite
+                # the existing file? Do we install it as $file.new to avoid
+                # deleting user configuration? etc.
+                #
+                # This is more or less similar to Arch Linux's Pacman with the
+                # user manually handling the .new files when and if they appear.
+                pkg_etc "$_tmp_file_pre_pre" || continue
+            esac
+
+            if [ -h "$_file" ]; then
                 # Copy the file to the destination directory overwriting
                 # any existing file.
                 cp -fP "$2$file" "${_file%/*}/."
@@ -1272,17 +1271,17 @@ pkg_remove_files() {
 pkg_etc() {
     _etc_cnt=$((_etc_cnt + 1))
 
-    sh256 "$tar_dir/$_pkg$1" "$KISS_ROOT$1" >/dev/null
+    sh256 "$tar_dir/$_pkg$file" "$KISS_ROOT$file" >/dev/null
 
     sum_new=${hash%%"$newline"*}
     sum_sys=${hash#*"$newline"}
-    sum_old=$(awk "NR == $_etc_cnt" "$2") >/dev/null 2>&1 ||:
+    sum_old=$(awk "NR == $_etc_cnt" "$1") >/dev/null 2>&1 ||:
 
     # Compare the three checksums to determine what to do.
     case ${sum_old:-null}${sum_sys:-null}${sum_new} in
         # old = Y, sys = X, new = Y
         "${sum_new}${sum_sys}${sum_old}")
-            return 0
+            return 1
         ;;
 
         # old = X, sys = X, new = X
@@ -1291,18 +1290,15 @@ pkg_etc() {
         "${sum_old}${sum_old}${sum_old}"|\
         "${sum_old:-null}${sum_sys}${sum_sys}"|\
         "${sum_sys}${sum_old}"*)
-            new=
+
         ;;
 
         # All other cases.
         *)
-            war "$_pkg" "saving $1 as $1.new"
-            new=.new
+            war "$_pkg" "saving $file as $file.new"
+            _file=$_file.new
         ;;
     esac
-
-    cp -fPp "$tar_dir/$_pkg/$1" "$KISS_ROOT$1$new"
-    chown root:root "$KISS_ROOT$1$new" 2>/dev/null ||:
 }
 
 pkg_removable() {
