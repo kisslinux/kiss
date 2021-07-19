@@ -56,6 +56,10 @@ ok() {
     case $1 in '') return 1 ;; *) return 0; esac
 }
 
+null() {
+    ! ok "$1"
+}
+
 tmp_file() {
     # Create a uniquely named temporary file and store its absolute path
     # in a variable (_tmp_file).
@@ -79,7 +83,7 @@ tmp_file_copy() {
 }
 
 prompt() {
-    ! ok "$1" || log "$1"
+    null "$1" || log "$1"
 
     log "Continue?: Press Enter to continue or Ctrl+C to abort"
 
@@ -334,7 +338,7 @@ pkg_source_resolve() {
     set -- "$1" "$_fnr" "${3%"${3##*[!/]}"}"
 
     # Git repository.
-    if ! ok "${2##git+*}"; then
+    if null "${2##git+*}"; then
         _res=$2
 
     # Remote source (cached).
@@ -342,7 +346,7 @@ pkg_source_resolve() {
         _res=$src_dir/$1/${3:+"$3/"}${2##*/}
 
     # Remote source.
-    elif ! ok "${2##*://*}"; then
+    elif null "${2##*://*}"; then
         _res=url+$2
         _des=$src_dir/$1/${3:+"$3/"}${2##*/}
 
@@ -476,7 +480,7 @@ pkg_extract() {
         pkg_source_resolve "$1" "$src" "$dest" >/dev/null
 
         # Create the source's directories if not null.
-        ! ok "$_res" || mkcd "$mak_dir/$1/$dest"
+        null "$_res" || mkcd "$mak_dir/$1/$dest"
 
         case $_res in
             git+*)
@@ -503,7 +507,7 @@ pkg_depends() {
     # dependencies are listed first and then the parents in reverse order.
     contains "$deps" "$1" || {
         # Filter out non-explicit, already installed packages.
-        ! ok "$3" || ok "$2" || contains "$explicit" "$1" ||
+        null "$3" || ok "$2" || contains "$explicit" "$1" ||
             ! [ -d "$sys_db/$1" ] || return
 
         # Detect circular dependencies and bail out.
@@ -998,7 +1002,7 @@ pkg_verify() {
     set -- $hash
 
     # Only read checksums if we generated some.
-    ! ok "$1" ||
+    null "$1" ||
 
     # Check that the first column (separated by whitespace) match in both
     # checksum files. If any part of either file differs, mismatch. Abort.
