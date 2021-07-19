@@ -1029,8 +1029,13 @@ pkg_verify() {
         printf '%s\n%s\n' "- ${chk:-missing}" "+ ${1:-no source}"
 
         case $1-${chk:-null} in
-            "$chk-$1"|"$1-SKIP") ;;
-            "$hash"-*|*) die "$repo_name" "Checksum mismatch"
+            "$chk-$1"|"$1-SKIP")
+                # We have a match.
+            ;;
+
+            "$hash"-*|*)
+                die "$repo_name" "Checksum mismatch"
+            ;;
         esac
 
         shift "$(($# != 0))"
