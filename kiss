@@ -334,12 +334,12 @@ pkg_source_resolve() {
 
     fnr "${2%"${2##*[!/]}"}" \
         VERSION "$repo_ver" \
-        RELEASE "$repo_rel" \
+          EPOCH "$repo_rel" \
           MAJOR "$repo_major" \
           MINOR "$repo_minor" \
           PATCH "$repo_patch" \
           IDENT "$repo_ident" \
-            PKG "$repo_name"
+        PACKAGE "$repo_name"
 
     set -- "$1" "$_fnr" "${3%"${3##*[!/]}"}" "$4"
 
