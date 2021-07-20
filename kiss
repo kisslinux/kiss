@@ -330,7 +330,7 @@ pkg_cache() {
 pkg_source_resolve() {
     # Given a line of input from the sources file, return an absolute
     # path to the source if it already exists, error if not.
-    ok "${2##\#*}" || { _res=; return; }
+    ok "${2##\#*}" || { unset _res _des; return; }
 
     unset _des
 
