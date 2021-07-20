@@ -425,9 +425,9 @@ pkg_source_get() {
 
     # Set the arguments based on found download utility.
     case ${cmd_get##*/} in
-           curl) set -- -fLo "$@" ;;
-           wget) set -- -O   "$@" ;;
-         aria2c) set -- -o   "$@" ;;
+        aria2c|axel) set -- -o   "$@" ;;
+               curl) set -- -fLo "$@" ;;
+         wget|wget2) set -- -O   "$@" ;;
     esac
 
     "$cmd_get" "$@" || {
@@ -1926,10 +1926,12 @@ main() {
 
     # Figure out which download utility is available.
     cmd_get=${KISS_GET:-"$(
-        command -v curl ||
-        command -v wget ||
-        command -v aria2c
-    )"} || die "No download utility found (curl, wget, aria2c)"
+        command -v aria2c ||
+        command -v axel   ||
+        command -v curl   ||
+        command -v wget   ||
+        command -v wget2  ||
+    )"} || die "No download utility found (aria2c, axel, curl, wget, wget2)"
 
     # Store the date and time of script invocation to be used as the name of
     # the log files the package manager creates uring builds.
