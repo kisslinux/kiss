@@ -1930,7 +1930,7 @@ main() {
         command -v axel   ||
         command -v curl   ||
         command -v wget   ||
-        command -v wget2  ||
+        command -v wget2
     )"} || die "No download utility found (aria2c, axel, curl, wget, wget2)"
 
     # Store the date and time of script invocation to be used as the name of
