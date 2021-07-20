@@ -377,7 +377,7 @@ pkg_source_resolve() {
         _res=/${2##/}
 
     else
-        die "$1" "No local file '$_res'"
+        die "$1" "No local file '$2'"
     fi
 
     ok "$4" || printf 'found %s\n' "$_res"
