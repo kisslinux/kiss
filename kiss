@@ -194,6 +194,17 @@ decompress() {
 }
 
 sh256() {
+    # Higher level sh256 function which filters out non-existent
+    # files (and also directories).
+    for f do shift
+        [ -d "$f" ] || [ ! -e "$f" ] || set -- "$@" "$f"
+    done
+
+    # Only call _sh256 if we have files to operate on.
+    for f do _sh256 "$@"; return 0; done
+}
+
+_sh256() {
     # There's no standard utility to generate sha256 checksums.
     # This is a simple wrapper around sha256sum, sha256, shasum,
     # openssl, digest, ... which will use whatever is available.
@@ -201,13 +212,7 @@ sh256() {
     # All utilities must match 'sha256sum' output.
     #
     # Example: '<checksum>  <file>'
-
-    # Filter out directories and anything which does not exist.
-    for f do shift
-        [ -d "$f" ] || [ ! -e "$f" ] || set -- "$@" "$f"
-    done
-
-    ! equ "$#" 0 || return 0
+    unset hash
 
     # Set the arguments based on found sha256 utility.
     case ${cmd_sha##*/} in
@@ -217,26 +222,19 @@ sh256() {
          digest) set -- -a sha256 "$@" ;;
     esac
 
-    # This is now one call to the checksums command rather than
-    # one per file. We also display errors now rather than not
-    # (due to old runtime detection method).
-    hash=$("$cmd_sha" "$@") || die "Failed to generate checksums"
+    IFS=$newline
 
-    # Intentional, globbing disabled.
-    # shellcheck disable=2046,2086
-    set -- $hash
+    # Generate checksums for all input files. This is a single
+    # call to the utility rather than one per file.
+    _hash=$("$cmd_sha" "$@") || die "Failed to generate checksums"
 
-    # As the output is '<hash>  <file>' and the above list is
-    # split on whitespace; we need to pop every 2nd element.
-    for sum do case ${_i:-0} in
-        0) _i=1; set -- "$@" "$sum" ;;
-        1) _i=0
-    esac; shift; done
+    # Strip the filename from each element.
+    # '<checksum> ?<file>' -> '<checksum>'
+    for sum in $_hash; do
+        hash=$hash${hash:+"$newline"}${sum%% *}
+    done
 
-    printf '%s\n' "$@"
-
-    # Convert the list items to a newline separated string.
-    IFS=$newline hash=$*
+    printf '%s\n' "$hash"
     unset IFS
 }
 
@@ -808,7 +806,7 @@ pkg_etcsums() {
         set -- "$pkg_dir/$repo_name/$etc" "$@"
     esac done < manifest
 
-    sh256 "$@" > etcsums
+    _sh256 "$@" > etcsums
 }
 
 pkg_tar() {
@@ -1021,7 +1019,7 @@ pkg_checksums() {
         esac
     done < "$repo_dir/sources"
 
-    sh256 "$@"
+    _sh256 "$@"
 }
 
 pkg_verify() {
