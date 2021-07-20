@@ -105,7 +105,6 @@ fnr() {
     shift 1
 
     while :; do case $_fnr-$# in
-         raw:*) _fnr=${_fnr##raw:}; break ;;
         *"$1"*) _fnr=${_fnr%"$1"*}${2}${_fnr##*"$1"} ;;
            *-2) break ;;
              *) shift 2
@@ -333,14 +332,18 @@ pkg_source_resolve() {
     # path to the source if it already exists, error if not.
     ok "${2##\#*}" || { _res=; return; }
 
+    # Surround each replacement with substitutions to handled escaped markers.
+    # First substitution turns '\MARKER' into ' ' (can't appear in sources as
+    # they're already split on whitespace), second replaces 'MARKER' with its
+    # value and the third, turns ' ' into 'MARKER' (dropping \\).
     fnr "${2%"${2##*[!/]}"}" \
-        VERSION "$repo_ver" \
-        RELEASE "$repo_rel" \
-          MAJOR "$repo_major" \
-          MINOR "$repo_minor" \
-          PATCH "$repo_patch" \
-          IDENT "$repo_ident" \
-        PACKAGE "$repo_name"
+        \\VERSION \  VERSION "$repo_ver"   \  VERSION \
+        \\RELEASE \  RELEASE "$repo_rel"   \  RELEASE \
+        \\MAJOR   \  MAJOR   "$repo_major" \  MAJOR \
+        \\MINOR   \  MINOR   "$repo_minor" \  MINOR \
+        \\PATCH   \  PATCH   "$repo_patch" \  PATCH \
+        \\IDENT   \  IDENT   "$repo_ident" \  IDENT \
+        \\PACKAGE \  PACKAGE "$repo_name"  \  PACKAGE
 
     set -- "$1" "$_fnr" "${3%"${3##*[!/]}"}" "$4"
 
