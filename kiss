@@ -662,12 +662,12 @@ pkg_fix_deps() {
 
         # The readelf mode requires ldd's output to resolve the library
         # path for a given file. If ldd fails, silently skip the file.
-        ldd_buf=$(ldd -- "$_file" 2>/dev/null) || continue
+        ldd=$(ldd -- "$pkg_dir/$repo_name$_file" 2>/dev/null) || continue
 
         # Attempt to get information from readelf. If this fails (or we
         # are in ldd mode), do full ldd mode (which has the downside of
         # listing dependencies of dependencies (and so on)).
-        elf_buf=$("$cmd_elf" -d "$_file" 2>/dev/null) || elf_buf=$ldd_buf
+        elf=$("$cmd_elf" -d "$pkg_dir/$repo_name$_file" 2>/dev/null) || elf=$ldd
 
         # Iterate over the output of readelf or ldd, extract file names,
         # resolve their paths and finally, figure out their owner.
@@ -679,7 +679,7 @@ pkg_fix_deps() {
             # Resolve library path.
             # ldd: libjson-c.so.5 => /lib/libjson-c.so.5 ...
             case $cmd_elf in
-                *readelf) lib=${ldd_buf#*"	$lib => "} ;;
+                *readelf) lib=${ldd#*"	$lib => "} ;;
                 *)        lib=${lib##*=> } ;;
             esac
             lib=${lib%% *}
@@ -711,7 +711,7 @@ pkg_fix_deps() {
                 printf '%s\n' "$_owns"
 
         esac done <<EOF || :
-$elf_buf
+$elf
 EOF
     esac done < manifest |
 
