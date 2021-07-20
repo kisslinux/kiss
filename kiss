@@ -105,6 +105,7 @@ fnr() {
     shift 1
 
     while :; do case $_fnr-$# in
+         raw:*) _fnr=${_fnr##raw:}; break ;;
         *"$1"*) _fnr=${_fnr%"$1"*}${2}${_fnr##*"$1"} ;;
            *-2) break ;;
              *) shift 2
