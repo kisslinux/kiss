@@ -521,10 +521,6 @@ pkg_extract() {
                 pkg_source_tar "$_res"
             ;;
 
-            *.zip)
-                unzip "$_res"
-            ;;
-
             *?*)
                 cp -Rf "$_res" .
             ;;
@@ -1013,7 +1009,7 @@ pkg_checksums() {
     while read -r src dest || ok "$src"; do
         pkg_source_resolve "$repo_name" "$src" "$dest" >/dev/null
 
-        case $_res in git+*) ;; */*[!.])
+        case $_res in [!g][!i][!t][!+]*/*[!.])
             set -- "$@" "$_res"
         esac
     done < "$repo_dir/sources"
