@@ -409,7 +409,7 @@ pkg_source() {
             # conflicts between identical sources with differing dests.
             mkcd "${_des%/*}"
 
-            pkg_source_get "${_res##url+}" "$_des"
+            pkg_source_get "$_des" "${_res##url+}"
         esac
 
         # arg1: post-source
@@ -421,11 +421,18 @@ pkg_source() {
 }
 
 pkg_source_get() {
-    log "$repo_name" "Downloading $1"
+    log "$repo_name" "Downloading $2"
 
-    curl -fLo "$2" "$1" || {
+    # Set the arguments based on found download utility.
+    case ${cmd_get##*/} in
+           curl) set -- -fLo "$@" ;;
+           wget) set -- -O   "$@" ;;
+         aria2c) set -- -o   "$@" ;;
+    esac
+
+    "$cmd_get" "$@" || {
         rm -f "$2"
-        die "$repo_name" "Failed to download $1"
+        die "$repo_name" "Failed to download $3"
     }
 }
 
@@ -1909,13 +1916,20 @@ main() {
     )"} || cmd_elf=ldd
 
     # Figure out which sha256 utility is available.
-    cmd_sha=$(
+    cmd_sha=${KISS_SHA:-"$(
         command -v openssl   ||
         command -v sha256sum ||
         command -v sha256    ||
         command -v shasum    ||
         command -v digest
-    ) || die "No sha256 utility found"
+    )"} || die "No sha256 utility found"
+
+    # Figure out which download utility is available.
+    cmd_get=${KISS_GET:-"$(
+        command -v curl ||
+        command -v wget ||
+        command -v aria2c
+    )"} || die "No download utility found (curl, wget, aria2c)"
 
     # Store the date and time of script invocation to be used as the name of
     # the log files the package manager creates uring builds.
