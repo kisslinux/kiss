@@ -882,7 +882,7 @@ pkg_build_all() {
     # Finally build and create tarballs for all passed packages and
     # dependencies.
     for pkg do
-        log "$pkg" "Building package ($((_build_cur+=1))/${_build_tot:=$#})"
+        log "$pkg" "Building package ($((_build_cur+=1))/$#)"
 
         pkg_find_version_split "$pkg"
 
@@ -890,7 +890,7 @@ pkg_build_all() {
         # arg2: package name
         # arg3: number in queue
         # arg4: total in queue
-        run_hook queue "$pkg" "$((_build_cur += 1))" "$#"
+        run_hook queue "$pkg" "$_build_cur" "$#"
 
         ! [ -f "$repo_dir/sources" ] || pkg_extract  "$pkg"
 
