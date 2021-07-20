@@ -332,6 +332,8 @@ pkg_source_resolve() {
     # path to the source if it already exists, error if not.
     ok "${2##\#*}" || { _res=; return; }
 
+    unset _des
+
     # Surround each replacement with substitutions to handled escaped markers.
     # First substitution turns '\MARKER' into ' ' (can't appear in sources as
     # they're already split on whitespace), second replaces 'MARKER' with its
@@ -392,31 +394,49 @@ pkg_source() {
     [ -f "$repo_dir/sources" ] || return 0
 
     log "$1" "Reading sources"
-    mkcd "$src_dir/$1"
 
     while read -r src dest || ok "$src"; do
         pkg_source_resolve "$1" "$src" "$dest" "$2"
 
-        case $_res in url+*)
-            log "$1" "Downloading ${_res##url+}"
-            mkdir -p "$PWD/$dest"
+        # arg1: pre-source
+        # arg2: package name
+        # arg3: verbatim source
+        # arg4: resolved source
+        run_hook pre-source "$1" "$src" "$_fnr"
 
-            curl -fLo "$_des" "${_res##url+}" || {
-                rm -f "$_des"
-                die "$1" "Failed to download ${_res##url+}"
-            }
+        case $_res in url+*)
+            # Create directory structure in source cache. This prevents cache
+            # conflicts between identical sources with differing dests.
+            mkcd "${_des%/*}"
+
+            pkg_source_get "${_res##url+}" "$_des"
         esac
+
+        # arg1: post-source
+        # arg2: package name
+        # arg3: verbatim source
+        # arg4: resolved source
+        run_hook post-source "$1" "$src" "${_des:-"$_res"}"
     done < "$repo_dir/sources"
+}
+
+pkg_source_get() {
+    log "$repo_name" "Downloading $1"
+
+    curl -fLo "$2" "$1" || {
+        rm -f "$2"
+        die "$repo_name" "Failed to download $1"
+    }
 }
 
 pkg_source_git() {
     # This magic will shallow clone branches, commits or the
     # regular repository. It correctly handles cases where a
     # shallow clone is not possible.
-    log "$repo_name" "Cloning ${1##git+}"
+    log "$repo_name" "Cloning $1"
 
     # Split the source into URL + OBJECT (branch or commit).
-    url=${1##git+} com=${url##*[@#]} com=${com#${url%[#@]*}}
+    url=$1 com=${url##*[@#]} com=${com#${url%[#@]*}}
 
     git init
     git remote add origin "${url%[#@]*}"
@@ -424,7 +444,7 @@ pkg_source_git() {
     git -c advice.detachedHead=0 checkout "${com:-FETCH_HEAD}"
 }
 
-pkg_source_tar_hack() {
+pkg_source_tar() {
     # This is a portable shell implementation of GNU tar's
     # '--strip-components 1'. Use of this function denotes a
     # performance penalty.
@@ -494,11 +514,11 @@ pkg_extract() {
 
         case $_res in
             git+*)
-                pkg_source_git "$_res"
+                pkg_source_git "${_res##git+}"
             ;;
 
             *.tar|*.tar.??|*.tar.???|*.tar.????|*.t?z)
-                pkg_source_tar_hack "$_res"
+                pkg_source_tar "$_res"
             ;;
 
             *.zip)
