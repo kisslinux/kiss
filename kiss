@@ -453,26 +453,23 @@ pkg_source_tar() {
     # This is a portable shell implementation of GNU tar's
     # '--strip-components 1'. Use of this function denotes a
     # performance penalty.
-    tmp_file "$repo_name" tarball
-    tmp_file "$repo_name" tarball-manifest
-
     unset _seen
 
-    decompress "$1" > "$_tmp_file_pre" ||
-        die "$repo_name" "Failed to decompress $1"
+    tmp_file "$repo_name" tarball-manifest
 
-    tar xf "$_tmp_file_pre" ||
+    # Decompress the tarball and extract it to the current directory.
+    # Store its verbose output in a file for use below.
+    decompress "$1" | tar xvf - > "$_tmp_file" ||
         die "$repo_name" "Failed to extract $1"
-
-    # The sort command filters out all duplicate top-level
-    # directories from the tarball's manifest. This is an optimization
-    # as we avoid looping (4000 times for Python(!)).
-    tar tf "$_tmp_file_pre" | sort -ut / -k1,1 > "$_tmp_file" ||
-        die "$repo_name" "Failed to extract manifest"
 
     # Iterate over all directories in the first level of the
     # tarball's manifest. Each directory is moved up a level.
     while IFS=/ read -r dir _; do case ${dir#.} in *?*)
+        # Skip directories we have seen before. This used to be a
+        # sort call but with pipe shenanigans and error handling,
+        # this is the better solution.
+        ! contains "$_seen" "$dir" || continue && _seen="$_seen $dir"
+
         # Move the parent directory to prevent naming conflicts
         # with the to-be-moved children.
         mv -f "$dir" "$KISS_PID-$dir"
@@ -494,9 +491,6 @@ pkg_source_tar() {
         # as we may leave files in here if any were copied.
         rm -rf "$KISS_PID-$dir"
     esac done < "$_tmp_file"
-
-    # Remove the tarball now that we are done with it.
-    rm -f "$_tmp_file_pre"
 }
 
 pkg_extract() {
