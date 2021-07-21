@@ -456,8 +456,6 @@ pkg_source_tar() {
     tmp_file "$repo_name" tarball
     tmp_file "$repo_name" tarball-manifest
 
-    unset _seen
-
     decompress "$1" > "$_tmp_file_pre" ||
         die "$repo_name" "Failed to decompress $1"
 
