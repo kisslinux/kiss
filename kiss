@@ -757,18 +757,19 @@ pkg_manifest() {
 }
 
 pkg_manifest_validate() {
-    log "$1" "Checking if manifest valid"
+    # NOTE: _pkg comes from caller.
+    log "$_pkg" "Checking if manifest valid"
 
     while read -r line; do
-        [ -e "$tar_dir/$1$line" ] || [ -h "$tar_dir/$1$line" ] || {
+        [ -e "$tar_dir/$_pkg$line" ] || [ -h "$tar_dir/$_pkg$line" ] || {
             printf '%s\n' "$line"
             set -- "$@" "$line"
         }
-    done < "$pkg_db/$1/manifest"
+    done < "$pkg_db/$_pkg/manifest"
 
-    case $# in [2-9]|[1-9][0-9]*)
-        die "$1" "manifest contains $(($# - 1)) non-existent files"
-    esac
+    for f do
+        die "$_pkg" "manifest contains $# non-existent files"
+    done
 }
 
 pkg_manifest_replace() {
@@ -1455,7 +1456,7 @@ pkg_install() {
     # Intended behavior.
     # shellcheck disable=2030,2031
     equ "$KISS_FORCE" 1 || {
-        pkg_manifest_validate "$_pkg"
+        pkg_manifest_validate
         pkg_installable "$_pkg" "$PWD/$pkg_db/$_pkg/depends"
     }
 
