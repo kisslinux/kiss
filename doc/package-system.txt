@@ -33,6 +33,18 @@ rows by newline and columns by whitespace.
     https://en.wikipedia.org/wiki/Domain-specific_language
 
 
+[0.0] Index
+________________________________________________________________________________
+
+* build                                                                    [1.0]
+* checksums                                                                [2.0]
+* depends                                                                  [3.0]
+* sources                                                                  [4.0]
+* version                                                                  [5.0]
+* pre-remove                                                               [6.0]
+* post-install                                                             [7.0]
+
+
 [1.0] build
 ________________________________________________________________________________
 
