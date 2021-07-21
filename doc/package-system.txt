@@ -43,6 +43,7 @@ ________________________________________________________________________________
 * version                                                                  [5.0]
 * pre-remove                                                               [6.0]
 * post-install                                                             [7.0]
+* Further reading                                                          [8.0]
 
 
 [1.0] build
@@ -213,4 +214,10 @@ should be used to perform any required post-install steps or to display notices.
 |                                                                              |
 +------------------------------------------------------------------------------+
 
+
+[8.0] Further reading
+________________________________________________________________________________
+
+- @/package-manager
+- $/kisslinux/kiss
 
