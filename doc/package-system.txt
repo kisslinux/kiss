@@ -1,81 +1,87 @@
 KISS PACKAGE SYSTEM
 ________________________________________________________________________________
 
-The distribution employs a package system based around the concept of easily
-parseable plain-text files (with fields separated by lines and spaces).
+Packages are comprised of a directory and the series of files contained within.
+The name of the package is derived from its directory name. The files which
+comprise the system are as follows.
 
-This format allows effortless interface using any programming language or just
-basic UNIX utilities and tools.
++------------------+----------+------------+----------+-------------+----------+
+| File             | Language | Executable | Comments | Blank lines | Required |
++------------------+----------+------------+----------+-------------+----------+
+|                  |          |            |          |             |          |
+| build            | Any      | Yes [2]    | N/A      | N/A         | Yes      |
+| checksums        | DSL [3]  | No         | No       | No          | No [1]   |
+| depends          | DSL [3]  | No         | Yes      | Yes         | No       |
+| sources          | DSL [3]  | No         | Yes      | Yes         | No       |
+| version          | DSL [3]  | No         | No       | No          | Yes      |
+|                  |          |            |          |             |          |
+| pre-remove       | Any      | Yes [2]    | N/A      | N/A         | No       |
+| post-install     | Any      | Yes [2]    | N/A      | N/A         | No       |
+|                  |          |            |          |             |          |
++------------------+----------+------------+----------+-------------+----------+
+
+Unless stated otherwise, all files marked DSL are a grid of cells split into
+rows by newline and columns by whitespace.
+
+[1] The checksums file is only required if the sources file contains sources
+    which exist as files on disk (directories, git repositories need not apply).
+
+[2] The only requirement is that the file be executable. The file itself can be
+    written in any programming language.
+
+[3] The file's format is a domain specific language with its own rules.
+    https://en.wikipedia.org/wiki/Domain-specific_language
 
 
-[0.0] Index
+[1.0] build
 ________________________________________________________________________________
 
-- Directory Structure                                                      [1.0]
+The build file is executed in the directory containing the package's extracted
+sources. Unlike other distributions, a 'cd' is not needed as sources have their
+top-level directory components stripped away.
 
-- build                                                                    [2.0]
-- depends                                                                  [3.0]
-- sources                                                                  [4.0]
-- version                                                                  [5.0]
-- pre-remove                                                               [6.0]
-- post-install                                                             [7.0]
-- patches/*                                                                [8.0]
-- files/*                                                                  [9.0]
+The build file is given two arguments. The destination directory (where
+artifacts should be installed) and the first field of the package's version
+file (verbatim).
+
+The build file is given a modified environment containing DESTDIR, KISS_ROOT,
+GOPATH and generic defaults for toolchain variables (if unset by the user). The
+toolchain defaults are as follows: AR=ar, CC=cc, CXX=c++, NM=nm, RANLIB=ranlib
+
++------------------------------------------------------------------------------+
+| Example shell-based build file                                               |
++------------------------------------------------------------------------------+
+|                                                                              |
+|  1  #!/bin/sh -e                                                             |
+|  2                                                                           |
+|  3  # Disable stripping (use if needed).                                     |
+|  4  :> nostrip                                                               |
+|  5                                                                           |
+|  6  ./configure \                                                            |
+|  7      --prefix=/usr                                                        |
+|  8                                                                           |
+|  9  make                                                                     |
+| 10  make install                                                             |
+|                                                                              |
++------------------------------------------------------------------------------+
 
 
-[1.0] Directory Structure
+[2.0] checksums
 ________________________________________________________________________________
 
-+------------------------------------------------------------------------------+
-|                                                                              |
-|  zlib/            # Package name.                                            |
-|  - build          # Build script (chmod +x).                                 |
-|  - sources        # Remote and local sources.                                |
-|  - version        # Package version.                                         |
-|                                                                              |
-|                                                                              |
-|  # Optional files.                                                           |
-|                                                                              |
-|  - depends        # Dependencies (usually required).                         |
-|  - pre-remove     # Pre-remove script (chmod +x).                            |
-|  - post-install   # Post-install script (chmod +x).                          |
-|  - patches/*      # Directory to store patches.                              |
-|  - files/*        # Directory to store misc files.                           |
-|                                                                              |
-+------------------------------------------------------------------------------+
+The checksums file is generated by the package manager (kiss c pkg) and is
+derived from files listed in the package's sources file. Directories and Git
+repositories are excluded.
 
-
-[2.0] build
-________________________________________________________________________________
-
-The build file should contain all of the steps necessary to patch, configure,
-make and install ('make install' in this context) the package. The file is
-language agnostic and the only requirement is that it be executable.
-
-On execution the script will start in the directory of the package's source
-(no need to cd anywhere).
-
-The script is also given arguments (equivalent to 'script arg arg'). The first
-argument contains the path where the script should install the compiled files.
-The second argument contains the package's version.
-
-Everything in the mentioned path is added to the package tarball and later
-installed to the system.
+Checksum verification can be disabled for a source by replacing its checksum
+with 'SKIP' in the checksums file. The package manager will notify you when
+this occurs.
 
 +------------------------------------------------------------------------------+
-| build                                                                        |
-+------------------------------------------------------------------------------+
 |                                                                              |
-|   #!/bin/sh -e                                                               |
-|                                                                              |
-|   # Disable stripping (add this only if needed).                             |
-|   :> nostrip                                                                 |
-|                                                                              |
-|   ./configure \                                                              |
-|        --prefix=/usr                                                         |
-|                                                                              |
-|   make                                                                       |
-|   make DESTDIR="$1" install                                                  |
+|  1 892a0875b9872acd04a9fde79b1f943075d5ea162415de3047c327df33fbaee5          |
+|  2 8a5b38a76b778da8d6f4236f1ea89e680daea971be6ee3a57e4e7ae99a883aa2          |
+|  3 SKIP                                                                      |
 |                                                                              |
 +------------------------------------------------------------------------------+
 
@@ -83,26 +89,18 @@ installed to the system.
 [3.0] depends
 ________________________________________________________________________________
 
-The depends file should contain any other packages the package depends on to
-function correctly. Each dependency should be listed one per line.
-
-A second and optional field allows for the distinction between a compile time
-dependency and a run time one. The value of this field should be set to 'make'
-for compile time dependencies and left blank for runtime dependencies.
-
-The depends file can be omitted entirely if the package has no dependencies.
+The depends file contains the package's dependencies listed one per line in
+alphabetical order. Duplicate entries are not supported. The second optional
+field denotes the dependency type (unset for runtime, 'make' for compile-time).
 
 +------------------------------------------------------------------------------+
-| depends                                                                      |
-+------------------------------------------------------------------------------+
 |                                                                              |
-|   # Comments are supported.                                                  |
-|                                                                              |
-|   # Perl is needed at compile time.                                          |
-|   perl make                                                                  |
-|                                                                              |
-|   # zlib is needed at runtime.                                               |
-|   zlib                                                                       |
+|  1 alsa-lib                                                                  |
+|  2 meson make                                                                |
+|  3                                                                           |
+|  4 # This is a comment.                                                      |
+|  5 wayland                                                                   |
+|  6 wayland-protocols make                                                    |
 |                                                                              |
 +------------------------------------------------------------------------------+
 
@@ -110,119 +108,57 @@ The depends file can be omitted entirely if the package has no dependencies.
 [4.0] sources
 ________________________________________________________________________________
 
-The sources file should contain all remote and local files needed by the
-package during the build. This includes the source, patches and any other
-miscellaneous files which may be needed.
+The sources file contains the package's sources one per line. A valid source is
+a URL to a file, relative path, absolute path or Git repository. The optional
+second field denotes the relative destination directory.
 
-Each source should be listed one per line. An optional second field specifies
-an extraction directory (relative to the build directory).
+Git repositories must be prefixed with git+. An optional suffix is supported to
+checkout a specific branch (@BRANCH) or commit (#COMMIT). All clones are shallow
+where supported by the remote server. If no suffix is used, master is cloned.
 
-Sources which pull from a git repository use a special syntax. An additional
-prefix 'git+' should be added with an optional suffix #hash or @branch).
-
-Adding a suffix of '?no-extract' to the source URL will prevent the package
-manager from automatically extracting the source (if a tarball or zip).
-
-Sources also support MARKERS which are replaced with the version information
-as defined in the version file at runtime.
-
-+------------------------------------------------------------------------------+
-| sources                                                                      |
 +------------------------------------------------------------------------------+
 |                                                                              |
-|   https://example.com/dhcpcd-8.0.2.tar.xz                                    |
-|   files/dhcpcd.run                                                           |
+|  1 # This is a comment.                                                      |
+|  2 https://www.openssl.org/source/openssl-VERSION.tar.gz                     |
+|  3 https://causal.agency/libretls/libretls-3.3.3p1.tar.gz libretls           |
+|  4                                                                           |
+|  5 files/update-certdata.sh                                                  |
+|  6 git+https://github.com/kisslinux/kiss@dev                                 |
 |                                                                              |
 +------------------------------------------------------------------------------+
 
-+------------------------------------------------------------------------------+
-| sources (usage with second field)                                            |
-+------------------------------------------------------------------------------+
-|                                                                              |
-|   https://example.com/gcc-9.1.0.tar.xz  gcc                                  |
-|   https://example.com/gmp-6.1.2.tar.xz  gcc/gmp                              |
-|   https://example.com/mpfr-4.0.2.tar.xz gcc/mpfr                             |
-|   https://example.com/mpc-1.1.0.tar.gz  gcc/mpc                              |
-|                                                                              |
-+------------------------------------------------------------------------------+
+The following MARKERS can be used to substitute version information. These are
+replaced at runtime with their respective values. Literal MARKERS can be escaped
+by prepending a backslash.
 
 +------------------------------------------------------------------------------+
-| sources (usage with Git)                                                     |
-+------------------------------------------------------------------------------+
 |                                                                              |
-|   git+https://github.com/dylanaraps/eiwd                                     |
-|                                                                              |
-|   # Grabbing a specific branch.                                              |
-|   git+https://github.com/dylanaraps/eiwd@branch                              |
-|                                                                              |
-|   # Grabbing a specific commit.                                              |
-|   git+https://github.com/dylanaraps/eiwd#commit                              |
+|  VERSION   The first  field of the version file verbatim.                    |
+|  RELEASE   The second field of the version file verbatim.                    |
+|    MAJOR   The first  component of VERSION split on .-_+                     |
+|    MINOR   The second component of VERSION split on .-_+                     |
+|    PATCH   The third  component of VERSION split on .-_+                     |
+|    IDENT   All other components.                                             |
+|  PACKAGE   The name of the package.                                          |
 |                                                                              |
 +------------------------------------------------------------------------------+
-
-+------------------------------------------------------------------------------+
-| sources (usage with MARKERS)                                                 |
-+------------------------------------------------------------------------------+
-|                                                                              |
-| VERSION The first  field of the version file verbatim.                       |
-| RELEASE The second field of the version file verbatim.                       |
-|   MAJOR The first  component of VERSION split on .+-_                        |
-|   MINOR The second component of VERSION split on .+-_                        |
-|   PATCH The third  component of VERSION split on .+-_                        |
-|   IDENT All other components of VERSION.                                     |
-|     PKG The name of the package.                                             |
-|                                                                              |
-+------------------------------------------------------------------------------+
-|                                                                              |
-|   https://example.com/dhcpcd-VERSION.tar.xz                                  |
-|   https://example.com/pub/gnome/sources/atk/MAJOR.MINOR/atk-VERSION.tar.xz   |
-|                                                                              |
-+------------------------------------------------------------------------------+
-
-+------------------------------------------------------------------------------+
-| sources (usage with automatic source extraction disabled)                    |
-+------------------------------------------------------------------------------+
-|                                                                              |
-|   https://example.com/zlib-1.2.0.tar.xz?no-extract                           |
-|                                                                              |
-+------------------------------------------------------------------------------+
-
 
 
 [5.0] version
 ________________________________________________________________________________
 
-The version file should contain a single line with two fields. All other lines
-will be ignored.
+The version file is a single line split into two mandatory fields. The first
+field is the package's version and the second field the version of the
+repository files themselves.
 
-The first field should contain the software's upstream version and the second
-field should contain the version number of the repository files themselves.
-
-If the package is using a git source to pull down the latest commit, the
-version should be simply set to 'git'. If a specific commit hash is being
-used, the version should be set accordingly.
-
-+------------------------------------------------------------------------------+
-| version                                                                      |
-+------------------------------------------------------------------------------+
-|                                                                              |
-|   1.2.3 1                                                                    |
-|                                                                              |
-+------------------------------------------------------------------------------+
+If the package follows its upstream release schedule, the first field should
+match the upstream version number. If the source is a Git repository, the
+version should be set to 'git'. If a specific git commit is used, the version
+number should match accordingly.
 
 +------------------------------------------------------------------------------+
-| version (Git)                                                                |
-+------------------------------------------------------------------------------+
 |                                                                              |
-|   git 1                                                                      |
-|                                                                              |
-+------------------------------------------------------------------------------+
-
-+------------------------------------------------------------------------------+
-| version (commit hash)                                                        |
-+------------------------------------------------------------------------------+
-|                                                                              |
-|   7fd2c9bd80b1053852a9cc989205f7ee6b1f6d6f 1                                 |
+|  1 1.2.11 1                                                                  |
 |                                                                              |
 +------------------------------------------------------------------------------+
 
@@ -230,18 +166,14 @@ used, the version should be set accordingly.
 [6.0] pre-remove
 ________________________________________________________________________________
 
-The pre-remove file should contain anything that needs run prior to the
-removal of the package. The file is language agnostic and the only requirement
-is that it be executable.
+The pre-remove file is executed before removal of the package. This file should
+be used to perform any required pre-removal steps or to display notices.
 
 +------------------------------------------------------------------------------+
-| pre-remove                                                                   |
+| Example shell-based pre-remove file                                          |
 +------------------------------------------------------------------------------+
 |                                                                              |
-|   #!/bin/sh -e                                                               |
-|                                                                              |
-|   printf 'No one has used this yet!\n'                                       |
-|   printf 'I have no example!\n'                                              |
+| TODO: Example                                                                |
 |                                                                              |
 +------------------------------------------------------------------------------+
 
@@ -249,87 +181,23 @@ is that it be executable.
 [7.0] post-install
 ________________________________________________________________________________
 
-The post-install file should contain anything that needs to be run after a
-package installation to properly setup the software. The file is language
-agnostic and the only requirement is that it be executable.
+The post-install file is executed after installation of the package. This file
+should be used to perform any required post-install steps or to display notices.
 
 +------------------------------------------------------------------------------+
-| post-install                                                                 |
+| Example shell-based post-install file                                        |
 +------------------------------------------------------------------------------+
 |                                                                              |
-|   #!/bin/sh -e                                                               |
-|                                                                              |
-|   fc-cache -vf                                                               |
-|                                                                              |
-+------------------------------------------------------------------------------+
-
-
-[8.0] patches/*
-________________________________________________________________________________
-
-The patches directory should contain any patches the software needs.
-
-In the `sources` file patches are referred to by using a relative path
-(patches/musl.patch). The package manager does not automatically apply patches.
-This must be done in the build script of the package.
-
-The build script has direct access to the patches in its current working
-directory ('patch -p1 < example.patch' works directly).
-
-+------------------------------------------------------------------------------+
-| sources (usage with patches)                                                 |
-+------------------------------------------------------------------------------+
-|                                                                              |
-|   https://example.com/rxvt-unicode-9.22.tar.bz2                              |
-|   patches/gentables.patch                                                    |
-|   patches/rxvt-unicode-kerning.patch                                         |
-|                                                                              |
-+------------------------------------------------------------------------------+
-| build (usage with patches)                                                   |
-+------------------------------------------------------------------------------+
-|                                                                              |
-|   #!/bin/sh -e                                                               |
-|                                                                              |
-|   patch -p1 < rxvt-unicode-kerning.patch                                     |
-|   patch -p1 < gentables.patch                                                |
-|                                                                              |
-|   ./configure \                                                              |
-|        --prefix=/usr                                                         |
-|                                                                              |
-|   make                                                                       |
-|   make DESTDIR="$1" install                                                  |
-|                                                                              |
-+------------------------------------------------------------------------------+
-
-
-[9.0] files/*
-________________________________________________________________________________
-
-The files/ directory should contain any miscellaneous files the software needs.
-
-In the sources file, files are referred to by using a relative path
-(files/busybox.config).
-
-The build script has direct access to the files in its current working
-directory ('cat example_file' works directly).
-
-+------------------------------------------------------------------------------+
-| sources (usage with local files)                                             |
-+------------------------------------------------------------------------------+
-|                                                                              |
-|   https://example.com/kiss-1.0.0.tar.gz                                      |
-|   files/kiss_path.sh                                                         |
-|                                                                              |
-+------------------------------------------------------------------------------+
-| build (usage with local files)                                               |
-+------------------------------------------------------------------------------+
-|                                                                              |
-|   #!/bin/sh -e                                                               |
-|                                                                              |
-|   install -D kiss "$1/usr/bin/kiss"                                          |
-|                                                                              |
-|   # Accessible directly in '$PWD'.                                           |
-|   install -D kiss_path.sh "$1/etc/kiss_path.sh"                              |
+|  1 #!/bin/sh -e                                                              |
+|  2                                                                           |
+|  3 cat <<EOF                                                                 |
+|  4                                                                           |
+|  5 The commands zcat, unpigz and gunzip were merely symbolic                 |
+|  6 links to the pigz binary. They have been removed. To gain                 |
+|  7 them back, create the symlinks (or use an alias or shell                  |
+|  8 function).                                                                |
+|  9                                                                           |
+| 10 EOF                                                                       |
 |                                                                              |
 +------------------------------------------------------------------------------+
 
