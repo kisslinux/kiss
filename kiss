@@ -1788,14 +1788,14 @@ args() {
 
         '')
             log 'kiss [a|b|c|d|i|l|r|s|u|v] [pkg]...'
-            log 'alternatives List and swap to alternatives'
-            log 'build        Build a package'
+            log 'alternatives List and swap alternatives'
+            log 'build        Build packages'
             log 'checksum     Generate checksums'
-            log 'download     Pre-download all sources'
-            log 'install      Install a package'
+            log 'download     Download sources'
+            log 'install      Install packages'
             log 'list         List installed packages'
-            log 'remove       Remove a package'
-            log 'search       Search for a package'
+            log 'remove       Remove packages'
+            log 'search       Search for packages'
             log 'update       Update the system'
             log 'version      Package manager version'
 
@@ -1915,7 +1915,7 @@ main() {
     )"} || cmd_elf=ldd
 
     # Figure out which sha256 utility is available.
-    cmd_sha=${KISS_SHA:-"$(
+    cmd_sha=${KISS_CHK:-"$(
         command -v openssl   ||
         command -v sha256sum ||
         command -v sha256    ||
