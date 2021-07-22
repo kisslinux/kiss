@@ -551,7 +551,7 @@ pkg_depends() {
             die "Circular dependency detected $1 <> ${4##* }"
         esac
 
-        ! _pkg_find "$1" || ! [ -e "$repo_dir/depends" ] ||
+        ! pkg_find "$1" || ! [ -e "$repo_dir/depends" ] ||
 
         # Recurse through the dependencies of the child packages.
         while read -r dep dep_type || ok "$dep"; do
@@ -571,6 +571,8 @@ pkg_order() {
     # Order a list of packages based on dependence and take into account
     # pre-built tarballs if this is to be called from 'kiss i'.
     unset order redro deps
+
+    log "Ordering arguments list based on dependence"
 
     for pkg do case $pkg in
       /*@*.tar.*) deps="$deps $pkg" ;;
