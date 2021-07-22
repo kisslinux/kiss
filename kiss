@@ -805,8 +805,7 @@ pkg_etcsums() {
         set -- "$pkg_dir/$repo_name/$etc" "$@"
     esac done < manifest
 
-    # Only run _sh256 if we have elements.
-    for f do _sh256 "$@" > etcsums; return 0; done
+    sh256 "$@" > etcsums
 }
 
 pkg_tar() {
