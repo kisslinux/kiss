@@ -1,7 +1,7 @@
 #!/bin/sh
 # shellcheck source=/dev/null
 #
-# Simple package manager written in POSIX shell for https://kisslinux.xyz
+# Simple package manager written in POSIX shell for https://kisslinux.org
 #
 # The MIT License (MIT)
 #
