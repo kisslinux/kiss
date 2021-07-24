@@ -1545,62 +1545,66 @@ pkg_update() {
 
     # Update each repository in '$KISS_PATH'.
     for repo do
-        ok "$repo" || continue
+        repo_type=null repo_sig=false
 
-        [ -d "$repo" ] || {
-            log "$repo" " "
-            printf 'Skipping repository, not a directory\n'
-            continue
-        }
-
-        cd "$repo"
-
-        git remote >/dev/null 2>&1 || {
-            log "$repo" " "
-            printf 'Skipping git pull, not a repository\n'
-            continue
-        }
-
-        # Go to the repository's root directory.
-        git_root=$(git rev-parse --show-toplevel)
-        cd "${git_root:?"failed to find git root for '$PWD'"}"
-
-        # Go to the real root directory if this is a submodule.
-        git_root=$(git rev-parse --show-superproject-working-tree)
-        cd "${git_root:-"$PWD"}"
-
-        contains "$repos" "$PWD" || {
-            repos="$repos $PWD "
-
-            # arg1: pre-update
-            # env:  PWD is path to repository
-            run_hook pre-update
+        if git -C "$repo" remote >/dev/null 2>&1; then
+            repo_type=git
 
             # Display whether or not signature verification is enabled.
-            _sig=$(git config --get --default false merge.verifySignatures)
+            repo_sig=$(git -C "$repo" config --get merge.verifySignatures) || :
 
-            log "$PWD" "[verify: $_sig]"
+            # Get the Git repository root directory.
+            subm=$(git -C "$repo" rev-parse --show-superproject-working-tree)
+            repo=$(git -C "${subm:-"$repo"}" rev-parse --show-toplevel)
 
-            if ! am_owner "$PWD"; then
-                log "$PWD" "Need '$user' to update"
-                as_user git pull
-                as_user git submodule update --remote --init -f
-            else
-                git pull
-                git submodule update --remote --init -f
-            fi
+        elif ! [ -d "$repo" ]; then
+            continue
+        fi
 
-            # arg1: post-update
-            # env:  PWD is path to repository
-            run_hook post-update
-        }
+        pkg_update_repo "$repo" "$repo_type" "${repo_sig:-false}"
     done
 
+    pkg_upgrade
+}
+
+pkg_update_repo() {
+    cd "$1" || die "Repository '$1' inaccessible"
+
+    # NULL function for unsupported repository types.
+    pkg_update_null() { log "$PWD" "Repository has no remote"; }
+
+    contains "$repos" "$PWD" || {
+        repos="$repos $PWD"
+
+        log "$PWD" "[verify: $3]"
+
+        # arg1: pre-update
+        # env:  PWD is path to repository
+        run_hook pre-update
+
+        "pkg_update_$2"
+
+        # arg1: post-update
+        # env:  PWD is path to repository
+        run_hook post-update
+    }
+}
+
+pkg_update_git() {
+    am_owner "$PWD" || {
+        log "$PWD" "Need '$user' to update"
+        set -- as_user
+    }
+
+    "$@" git pull
+    "$@" git submodule update --remote --init -f
+}
+
+pkg_upgrade() {
     log "Checking for new package versions"
+    set +f
 
-    set +f --
-
-    for pkg in "$sys_db/"*; do
+    for pkg in "$sys_db/"*; do set -f
         pkg_find_version "${pkg##*/}" "" "" "$sys_db"
         pkg_find_version "${pkg##*/}"
 
@@ -1612,48 +1616,46 @@ pkg_update() {
 
         # Compare installed packages to repository packages.
         equ "$ver_pre-$rel_pre" "$repo_ver-$repo_rel" || {
-            printf '%s\n' "${pkg##*/} $ver_pre-$rel_pre ==> $repo_ver-$repo_rel"
             set -- "$@" "${pkg##*/}"
+
+            printf '%s %s => %s\n' \
+                "${pkg##*/}" "$ver_pre-$rel_pre" "$repo_ver-$repo_rel"
         }
     done
 
-    log "Checking for orphaned repository packages"
     case $_repo_orp in *?*)
-        war "Packages without repository$_repo_orp"
+        war "Installed packages without repository$_repo_orp"
     esac
 
-    set -f
     pkg_update=1
 
-    case " $* " in
-        *" kiss "*)
-            log "Detected package manager update"
-            log "The package manager will be updated first"
+    ! contains "$*" kiss || {
+        log "Detected package manager update"
+        log "The package manager will be updated first"
 
-            prompt
-            pkg_build_all kiss
+        prompt
+        pkg_build_all kiss
 
-            log "Updated the package manager"
-            log "Re-run 'kiss update' to update your system"
-        ;;
+        log "Updated the package manager"
+        log "Re-run 'kiss update' to update your system"
+        return 0
+    }
 
-        "  ")
-            log "Everything is up to date"
-        ;;
+    for _ do
+        pkg_order "$@"
 
-        *)
-            log "Packages to update: $*"
+        # Intentional, globbing disabled.
+        # shellcheck disable=2046,2086
+        set -- $order
 
-            prompt
-            pkg_order "$@"
+        log "Packages to update ($#): $*"
+        prompt
+        pkg_build_all "$@"
+        log "Updated all packages"
+        return 0
+    done
 
-            # Intentional, globbing disabled.
-            # shellcheck disable=2046,2086
-            pkg_build_all $order
-
-            log "Updated all packages"
-        ;;
-    esac
+    log "Nothing to do"
 }
 
 pkg_clean() {
@@ -1787,6 +1789,7 @@ args() {
         r|remove)   for pkg in $redro; do pkg_remove "$pkg"; done ;;
         s|search)   for pkg do pkg_find "$pkg" all; done ;;
         u|update)   pkg_update ;;
+        U|upgrade)  pkg_upgrade ;;
         v|version)  printf '5.5.18\n' ;;
 
         '')
