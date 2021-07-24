@@ -1543,8 +1543,6 @@ pkg_update() {
 
     # Update each repository in '$KISS_PATH'.
     for repo do
-        repo_type=null
-
         if git -C "$repo" remote >/dev/null 2>&1; then
             repo_type=git
 
@@ -1554,6 +1552,9 @@ pkg_update() {
 
         elif ! [ -d "$repo" ]; then
             continue
+
+        else
+            unset repo_type
         fi
 
         pkg_update_repo
@@ -1568,7 +1569,7 @@ pkg_update_repo() {
     contains "$repos" "$PWD" || {
         repos="$repos $PWD"
 
-        log "Updating" "$PWD"
+        log "$PWD" ""
 
         am_owner "$PWD" || {
             printf 'Need "%s" to update\n' "$user"
