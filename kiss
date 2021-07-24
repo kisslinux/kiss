@@ -200,8 +200,7 @@ sh256() {
         [ -d "$f" ] || [ ! -e "$f" ] || set -- "$@" "$f"
     done
 
-    # Only call _sh256 if we have files to operate on.
-    for f do _sh256 "$@"; return 0; done
+    _sh256 "$@"
 }
 
 _sh256() {
@@ -213,6 +212,9 @@ _sh256() {
     #
     # Example: '<checksum>  <file>'
     unset hash
+
+    # Skip generation if no arguments.
+    ! equ "$#" 0 || return 0
 
     # Set the arguments based on found sha256 utility.
     case ${cmd_sha##*/} in
@@ -1022,8 +1024,7 @@ pkg_checksums() {
         esac
     done < "$repo_dir/sources"
 
-    # Only run _sh256 if we have elements.
-    for f do _sh256 "$@"; return 0; done
+    _sh256 "$@"
 }
 
 pkg_verify() {
