@@ -1565,7 +1565,7 @@ pkg_update_repo() {
     contains "$repos" "$PWD" || {
         repos="$repos $PWD"
 
-        log "$PWD" ""
+        log "$PWD" " "
 
         am_owner "$PWD" || {
             printf 'Need "%s" to update\n' "$user"
@@ -1787,7 +1787,7 @@ args() {
         s|search)   for pkg do pkg_find "$pkg" all; done ;;
         u|update)   pkg_update ;;
         U|upgrade)  pkg_upgrade ;;
-        v|version)  printf '5.5.19\n' ;;
+        v|version)  printf '5.5.20\n' ;;
 
         '')
             log 'kiss [a|b|c|d|i|l|r|s|u|v] [pkg]...'
