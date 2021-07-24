@@ -1543,7 +1543,7 @@ pkg_update() {
 
     # Update each repository in '$KISS_PATH'.
     for repo do
-        repo_type=null repo_sig=false
+        repo_type=null
 
         if git -C "$repo" remote >/dev/null 2>&1; then
             repo_type=git
