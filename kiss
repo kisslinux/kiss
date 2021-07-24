@@ -551,7 +551,7 @@ pkg_depends() {
             die "Circular dependency detected $1 <> ${4##* }"
         esac
 
-        ! pkg_find "$1" || ! [ -e "$repo_dir/depends" ] ||
+        ! _pkg_find "$1" || ! [ -e "$repo_dir/depends" ] ||
 
         # Recurse through the dependencies of the child packages.
         while read -r dep dep_type || ok "$dep"; do
