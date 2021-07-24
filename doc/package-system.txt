@@ -68,7 +68,7 @@ toolchain defaults are as follows: AR=ar, CC=cc, CXX=c++, NM=nm, RANLIB=ranlib
 |  1  #!/bin/sh -e                                                             |
 |  2                                                                           |
 |  3  # Disable stripping (use if needed).                                     |
-|  4  :> nostrip                                                               |
+|  4  :&gt; nostrip                                                               |
 |  5                                                                           |
 |  6  ./configure \                                                            |
 |  7      --prefix=/usr                                                        |
@@ -203,7 +203,7 @@ should be used to perform any required post-install steps or to display notices.
 |                                                                              |
 |  1 #!/bin/sh -e                                                              |
 |  2                                                                           |
-|  3 cat <<EOF                                                                 |
+|  3 cat &lt;&lt;EOF                                                           |
 |  4                                                                           |
 |  5 The commands zcat, unpigz and gunzip were merely symbolic                 |
 |  6 links to the pigz binary. They have been removed. To gain                 |
