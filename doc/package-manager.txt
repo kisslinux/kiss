@@ -193,13 +193,17 @@ features or conditionally do things on a per-package basis.
     | pre-install   | Type   | Package  | Extracted package  |                 |
     | pre-remove    | Type   | Package  | Installed database |                 |
     | pre-source    | Type   | Package  | Verbatim source    | Resolved source |
-    | pre-update    | Type   | [7]      |                    |                 |
+    | pre-update    | Type   | [8]      |                    |                 |
     | queue-status  | Type   | Package  | Number in queue    | Total in queue  |
     |               |        |          |                    |                 |
     +---------------+--------+----------+--------------------+-----------------+
 
     [7] The -update hooks start in the current repository. In other words, you
         can operate on the repository directly or grab the value from '$PWD'.
+
+    [8] The second argument of pre-update is '0' if the current user owns the
+        repository and '1' if they do not. In the latter case, privilege
+        escalation is required to preserve ownership.
 
 
 [5.0] Package Manager Extensions

@@ -1548,9 +1548,6 @@ pkg_update() {
         if git -C "$repo" remote >/dev/null 2>&1; then
             repo_type=git
 
-            # Display whether or not signature verification is enabled.
-            repo_sig=$(git -C "$repo" config --get merge.verifySignatures) || :
-
             # Get the Git repository root directory.
             subm=$(git -C "$repo" rev-parse --show-superproject-working-tree)
             repo=$(git -C "${subm:-"$repo"}" rev-parse --show-toplevel)
@@ -1559,28 +1556,34 @@ pkg_update() {
             continue
         fi
 
-        pkg_update_repo "$repo" "$repo_type" "${repo_sig:-false}"
+        pkg_update_repo
     done
 
     pkg_upgrade
 }
 
 pkg_update_repo() {
-    cd "$1" || die "Repository '$1' inaccessible"
+    cd "$repo" || die "Repository '$repo' inaccessible"
 
     # NULL function for unsupported repository types.
-    pkg_update_null() { log "$PWD" "Repository has no remote"; }
+    pkg_update_null() { printf 'Repository has no remote\n'; }
 
     contains "$repos" "$PWD" || {
         repos="$repos $PWD"
 
-        log "$PWD" "[verify: $3]"
+        log "Updating" "$PWD"
+
+        am_owner "$PWD" || {
+            printf 'Need "%s" to update\n' "$user"
+            set -- as_user
+        }
 
         # arg1: pre-update
+        # arg2: need su?
         # env:  PWD is path to repository
-        run_hook pre-update
+        run_hook pre-update "$#"
 
-        "pkg_update_$2"
+        "pkg_update_$repo_type" "$@"
 
         # arg1: post-update
         # env:  PWD is path to repository
@@ -1589,10 +1592,10 @@ pkg_update_repo() {
 }
 
 pkg_update_git() {
-    am_owner "$PWD" || {
-        log "$PWD" "Need '$user' to update"
-        set -- as_user
-    }
+    # Display whether or not signature verification is enabled.
+    case $(git config --get merge.verifySignatures) in true)
+        printf 'Signature verification enabled.\n'
+    esac
 
     "$@" git pull
     "$@" git submodule update --remote --init -f
