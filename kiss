@@ -574,10 +574,6 @@ pkg_order() {
     # pre-built tarballs if this is to be called from 'kiss i'.
     unset order redro deps
 
-    case $2 in *?*)
-        log "Ordering arguments list based on dependence"
-    esac
-
     for pkg do case $pkg in
       /*@*.tar.*) deps="$deps $pkg" ;;
        *@*.tar.*) deps="$deps $ppwd/$pkg" ;;
