@@ -1565,9 +1565,6 @@ pkg_update() {
 pkg_update_repo() {
     cd "$repo" || die "Repository '$repo' inaccessible"
 
-    # NULL function for unsupported repository types.
-    pkg_update_null() { printf 'Repository has no remote\n'; }
-
     contains "$repos" "$PWD" || {
         repos="$repos $PWD"
 
@@ -1583,7 +1580,9 @@ pkg_update_repo() {
         # env:  PWD is path to repository
         run_hook pre-update "$#"
 
-        "pkg_update_$repo_type" "$@"
+        case $repo_type in git)
+            pkg_update_git "$@"
+        esac
 
         # arg1: post-update
         # env:  PWD is path to repository
