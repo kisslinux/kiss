@@ -1701,6 +1701,13 @@ args() {
                 set -- "${PWD##*/}"
             esac
 
+            # Search the installed database first when removing packages. Dependency
+            # files may differ when repositories change. Removal is not dependent on
+            # the state of the repository.
+            case $action in r|remove)
+                export KISS_PATH=$sys_db:$KISS_PATH
+            esac
+
             # Order the argument list based on dependence.
             pkg_order "$@"
 
