@@ -1672,35 +1672,6 @@ args() {
     action=$1
     shift "$(($# != 0))"
 
-    # Need to increment _KISS_LVL here to ensure we don't wipe the cache
-    # early by non-asroot invocations.
-    export _KISS_LVL=$((_KISS_LVL + 1))
-
-    # Rerun the script as root with a fixed environment if needed. We sadly
-    # can't run singular functions as root so this is needed.
-    #
-    # Intended behavior.
-    # shellcheck disable=2030,2031
-    case $action in a|alternatives|i|install|r|remove)
-        if ok "$1" && ! am_owner "$KISS_ROOT/"; then
-            as_user env \
-                LOGNAME="$user" \
-                HOME="$HOME" \
-                XDG_CACHE_HOME="$XDG_CACHE_HOME" \
-                KISS_COMPRESS="$KISS_COMPRESS" \
-                KISS_PATH="$KISS_PATH" \
-                KISS_FORCE="$KISS_FORCE" \
-                KISS_ROOT="$KISS_ROOT" \
-                KISS_CHOICE="$KISS_CHOICE" \
-                KISS_COLOR="$KISS_COLOR" \
-                KISS_TMPDIR="$KISS_TMPDIR" \
-                KISS_PID="$KISS_PID" \
-                _KISS_LVL="$_KISS_LVL" \
-                "$0" "$action" "$@"
-            return
-        fi
-    esac
-
     # Ensure that arguments do not contain invalid characters. Wildcards can
     # not be used here as they would conflict with kiss extensions.
     case $action in
@@ -1737,6 +1708,35 @@ args() {
             # shellcheck disable=2046,2086
             set -- $order
         ;;
+    esac
+
+    # Need to increment _KISS_LVL here to ensure we don't wipe the cache
+    # early by non-asroot invocations.
+    export _KISS_LVL=$((_KISS_LVL + 1))
+
+    # Rerun the script as root with a fixed environment if needed. We sadly
+    # can't run singular functions as root so this is needed.
+    #
+    # Intended behavior.
+    # shellcheck disable=2030,2031
+    case $action in a|alternatives|i|install|r|remove)
+        if ok "$1" && ! am_owner "$KISS_ROOT/"; then
+            as_user env \
+                LOGNAME="$user" \
+                HOME="$HOME" \
+                XDG_CACHE_HOME="$XDG_CACHE_HOME" \
+                KISS_COMPRESS="$KISS_COMPRESS" \
+                KISS_PATH="$KISS_PATH" \
+                KISS_FORCE="$KISS_FORCE" \
+                KISS_ROOT="$KISS_ROOT" \
+                KISS_CHOICE="$KISS_CHOICE" \
+                KISS_COLOR="$KISS_COLOR" \
+                KISS_TMPDIR="$KISS_TMPDIR" \
+                KISS_PID="$KISS_PID" \
+                _KISS_LVL="$_KISS_LVL" \
+                "$0" "$action" "$@"
+            return
+        fi
     esac
 
     # Actions can be abbreviated to their first letter. This saves keystrokes
