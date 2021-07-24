@@ -1624,7 +1624,7 @@ pkg_upgrade() {
     done
 
     case $_repo_orp in *?*)
-        war "Installed packages without repository$_repo_orp"
+        war "Packages without repository$_repo_orp"
     esac
 
     pkg_update=1
