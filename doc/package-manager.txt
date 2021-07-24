@@ -193,7 +193,7 @@ features or conditionally do things on a per-package basis.
     | pre-install   | Type   | Package  | Extracted package  |                 |
     | pre-remove    | Type   | Package  | Installed database |                 |
     | pre-source    | Type   | Package  | Verbatim source    | Resolved source |
-    | pre-update    | Type   | [8]      |                    |                 |
+    | pre-update    | Type   | [7] [8]  |                    |                 |
     | queue-status  | Type   | Package  | Number in queue    | Total in queue  |
     |               |        |          |                    |                 |
     +---------------+--------+----------+--------------------+-----------------+
