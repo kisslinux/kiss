@@ -1791,7 +1791,7 @@ args() {
         s|search)   for pkg do pkg_find "$pkg" all; done ;;
         u|update)   pkg_update ;;
         U|upgrade)  pkg_upgrade ;;
-        v|version)  printf '5.5.18\n' ;;
+        v|version)  printf '5.5.19\n' ;;
 
         '')
             log 'kiss [a|b|c|d|i|l|r|s|u|v] [pkg]...'
