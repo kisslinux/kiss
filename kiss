@@ -1543,19 +1543,7 @@ pkg_update() {
 
     # Update each repository in '$KISS_PATH'.
     for repo do
-        if git -C "$repo" remote >/dev/null 2>&1; then
-            repo_type=git
-
-            # Get the Git repository root directory.
-            subm=$(git -C "$repo" rev-parse --show-superproject-working-tree)
-            repo=$(git -C "${subm:-"$repo"}" rev-parse --show-toplevel)
-
-        elif ! [ -d "$repo" ]; then
-            continue
-
-        else
-            unset repo_type
-        fi
+        [ -d "$repo" ] || continue
 
         pkg_update_repo
     done
@@ -1573,32 +1561,14 @@ pkg_update_repo() {
 
         am_owner "$PWD" || {
             printf 'Need "%s" to update\n' "$user"
-            set -- as_user
+            set -- 1
         }
 
         # arg1: pre-update
         # arg2: need su?
         # env:  PWD is path to repository
-        run_hook pre-update "$#"
-
-        case $repo_type in git)
-            pkg_update_git "$@"
-        esac
-
-        # arg1: post-update
-        # env:  PWD is path to repository
-        run_hook post-update
+        run_hook update "$#"
     }
-}
-
-pkg_update_git() {
-    # Display whether or not signature verification is enabled.
-    case $(git config --get merge.verifySignatures) in true)
-        printf 'Signature verification enabled.\n'
-    esac
-
-    "$@" git pull
-    "$@" git submodule update --remote --init -f
 }
 
 pkg_upgrade() {
