@@ -1574,8 +1574,9 @@ pkg_update_repo() {
 
         # arg1: pre-update
         # arg2: need su?
+        # arg3: owner
         # env:  PWD is path to repository
-        run_hook pre-update "$#"
+        run_hook pre-update "$#" "$user"
 
         case $repo_type in git)
             pkg_update_git "$@"
