@@ -1567,13 +1567,6 @@ pkg_update() {
 pkg_update_repo() {
     cd "$repo" || die "Repository '$repo' inaccessible"
 
-    # Hook can tell the package manager to use a different path.
-    # arg1: update-resolve
-    # env:  PWD is path to repository
-    _pwd_res=$(run_hook update-resolve) repo=${_pwd_res:-"$repo"}
-
-    cd "$repo" || die "Repository '$repo' inaccessible"
-
     contains "$repos" "$PWD" || {
         repos="$repos $PWD"
 
