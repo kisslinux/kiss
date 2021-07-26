@@ -650,6 +650,8 @@ pkg_fix_deps() {
     set +f
     set -f -- "$sys_db/"*/manifest
 
+    unset _fdep_seen
+
     # False positive (not a write).
     # shellcheck disable=2094
     while read -r _file; do case $_file in
@@ -702,6 +704,12 @@ pkg_fix_deps() {
                 libxnet.so*    |\
                 ldd)
                     continue
+            esac
+
+            # Skip files we have seen before.
+            case " $_fdep_seen " in
+                *" $lib "*) continue ;;
+                *) _fdep_seen="$_fdep_seen $lib"
             esac
 
             resolve_path "$lib"
