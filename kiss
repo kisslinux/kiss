@@ -682,17 +682,22 @@ pkg_fix_deps() {
             esac
             lib=${lib%% *}
 
-            # Skip files owned by libc and POSIX.
+            # Skip files owned by libc, libc++ and POSIX.
             case ${lib##*/} in
                 ld-*           |\
                 lib[cm].so*    |\
+                libc++.so*     |\
+                libc++abi.so*  |\
                 libcrypt.so*   |\
                 libdl.so*      |\
+                libgcc_s.so*   |\
                 libmvec.so*    |\
                 libpthread.so* |\
                 libresolv.so*  |\
                 librt.so*      |\
+                libstdc++.so*  |\
                 libtrace.so*   |\
+                libunwind.so*  |\
                 libutil.so*    |\
                 libxnet.so*    |\
                 ldd)
