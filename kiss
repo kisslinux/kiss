@@ -661,7 +661,7 @@ pkg_fix_deps() {
 
     # False positive (not a write).
     # shellcheck disable=2094
-    while read -r _file; do case $_file in
+    while read -r _file; do [ -h "$_file" ] || case $_file in
         # Look only in these locations for files of interest (libraries,
         # programs, etc). This includes all subdirectories. Old behavior
         # would run ldd on all files (upwards of 4000 for Python).
