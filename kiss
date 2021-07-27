@@ -621,7 +621,7 @@ pkg_strip() {
     # 0000000   !   <   a   r   c   h   >  \n   /
     # 0000020
     # 0000022
-    while read -r file; do case $file in
+    while read -r file; do [ -h "$pkg_dir/$1$file" ] || case $file in
         # Look only in these locations for files of interest (libraries,
         # programs, etc). This includes all subdirectories. Old behavior
         # would run od on all files (upwards of 4000 for Python).
