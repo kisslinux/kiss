@@ -621,7 +621,7 @@ pkg_strip() {
         # would run od on all files (upwards of 4000 for Python).
         */sbin/?*|*/bin/?*|*/lib/?*|*/lib??/?*|*/lib???/?*|*/lib????/?*)
 
-        case $(od -A o -t c -N 18 "$file") in
+        case $(od -A o -t c -N 18 "$pkg_dir/$pkg$file") in
             # REL (object files (.o), static libraries (.a)).
             *177*E*L*F*0000020\ 001\ *|*\!*\<*a*r*c*h*\>*)
                 strip -g -R .comment -R .note "$pkg_dir/$pkg$file"
