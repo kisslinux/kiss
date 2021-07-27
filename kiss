@@ -542,37 +542,35 @@ pkg_extract() {
 pkg_depends() {
     # Resolve all dependencies and generate an ordered list. The deepest
     # dependencies are listed first and then the parents in reverse order.
-    contains "$deps" "$1" || {
-        # Filter out non-explicit, already installed packages.
-        null "$3" || ok "$2" || contains "$explicit" "$1" ||
-            ! [ -d "$sys_db/$1" ] || return
+    ! contains "$deps" "$1" || return 0
 
-        # Detect circular dependencies and bail out.
-        # Looks for multiple repeating patterns of (dep dep_parent) (5 is max).
-        case " $4 " in
+    # Filter out non-explicit, already installed packages.
+    null "$3" || ok "$2" || contains "$explicit" "$1" ||
+        ! [ -d "$sys_db/$1" ] || return 0
+
+    # Detect circular dependencies and bail out.
+    # Looks for multiple repeating patterns of (dep dep_parent) (5 is max).
+    case " $4 " in
 *" ${4##* } "*" $1 "\
 *" ${4##* } "*" $1 "\
 *" ${4##* } "*" $1 "\
 *" ${4##* } "*" $1 "\
-*" ${4##* } "*" $1 "\
-*)
-            die "Circular dependency detected $1 <> ${4##* }"
-        esac
+*" ${4##* } "*" $1 "*)
+        die "Circular dependency detected $1 <> ${4##* }"
+    esac
 
-        ! _pkg_find "$1" || ! [ -e "$repo_dir/depends" ] ||
+    # Packages which exist and have depends.
+    ! _pkg_find "$1" || ! [ -e "$repo_dir/depends" ] ||
 
-        # Recurse through the dependencies of the child packages.
-        while read -r dep dep_type || ok "$dep"; do
-            ok "${dep##\#*}" || continue
+    # Recurse through the dependencies of the child packages.
+    while read -r dep dep_type || ok "$dep"; do
+        ! ok "${dep##\#*}" || pkg_depends "$dep" '' "$3" "$4 $1" "$dep_type"
+    done < "$repo_dir/depends" || :
 
-            pkg_depends "$dep" '' "$3" "$4 $1" "$dep_type"
-        done < "$repo_dir/depends" || :
-
-        # Add parent to dependencies list.
-        if ! equ "$2" expl || { equ "$5" make && ! pkg_cache "$1"; }; then
-            deps="$deps $1"
-        fi
-    }
+    # Add parent to dependencies list.
+    if ! equ "$2" expl || { equ "$5" make && ! pkg_cache "$1"; }; then
+        deps="$deps $1"
+    fi
 }
 
 pkg_order() {
