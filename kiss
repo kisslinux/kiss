@@ -39,6 +39,12 @@ die() {
     exit 1
 }
 
+run() {
+    # Print the command, then run it.
+    printf '%s\n' "$*"
+    "$@"
+}
+
 contains() {
     # Check if a "string list" contains a word.
     case " $1 " in *" $2 "*) return 0; esac; return 1
@@ -619,12 +625,13 @@ pkg_strip() {
         # Look only in these locations for files of interest (libraries,
         # programs, etc). This includes all subdirectories. Old behavior
         # would run od on all files (upwards of 4000 for Python).
-        */sbin/?*|*/bin/?*|*/lib/?*|*/lib??/?*|*/lib???/?*|*/lib????/?*)
+        */sbin/?*[!/]|*/bin/?*[!/]|*/lib/?*[!/]|\
+        */lib??/?*[!/]|*/lib???/?*[!/]|*/lib????/?*[!/])
 
         case $(od -A o -t c -N 18 "$pkg_dir/$1$file") in
             # REL (object files (.o), static libraries (.a)).
             *177*E*L*F*0000020\ 001\ *|*\!*\<*a*r*c*h*\>*)
-                strip -g -R .comment -R .note "$pkg_dir/$1$file"
+                run strip -g -R .comment -R .note "$pkg_dir/$1$file"
             ;;
 
             # EXEC (binaries), DYN (shared libraries).
@@ -632,10 +639,10 @@ pkg_strip() {
             # called '.dynsym'. '--strip-all/-s' does not touch the dynamic
             # symbol entries which makes this safe to do.
             *177*E*L*F*0000020\ 00[23]\ *)
-                strip -s -R .comment -R .note "$pkg_dir/$1$file"
+                run strip -s -R .comment -R .note "$pkg_dir/$1$file"
             ;;
         esac
-    esac done < "$pkg_dir/$1/$pkg_db/$1/manifest" 2>/dev/null || :
+    esac done < "$pkg_dir/$1/$pkg_db/$1/manifest" || :
 }
 
 pkg_fix_deps() {
@@ -658,7 +665,8 @@ pkg_fix_deps() {
         # Look only in these locations for files of interest (libraries,
         # programs, etc). This includes all subdirectories. Old behavior
         # would run ldd on all files (upwards of 4000 for Python).
-        */sbin/?*|*/bin/?*|*/lib/?*|*/lib??/?*|*/lib???/?*|*/lib????/?*)
+        */sbin/?*[!/]|*/bin/?*[!/]|*/lib/?*[!/]|\
+        */lib??/?*[!/]|*/lib???/?*[!/]|*/lib????/?*[!/])
 
         # The readelf mode requires ldd's output to resolve the library
         # path for a given file. If ldd fails, silently skip the file.
