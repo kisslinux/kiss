@@ -621,10 +621,10 @@ pkg_strip() {
         # would run od on all files (upwards of 4000 for Python).
         */sbin/?*|*/bin/?*|*/lib/?*|*/lib??/?*|*/lib???/?*|*/lib????/?*)
 
-        case $(od -A o -t c -N 18 "$pkg_dir/$pkg$file") in
+        case $(od -A o -t c -N 18 "$pkg_dir/$1$file") in
             # REL (object files (.o), static libraries (.a)).
             *177*E*L*F*0000020\ 001\ *|*\!*\<*a*r*c*h*\>*)
-                strip -g -R .comment -R .note "$pkg_dir/$pkg$file"
+                strip -g -R .comment -R .note "$pkg_dir/$1$file"
             ;;
 
             # EXEC (binaries), DYN (shared libraries).
@@ -632,7 +632,7 @@ pkg_strip() {
             # called '.dynsym'. '--strip-all/-s' does not touch the dynamic
             # symbol entries which makes this safe to do.
             *177*E*L*F*0000020\ 00[23]\ *)
-                strip -s -R .comment -R .note "$pkg_dir/$pkg$file"
+                strip -s -R .comment -R .note "$pkg_dir/$1$file"
             ;;
         esac
     esac done < "$pkg_dir/$1/$pkg_db/$1/manifest" 2>/dev/null || :
