@@ -624,7 +624,7 @@ pkg_strip() {
         case $(od -A o -t c -N 18 "$file") in
             # REL (object files (.o), static libraries (.a)).
             *177*E*L*F*0000020\ 001\ *|*\!*\<*a*r*c*h*\>*)
-                strip -g -R .comment -R .note "$file"
+                strip -g -R .comment -R .note "$pkg_dir/$pkg$file"
             ;;
 
             # EXEC (binaries), DYN (shared libraries).
@@ -632,7 +632,7 @@ pkg_strip() {
             # called '.dynsym'. '--strip-all/-s' does not touch the dynamic
             # symbol entries which makes this safe to do.
             *177*E*L*F*0000020\ 00[23]\ *)
-                strip -s -R .comment -R .note "$file"
+                strip -s -R .comment -R .note "$pkg_dir/$pkg$file"
             ;;
         esac
     esac done < "$pkg_dir/$1/$pkg_db/$1/manifest" 2>/dev/null || :
@@ -1808,7 +1808,7 @@ args() {
         s|search)   for pkg do pkg_find "$pkg" all; done ;;
         u|update)   pkg_update ;;
         U|upgrade)  pkg_upgrade ;;
-        v|version)  printf '5.5.22\n' ;;
+        v|version)  printf '5.5.23\n' ;;
 
         '')
             log 'kiss [a|b|c|d|i|l|r|s|u|v] [pkg]...'
