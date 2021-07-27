@@ -77,7 +77,7 @@ tmp_file() {
     # for access by the caller (allowing 3 files at once).
     _tmp_file_pre_pre=$_tmp_file_pre
     _tmp_file_pre=$_tmp_file
-    _tmp_file=$tmp_dir/$KISS_PID-$1-$2
+    _tmp_file=$tmp_dir/$1-$2
 
     : > "$_tmp_file" || die "$1" "Failed to create temporary file"
 }
