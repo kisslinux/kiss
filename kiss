@@ -1030,7 +1030,7 @@ pkg_build() {
 pkg_checksum() {
     pkg_source "$1" c
 
-    [ -f "$repo_dir/sources" ] || continue
+    [ -f "$repo_dir/sources" ] || return 0
 
     pkg_checksum_gen
 
