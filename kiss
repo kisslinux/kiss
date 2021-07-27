@@ -1027,7 +1027,23 @@ pkg_build() {
     run_hook post-build "$1" "$pkg_dir/$1"
 }
 
-pkg_checksums() {
+pkg_checksum() {
+    pkg_source "$1" c
+
+    [ -f "$repo_dir/sources" ] || continue
+
+    pkg_checksum_gen
+
+    if ok "$hash"; then
+        printf '%s\n' "$hash" > "$repo_dir/checksums"
+        log "$1" "Generated checksums"
+
+    else
+        log "$1" "No sources needing checksums"
+    fi
+}
+
+pkg_checksum_gen() {
     # Generate checksums for packages.
     #
     # NOTE: repo_ comes from caller.
@@ -1050,7 +1066,7 @@ pkg_verify() {
     log "$repo_name" "Verifying sources"
 
     # Generate a new set of checksums to compare against.
-    pkg_checksums >/dev/null
+    pkg_checksum_gen >/dev/null
 
     # Intentional, globbing disabled.
     # shellcheck disable=2038,2086
@@ -1170,6 +1186,25 @@ pkg_conflicts() {
         log "Package '$_pkg' conflicts with another package" "" "!>"
         log "Run 'KISS_CHOICE=1 kiss i $_pkg' to add conflicts" "" "!>"
         die "as alternatives." "" "!>"
+    fi
+}
+
+pkg_alternatives() {
+    if equ "$1" -; then
+        while read -r pkg path; do
+            pkg_swap "$pkg" "$path"
+        done
+
+    elif ok "$1"; then
+        pkg_swap "$@"
+
+    else
+        # Go over each alternative and format the file
+        # name for listing. (pkg_name>usr>bin>ls)
+        set +f; for pkg in "$sys_ch/"*; do
+            fnr "${pkg##*/}" '>' '/'
+            printf '%s %s\n' "${_fnr%%/*}" "/${_fnr#*/}"
+        done
     fi
 }
 
@@ -1685,6 +1720,42 @@ pkg_clean() {
     esac
 }
 
+pkg_help_ext() {
+    log 'Installed extensions (kiss-* in PATH)'
+
+    # Intentional, globbing disabled.
+    # shellcheck disable=2046,2030,2031
+    set -- $(pkg_find kiss-\* all -x "$PATH")
+
+    # To align descriptions figure out which extension has the longest
+    # name by doing a simple 'name > max ? name : max' on the basename
+    # of the path with 'kiss-' stripped as well.
+    #
+    # This also removes any duplicates found in '$PATH', picking the
+    # first match.
+    for path do p=${path#*/kiss-}
+        case " $seen " in
+            *" $p "*) shift ;;
+            *) seen=" $seen $p " max=$((${#p} > max ? ${#p}+1 : max))
+        esac
+    done
+
+    IFS=\#$IFS
+
+    # Print each extension, grab its description from the second line
+    # in the file and align the output based on the above max.
+    for path do
+        # Open the extension as a file descriptor.
+        exec 3< "$path"
+
+        # Grab the second line in the extension.
+        { read -r _ && read -r _ cmt; } <&3
+
+        printf "%b->%b %-${max}s %s\\n" \
+            "$c1" "$c3" "${path#*/kiss-}" "$cmt"
+    done >&2
+}
+
 args() {
     # Parse script arguments manually. This is rather easy to do in our case
     # since the first argument is always an "action" and the arguments that
@@ -1769,55 +1840,21 @@ args() {
     # Actions can be abbreviated to their first letter. This saves keystrokes
     # once you memorize the commands.
     case $action in
-        a|alternatives)
-            if equ "$1" -; then
-                while read -r pkg path; do
-                    pkg_swap "$pkg" "$path"
-                done
-
-            elif ok "$1"; then
-                pkg_swap "$@"
-
-            else
-                # Go over each alternative and format the file
-                # name for listing. (pkg_name>usr>bin>ls)
-                set +f; for pkg in "$sys_ch/"*; do
-                    fnr "${pkg##*/}" '>' '/'
-                    printf '%s %s\n' "${_fnr%%/*}" "/${_fnr#*/}"
-                done
-            fi
-        ;;
-
-        c|checksum)
-            for pkg do
-                pkg_source "$pkg" c
-
-                [ -f "$repo_dir/sources" ] || continue
-
-                pkg_checksums
-
-                if ok "$hash"; then
-                    printf '%s\n' "$hash" > "$repo_dir/checksums"
-                    log "$pkg" "Generated checksums"
-
-                else
-                    log "$pkg" "No sources needing checksums"
-                fi
-            done
-        ;;
-
-        i|install)  for pkg do pkg_install "$pkg"; done ;;
-        b|build)    pkg_build_all "${@:?No packages installed}" ;;
-        d|download) for pkg do pkg_source "$pkg"; done ;;
-        l|list)     pkg_list_version "$@" ;;
-        r|remove)   for pkg in $redro; do pkg_remove "$pkg"; done ;;
-        s|search)   for pkg do pkg_find "$pkg" all; done ;;
-        u|update)   pkg_update ;;
-        U|upgrade)  pkg_upgrade ;;
-        v|version)  printf '5.5.24\n' ;;
+        a|alternatives) pkg_alternatives "$@" ;;
+        b|build)        pkg_build_all "${@:?No packages installed}" ;;
+        c|checksum)     for pkg do pkg_checksum "$pkg"; done ;;
+        d|download)     for pkg do pkg_source "$pkg"; done ;;
+        H|help-ext)     pkg_help_ext "$@" ;;
+        i|install)      for pkg do pkg_install "$pkg"; done ;;
+        l|list)         pkg_list_version "$@" ;;
+        r|remove)       for pkg in $redro; do pkg_remove "$pkg"; done ;;
+        s|search)       for pkg do pkg_find "$pkg" all; done ;;
+        u|update)       pkg_update ;;
+        U|upgrade)      pkg_upgrade ;;
+        v|version)      printf '5.5.24\n' ;;
 
         '')
-            log 'kiss [a|b|c|d|i|l|r|s|u|v] [pkg]...'
+            log 'kiss [a|b|c|d|i|l|r|s|u|U|v] [pkg]...'
             log 'alternatives List and swap alternatives'
             log 'build        Build packages'
             log 'checksum     Generate checksums'
@@ -1826,46 +1863,11 @@ args() {
             log 'list         List installed packages'
             log 'remove       Remove packages'
             log 'search       Search for packages'
-            log 'update       Update the system'
+            log 'update       Update the system and repositories'
+            log 'upgrade      Update the system'
             log 'version      Package manager version'
 
-            printf '\nRun "kiss help-ext" to see all actions\n'
-        ;;
-
-        help-ext)
-            log 'Installed extensions (kiss-* in PATH)'
-
-            # Intentional, globbing disabled.
-            # shellcheck disable=2046,2030,2031
-            set -- $(pkg_find kiss-\* all -x "$PATH")
-
-            # To align descriptions figure out which extension has the longest
-            # name by doing a simple 'name > max ? name : max' on the basename
-            # of the path with 'kiss-' stripped as well.
-            #
-            # This also removes any duplicates found in '$PATH', picking the
-            # first match.
-            for path do p=${path#*/kiss-}
-                case " $seen " in
-                    *" $p "*) shift ;;
-                    *) seen=" $seen $p " max=$((${#p} > max ? ${#p}+1 : max))
-                esac
-            done
-
-            IFS=\#$IFS
-
-            # Print each extension, grab its description from the second line
-            # in the file and align the output based on the above max.
-            for path do
-                # Open the extension as a file descriptor.
-                exec 3< "$path"
-
-                # Grab the second line in the extension.
-                { read -r _ && read -r _ cmt; } <&3
-
-                printf "%b->%b %-${max}s %s\\n" \
-                    "$c1" "$c3" "${path#*/kiss-}" "$cmt"
-            done >&2
+            printf '\nRun "kiss [H|help-ext]" to see all actions\n'
         ;;
 
         *)
