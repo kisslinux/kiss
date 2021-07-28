@@ -1050,7 +1050,7 @@ pkg_checksum_gen() {
     while read -r src dest || ok "$src"; do
         pkg_source_resolve "$repo_name" "$src" "$dest" >/dev/null
 
-        case $_res in [!g][!i][!t][!+]*/*[!.])
+        case ${_res##git+*} in */*[!.])
             set -- "$@" "$_res"
         esac
     done < "$repo_dir/sources"
