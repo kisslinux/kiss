@@ -358,6 +358,8 @@ pkg_source_resolve() {
     # Git repository.
     if null "${2##git+*}"; then
         _res=$2
+        _des=$src_dir/$1/${3:+"$3/"}${2##*/}
+        _des=${_des%[@#]*}
 
     # Remote source (cached).
     elif [ -f "$src_dir/$1/${3:+"$3/"}${2##*/}" ]; then
@@ -410,12 +412,18 @@ pkg_source() {
         # arg4: resolved source
         run_hook pre-source "$1" "$src" "$_fnr"
 
-        case $_res in url+*)
-            # Create directory structure in source cache. This prevents cache
-            # conflicts between identical sources with differing dests.
-            mkcd "${_des%/*}"
+        case $_res in
+            git+*)
+                mkcd "$_des"
+                pkg_source_git "${_res##git+}"
+                ;;
 
-            pkg_source_get "$_des" "${_res##url+}"
+            url+*)
+                # Create directory structure in source cache. This prevents cache
+                # conflicts between identical sources with differing dests.
+                mkcd "${_des%/*}"
+                pkg_source_get "$_des" "${_res##url+}"
+            ;;
         esac
 
         # arg1: post-source
@@ -443,16 +451,24 @@ pkg_source_get() {
 }
 
 pkg_source_git() {
-    # This magic will shallow clone branches, commits or the
-    # regular repository. It correctly handles cases where a
-    # shallow clone is not possible.
-    log "$repo_name" "Cloning $1"
-
     # Split the source into URL + OBJECT (branch or commit).
     url=$1 com=${url##*[@#]} com=${com#${url%[#@]*}}
 
-    git init
-    git remote add origin "${url%[#@]*}"
+    if [ -z "$(ls -A)" ]; then
+        # Directory empty, initialize it with git
+        log "$repo_name" "Cloning $1"
+        git init
+        git remote add origin "${url%[#@]*}"
+
+    else
+        # Directory already exists, update it
+        log "$repo_name" "Updating $1"
+        git remote set-url origin "${url%[#@]*}"
+    fi
+
+    # This magic will shallow clone branches, commits or the
+    # regular repository. It correctly handles cases where a
+    # shallow clone is not possible.
     git fetch -t --filter=tree:0 origin "$com" || git fetch -t
     git -c advice.detachedHead=0 checkout "${com:-FETCH_HEAD}"
 }
