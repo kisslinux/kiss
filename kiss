@@ -454,8 +454,8 @@ pkg_source_git() {
     # Split the source into URL + OBJECT (branch or commit).
     url=$1 com=${url##*[@#]} com=${com#${url%[#@]*}}
 
-    if [ -z "$(ls -A)" ]; then
-        # Directory empty, initialize it with git
+    if ! git rev-parse 2>/dev/null; then
+        # Not a git directory, initialize it with git
         log "$repo_name" "Cloning $1"
         git init
         git remote add origin "${url%[#@]*}"
