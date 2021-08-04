@@ -27,14 +27,11 @@ kiss list "${1:-null}" >/dev/null || {
 
 # Filter directories from manifest and leave only files.
 # Directories in the manifest end in a trailing '/'.
-files=$(sed -e "s|^|$KISS_ROOT|" -e 's|.*/$||' \
-    "$KISS_ROOT/var/db/kiss/installed/$1/manifest")
-
-# Send the file list to 'du'.
-# This unquoted variable is safe as word splitting is intended
-# and globbing is globally disabled in this script.
-# shellcheck disable=2086
-du -sk -- $files 2>/dev/null |
+# Send the file list to 'xargs' to run through 'du',
+# this prevents du from exiting due to too many arguments
+sed -e "s|^|$KISS_ROOT|" -e 's|.*/$||' \
+    "$KISS_ROOT/var/db/kiss/installed/$1/manifest" \
+    | xargs du -sk -- 2>/dev/null |
 
 # Iterate over each line and convert the byte output to human
 # readable (MB, KB, GB, etc).
