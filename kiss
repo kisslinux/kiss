@@ -541,7 +541,7 @@ pkg_extract() {
 
         case $_res in
             git+*)
-                cp -Rf "$_des" .
+                cp -Rf "$_des"/* .
             ;;
 
             *.tar|*.tar.??|*.tar.???|*.tar.????|*.t?z)
