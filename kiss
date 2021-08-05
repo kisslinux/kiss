@@ -1840,7 +1840,7 @@ args() {
     # once you memorize the commands.
     case $action in
         a|alternatives) pkg_alternatives "$@" ;;
-        b|build)        pkg_build_all "${@:?No packages installed}" ;;
+        b|build)        pkg_build_all "$@" ;;
         c|checksum)     for pkg do pkg_checksum "$pkg"; done ;;
         d|download)     for pkg do pkg_source "$pkg"; done ;;
         H|help-ext)     pkg_help_ext "$@" ;;
