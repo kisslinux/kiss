@@ -206,7 +206,7 @@ should be used to perform any required post-install steps or to display notices.
 |                                                                              |
 |  1 #!/bin/sh -e                                                              |
 |  2                                                                           |
-|  3 cat &lt;&lt;EOF                                                           |
+|  3 cat &lt;&lt;EOF                                                                 |
 |  4                                                                           |
 |  5 The commands zcat, unpigz and gunzip were merely symbolic                 |
 |  6 links to the pigz binary. They have been removed. To gain                 |
