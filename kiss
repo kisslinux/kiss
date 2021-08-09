@@ -297,7 +297,7 @@ _pkg_find() {
     # values in variables. If there are 4 arguments, no package has been found.
     case $2-$# in
         *-4) return 1 ;;
-         -*) repo_dir=$5 repo_name=${5##*/} ;;
+         -*) repo_dir=$5; repo_name=${5##*/} ;;
           *) shift 4; printf '%s\n' "$@"
     esac
 }
@@ -449,7 +449,9 @@ pkg_source_git() {
     log "$repo_name" "Cloning $1"
 
     # Split the source into URL + OBJECT (branch or commit).
-    url=$1 com=${url##*[@#]} com=${com#${url%[#@]*}}
+    url=$1
+    com=${url##*[@#]}
+    com=${com#${url%[#@]*}}
 
     git init
     git remote add origin "${url%[#@]*}"
@@ -1241,7 +1243,9 @@ file_rwx() {
     #
     # NOTE: This drops setgid/setuid permissions and does not include
     # them in the conversion. This is intentional.
-    rwx=$(ls -ld "$1") oct='' o=0
+    unset oct o
+
+    rwx=$(ls -ld "$1")
 
     for c in 14 22 31 44 52 61 74 82 91; do
         rwx=${rwx#?}
@@ -1252,7 +1256,8 @@ file_rwx() {
         esac
 
         case $((${c%?} % 3)) in 0)
-            oct=$oct$o o=0
+            oct=$oct$o
+            o=0
         esac
     done
 }
@@ -1734,8 +1739,14 @@ pkg_help_ext() {
     # first match.
     for path do p=${path#*/kiss-}
         case " $seen " in
-            *" $p "*) shift ;;
-            *) seen=" $seen $p " max=$((${#p} > max ? ${#p}+1 : max))
+            *" $p "*)
+                shift
+            ;;
+
+            *)
+                seen=" $seen $p "
+                max=$((${#p} > max ? ${#p}+1 : max))
+            ;;
         esac
     done
 
@@ -1917,8 +1928,11 @@ main() {
 
     # Color can be disabled via the environment variable KISS_COLOR. Colors are
     # also automatically disabled if output is being used in a pipe/redirection.
-    equ "$KISS_COLOR" 0 || ! [ -t 2 ] ||
-        c1='\033[1;33m' c2='\033[1;34m' c3='\033[m'
+    equ "$KISS_COLOR" 0 || ! [ -t 2 ] || {
+        c1='\033[1;33m'
+        c2='\033[1;34m'
+        c3='\033[m'
+    }
 
     # Store the original working directory to ensure that relative paths
     # passed by the user on the command-line properly resolve to locations
