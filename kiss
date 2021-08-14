@@ -1881,8 +1881,11 @@ args() {
         ;;
 
         *)
+            # _KISS_LVL must be reset here so the that any extensions
+            # which call the package manager do not increment the value
+            # further than the parent instance.
             pkg_find "kiss-$action*" "" -x "$PATH"
-            "$repo_dir" "$@"
+            _KISS_LVL=0 "$repo_dir" "$@"
         ;;
     esac
 }
