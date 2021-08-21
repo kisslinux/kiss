@@ -535,7 +535,7 @@ pkg_extract() {
             ;;
 
             *?*)
-                cp -Rf "$_res" .
+                cp -LRf "$_res" .
             ;;
         esac
     done < "$repo_dir/sources" || die "$1" "Failed to extract $_res"
