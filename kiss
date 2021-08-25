@@ -412,8 +412,8 @@ pkg_source() {
         # arg4: resolved source
         run_hook pre-source "$1" "$src" "$_fnr"
 
-        case $_res in
-            url+*)
+        case $2$_res in
+            "$2url+"*)
                 mkcd "${_des%/*}"
                 pkg_source_get "$_des" "${_res##url+}"
             ;;
