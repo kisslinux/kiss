@@ -358,7 +358,7 @@ pkg_source_resolve() {
     # Git repository.
     if null "${2##git+*}"; then
         _res=$2
-        _des=$src_dir/$1/${3:+"$3/"}${2##*/}
+        _des=$src_dir/$1/${3:+"$3/"}${2##*/}/
         _des=${_des%[@#]*}
 
     # Remote source (cached).
@@ -414,16 +414,9 @@ pkg_source() {
 
         # '$2' is set when this function is called from 'kiss c' and it is used
         # here to skip calling the Git code.
-        case $2$_res in
-            "$2url+"*)
-                mkcd "${_des%/*}"
-                pkg_source_get "$_des" "${_res##url+}"
-            ;;
-
-            git+*)
-                mkcd "$_des"
-                pkg_source_git "${_res##git+}"
-            ;;
+        case $2$_res in "$2url+"*|git+*)
+            mkcd "${_des%/*}"
+            "pkg_source_${_res%%+*}" "$_des" "${_res##"${_res%%+*}+"}"
         esac
 
         # arg1: post-source
@@ -434,7 +427,7 @@ pkg_source() {
     done < "$repo_dir/sources"
 }
 
-pkg_source_get() {
+pkg_source_url() {
     log "$repo_name" "Downloading $2"
 
     # Set the arguments based on found download utility.
