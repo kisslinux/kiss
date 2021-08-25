@@ -412,6 +412,8 @@ pkg_source() {
         # arg4: resolved source
         run_hook pre-source "$1" "$src" "$_fnr"
 
+        # '$2' is set when this function is called from 'kiss c' and it is used
+        # here to skip calling the Git code.
         case $2$_res in
             "$2url+"*)
                 mkcd "${_des%/*}"
