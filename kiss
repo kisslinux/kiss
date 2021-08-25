@@ -444,18 +444,18 @@ pkg_source_url() {
 }
 
 pkg_source_git() {
-    com=${1##*[@#]}
-    com=${com#${1%[#@]*}}
+    com=${2##*[@#]}
+    com=${com#${2%[#@]*}}
 
     log "$repo_name" "Checking out ${com:-FETCH_HEAD}"
 
     [ -d .git ] || git init
 
-    git remote set-url origin "${1%[#@]*}" 2>/dev/null ||
-        git remote add origin "${1%[#@]*}"
+    git remote set-url origin "${2%[#@]*}" 2>/dev/null ||
+        git remote add origin "${2%[#@]*}"
 
     # Only fetch latest changes if not <url>[#]<sha|tag>.
-    case $1 in *"#$com") ;; *)
+    case $2 in *"#$com") ;; *)
         git fetch -t --filter=tree:0 origin "$com" || git fetch -t
     esac
 
