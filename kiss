@@ -454,10 +454,10 @@ pkg_source_git() {
 
     log "$repo_name" "Checking out ${com:-FETCH_HEAD}"
 
-    [ -d .git ] || {
-        git init
+    [ -d .git ] || git init
+
+    git remote set-url origin "${1%[#@]*}" 2>/dev/null ||
         git remote add origin "${1%[#@]*}"
-    }
 
     # Only fetch latest changes if not <url>[#]<sha|tag>.
     case $1 in *"#$com") ;; *)
