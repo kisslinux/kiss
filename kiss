@@ -358,6 +358,8 @@ pkg_source_resolve() {
     # Git repository.
     if null "${2##git+*}"; then
         _res=$2
+        _des=$src_dir/$1/${3:+"$3/"}${2##*/}
+        _des=${_des%[@#]*}/
 
     # Remote source (cached).
     elif [ -f "$src_dir/$1/${3:+"$3/"}${2##*/}" ]; then
@@ -410,12 +412,11 @@ pkg_source() {
         # arg4: resolved source
         run_hook pre-source "$1" "$src" "$_fnr"
 
-        case $_res in url+*)
-            # Create directory structure in source cache. This prevents cache
-            # conflicts between identical sources with differing dests.
+        # '$2' is set when this function is called from 'kiss c' and it is used
+        # here to skip calling the Git code.
+        case $2$_res in "$2url+"*|git+*)
             mkcd "${_des%/*}"
-
-            pkg_source_get "$_des" "${_res##url+}"
+            "pkg_source_${_res%%+*}" "$_des" "${_res##"${_res%%+*}+"}"
         esac
 
         # arg1: post-source
@@ -426,7 +427,7 @@ pkg_source() {
     done < "$repo_dir/sources"
 }
 
-pkg_source_get() {
+pkg_source_url() {
     log "$repo_name" "Downloading $2"
 
     # Set the arguments based on found download utility.
@@ -443,19 +444,21 @@ pkg_source_get() {
 }
 
 pkg_source_git() {
-    # This magic will shallow clone branches, commits or the
-    # regular repository. It correctly handles cases where a
-    # shallow clone is not possible.
-    log "$repo_name" "Cloning $1"
+    com=${2##*[@#]}
+    com=${com#${2%[#@]*}}
 
-    # Split the source into URL + OBJECT (branch or commit).
-    url=$1
-    com=${url##*[@#]}
-    com=${com#${url%[#@]*}}
+    log "$repo_name" "Checking out ${com:-FETCH_HEAD}"
 
-    git init
-    git remote add origin "${url%[#@]*}"
-    git fetch -t --filter=tree:0 origin "$com" || git fetch -t
+    [ -d .git ] || git init
+
+    git remote set-url origin "${2%[#@]*}" 2>/dev/null ||
+        git remote add origin "${2%[#@]*}"
+
+    # Only fetch latest changes if not <url>[#]<sha|tag>.
+    case $2 in *"#$com") ;; *)
+        git fetch -t --filter=tree:0 origin "$com" || git fetch -t
+    esac
+
     git -c advice.detachedHead=0 checkout "${com:-FETCH_HEAD}"
 }
 
@@ -527,7 +530,7 @@ pkg_extract() {
 
         case $_res in
             git+*)
-                pkg_source_git "${_res##git+}"
+                cp -LRf "$_des/." .
             ;;
 
             *.tar|*.tar.??|*.tar.???|*.tar.????|*.t?z)
