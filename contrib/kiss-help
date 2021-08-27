@@ -6,23 +6,35 @@ cd "$KISS_ROOT/usr/share/doc/kiss" 2>/dev/null || {
     exit 1
 }
 
-! [ -f "${1:-.}/index.txt" ] || file=./${1:-.}/index.txt
-! [ -f "${1:-.}.txt" ]       || file=./${1:-.}.txt
-! [ -f "${1:-:}" ]           || file=./${1:-.}
+_q=$1
+
+! [ -f "${_q:-.}/index.txt" ] || file=./${_q:-.}/index.txt
+! [ -f "${_q:-.}.txt" ]       || file=./${_q:-.}.txt
+! [ -f "${_q:-:}" ]           || file=./${_q:-.}
+
+# Fallback to package READMEs.
+# False positive, intended behavior.
+# shellcheck disable=2046
+[ "$file" ] || {
+    set -f
+    set +f -- $(kiss s "${_q##*/}")
+    file=${1:+"$1/README"}
+}
 
 # Fallback to search (allows 'kiss help firefox' to work).
 # False positive, intended behavior.
 # shellcheck disable=2046
 [ "$file" ] || {
     set -f
-    set +f -- $(find . -name "${1##*/}.txt")
+    set +f -- $(find . -name "${_q##*/}.txt")
     file=$1
 }
 
 : "${file:=404.txt}"
 
 cat <<EOF - "$file" | "${PAGER:-less}"
-Reading $PWD/${file#./}
+Reading ${file#./}
 ________________________________________________________________________________
+
 
 EOF
