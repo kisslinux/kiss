@@ -454,10 +454,8 @@ pkg_source_git() {
     git remote set-url origin "${2%[#@]*}" 2>/dev/null ||
         git remote add origin "${2%[#@]*}"
 
-    # Only fetch latest changes if not <url>[#]<sha|tag>.
-    case $2 in *"#$com") ;; *)
-        git fetch -t --filter=tree:0 origin "$com" || git fetch -t
-    esac
+    git fetch -t origin "$com" ||
+        git fetch -t
 
     git -c advice.detachedHead=0 checkout "${com:-FETCH_HEAD}"
 }
