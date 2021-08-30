@@ -1075,12 +1075,9 @@ pkg_verify() {
     # shellcheck disable=2038,2086
     set -- $hash
 
-    # Only read checksums if we generated some.
-    null "$1" ||
-
     # Check that the first column (separated by whitespace) match in both
     # checksum files. If any part of either file differs, mismatch. Abort.
-    while read -r chk _ || ok "$1"; do
+    null "$1" || while read -r chk _ || ok "$1"; do
         printf '%s\n%s\n' "- ${chk:-missing}" "+ ${1:-no source}"
 
         case $1-${chk:-null} in
