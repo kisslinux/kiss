@@ -1080,15 +1080,9 @@ pkg_verify() {
     null "$1" || while read -r chk _ || ok "$1"; do
         printf '%s\n%s\n' "- ${chk:-missing}" "+ ${1:-no source}"
 
-        case $1-${chk:-null} in
-            "$chk-$1"|"$1-SKIP")
-                # We have a match.
-            ;;
-
-            "$hash"-*|*)
-                die "$repo_name" "Checksum mismatch"
-            ;;
-        esac
+        equ "$1-${chk:-null}" "$chk-$1" ||
+        equ "$1-${chk:-null}" "$1-SKIP" ||
+            die "$repo_name" "Checksum mismatch"
 
         shift "$(($# != 0))"
     done < "$repo_dir/checksums"
