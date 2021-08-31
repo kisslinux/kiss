@@ -868,7 +868,6 @@ pkg_tar() {
 pkg_build_all() {
     # Build packages and turn them into packaged tarballs.
     # Order the argument list and filter out duplicates.
-    export KISS_BUILD_INSTALL=${KISS_BUILD_INSTALL:=1}
 
     # Mark packages passed on the command-line explicit.
     # Also resolve dependencies for all explicit packages.
@@ -949,7 +948,7 @@ pkg_build_all() {
         pkg_etcsums
         pkg_tar      "$pkg"
 
-        if equ "$KISS_BUILD_INSTALL" 1 || ! contains "$explicit" "$pkg"; then
+        if equ "${prefer_cache:=0}" 1 || ! contains "$explicit" "$pkg"; then
             log "$pkg" "Needed as a dependency or has an update, installing"
 
             # Intended behavior.
@@ -958,11 +957,10 @@ pkg_build_all() {
         fi
     done
 
-    case $KISS_BUILD_INSTALL in 1)
-        # Intentional, globbing disabled.
-        # shellcheck disable=2046,2086
+    # Intentional, globbing disabled.
+    # shellcheck disable=2046,2086
+    ! equ "${build_install:=1}" 1 || ! equ "${KISS_PROMPT:=1}" 1 ||
         ! prompt "Install built packages? [$explicit]" || (args i $explicit)
-    esac
 }
 
 pkg_build() {
@@ -1676,7 +1674,7 @@ pkg_upgrade() {
         war "Packages without repository$_repo_orp"
     esac
 
-    export KISS_BUILD_INSTALL=0
+    build_install=0
     prefer_cache=1
 
     ! contains "$*" kiss || {
