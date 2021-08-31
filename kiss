@@ -868,6 +868,7 @@ pkg_tar() {
 pkg_build_all() {
     # Build packages and turn them into packaged tarballs.
     # Order the argument list and filter out duplicates.
+    export KISS_BUILD_INSTALL=${KISS_BUILD_INSTALL:=1}
 
     # Mark packages passed on the command-line explicit.
     # Also resolve dependencies for all explicit packages.
@@ -878,7 +879,7 @@ pkg_build_all() {
 
     # If this is an update, don't always build explicitly passsed packages
     # and instead install pre-built binaries if they exist.
-    ok "$pkg_update" || explicit_build=$explicit
+    ok "$prefer_cache" || explicit_build=$explicit
 
     set --
 
@@ -948,7 +949,7 @@ pkg_build_all() {
         pkg_etcsums
         pkg_tar      "$pkg"
 
-        if ok "$pkg_update" || ! contains "$explicit" "$pkg"; then
+        if equ "$KISS_BUILD_INSTALL" 1 || ! contains "$explicit" "$pkg"; then
             log "$pkg" "Needed as a dependency or has an update, installing"
 
             # Intended behavior.
@@ -957,7 +958,7 @@ pkg_build_all() {
         fi
     done
 
-    case $pkg_update in '')
+    case $KISS_BUILD_INSTALL in 1)
         # Intentional, globbing disabled.
         # shellcheck disable=2046,2086
         ! prompt "Install built packages? [$explicit]" || (args i $explicit)
@@ -1675,7 +1676,8 @@ pkg_upgrade() {
         war "Packages without repository$_repo_orp"
     esac
 
-    pkg_update=1
+    export KISS_BUILD_INSTALL=0
+    prefer_cache=1
 
     ! contains "$*" kiss || {
         log "Detected package manager update"
@@ -1696,8 +1698,7 @@ pkg_upgrade() {
         # shellcheck disable=2046,2086
         set -- $order
 
-        log "Packages to update ($#): $*"
-        prompt
+        prompt "Packages to update ($#): $*"
         pkg_build_all "$@"
         log "Updated all packages"
         return 0
