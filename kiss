@@ -986,11 +986,10 @@ pkg_build() {
         # Give the script a modified environment. Define toolchain program
         # environment variables assuming a generic environment by default.
         #
-        # Define DESTDIR as GOPATH to sane defaults as their use is
-        # mandatory in anything using autotools, meson, cmake, etc.
-        #
-        # Define KISS_ROOT as the sanitized value used internally by the
-        # package manager. This is safe to join with other paths.
+        # Define DESTDIR and GOPATH to sane defaults as their use is mandatory
+        # in anything using autotools, meson, cmake, etc. Define KISS_ROOT as
+        # the sanitized value used internally by the package manager. This is
+        # safe to join with other paths.
         AR="${AR:-ar}" \
         CC="${CC:-cc}" \
         CXX="${CXX:-c++}" \
