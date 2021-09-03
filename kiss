@@ -986,7 +986,7 @@ pkg_build() {
         # Give the script a modified environment. Define toolchain program
         # environment variables assuming a generic environment by default.
         #
-        # Define DESTDIR, PREFIX and GOPATH to sane defaults as their use is
+        # Define DESTDIR as GOPATH to sane defaults as their use is
         # mandatory in anything using autotools, meson, cmake, etc.
         #
         # Define KISS_ROOT as the sanitized value used internally by the
