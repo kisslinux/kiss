@@ -566,7 +566,9 @@ pkg_depends() {
     # Recurse through the dependencies of the child packages.
     while read -r dep dep_type || ok "$dep"; do
         ! ok "${dep##\#*}" || pkg_depends "$dep" '' "$3" "$4 $1" "$dep_type"
-    done < "$repo_dir/depends" || :
+    done <<EOF ||:
+$(${KISS_DEPEND_HOOK:-cat} "$repo_dir/depends")
+EOF
 
     # Add parent to dependencies list.
     if ! equ "$2" expl || { equ "$5" make && ! pkg_cache "$1"; }; then
@@ -732,11 +734,12 @@ pkg_fix_deps() {
 $elf
 EOF
     esac done < manifest |
+    ${KISS_DEPEND_HOOK:-cat} "$_tmp_file_pre" - |
 
     # Sort the depends file (including the existing depends file) and
     # remove any duplicate entries. This can't take into account comments
     # so they remain rather than being replaced.
-    sort -uk1,1 "$_tmp_file_pre" - > "$_tmp_file"
+    sort -uk1,1 > "$_tmp_file"
 
     # If the depends file was modified, show a diff and replace it.
     ! [ -s "$_tmp_file" ] || {
