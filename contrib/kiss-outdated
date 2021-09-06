@@ -68,6 +68,10 @@ EOF
             remote=fonts:fontawesome
         ;;
 
+        foot-pgo)
+            remote=foot
+        ;;
+
         gc)
             remote=boehm-gc
         ;;
@@ -199,6 +203,10 @@ EOF
             remote=st-term
         ;;
 
+        sway-no-seat | sway-tiny)
+            remote=sway
+        ;;
+
         terminus-font)
             remote=fonts:terminus
         ;;
@@ -227,7 +235,23 @@ EOF
     esac
 }
 
-get_versions() {
+repology_version() {
+    [ -f "$1.svg" ] || return 1
+    read -r remote_ver < "$1.svg" || :
+    remote_ver=${remote_ver%</text>*}
+    remote_ver=${remote_ver##*>}
+}
+
+repo_version() {
+    read -r ver _ 2>/dev/null < "$2/version" || {
+        printf '%-30s local version not found\n' "$1" >&2
+        return 1
+    }
+
+    [ "$ver" != git ]
+}
+
+get_outdated() {
     repo=${repo%%/}
     printf '\n[Checking Repology for outdated packages in %s]\n\n' "$repo" >&2
 
@@ -235,12 +259,9 @@ get_versions() {
         pkg=${pkg%%/}
         repology_name "${pkg##*/}"
 
-        case $remote in
-            -) continue
-        esac
-
-        set -- "$@" -z "$remote.svg" \
-            "https://repology.org/badge/latest-versions/$remote.svg"
+        [ "$remote" = - ] ||
+            set -- "$@" -z "$remote.svg" \
+                "https://repology.org/badge/latest-versions/$remote.svg"
     done
 
     mkcd "$tmp/${repo##*/}"
@@ -252,20 +273,11 @@ get_versions() {
         pkg=${_pkg%%/}
         pkg=${pkg##*/}
 
-        read -r ver _ 2>/dev/null < "$_pkg/version" || {
-            printf '%-30s local version not found\n' "$pkg" >&2
-            continue
-        }
-
-        [ "$ver" != git ] || continue
+        repo_version  "$pkg" "$_pkg" || continue
         repology_name "$pkg"
-        [ -f "$remote.svg" ] || continue
+        repology_version "$remote" || continue
 
-        read -r remote_ver < "$remote.svg" || :
-        remote_ver=${remote_ver%</text>*}
-        remote_ver=${remote_ver##*>}
-
-        case $remote_ver in *", $ver"* | *"$ver,"* | "$ver" | -)
+        case $remote_ver in *", $ver"* | *"$ver,"* | "$ver" | - | '')
             continue
         esac
 
@@ -276,16 +288,15 @@ get_versions() {
 main() {
     set -e
 
-    case $1 in '')
+    [ "$1" ] ||
         die 'usage: kiss [ou]tdated /path/to/repo...\n'
-    esac
 
     mkdir -p "${tmp:=${XDG_CACHE_HOME:-"$HOME/.cache"}/kiss/repology}"
 
     for repo do
         old_pwd=$PWD
         cd "$repo"
-        get_versions
+        get_outdated
         cd "$old_pwd"
     done
 }
