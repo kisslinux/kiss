@@ -17,11 +17,10 @@ repology_name() {
         remote=${1%%-bin}
         remote=${remote%%-git}
 
-        printf %s "$remote" |
-
         # Remote names are all lowercase.
-        tr '[:upper:]' '[:lower:]' |
-
+        tr '[:upper:]' '[:lower:]' <<EOF |
+$remote
+EOF
         # Remote always uses -.
         tr _ -
     )
