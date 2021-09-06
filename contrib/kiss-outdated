@@ -1,15 +1,13 @@
 #!/bin/sh
 # Check repository for outdated packages
 
-repology_version() {
-    # Grab the package's version as known by repology.org by downloading the
-    # svg latest-version badge and extracting the version from the xml.
-    repology_name "$1"
+die() {
+    printf '%s\n' "$*" >&2
+    exit 1
+}
 
-    r=$(curl -Ss "https://repology.org/badge/latest-versions/$remote.svg") && {
-        remote_ver=${r%</text>*}
-        remote_ver=${remote_ver##*>}
-    }
+mkcd() {
+    mkdir -p "$1" && cd "$1"
 }
 
 repology_name() {
@@ -230,60 +228,67 @@ repology_name() {
     esac
 }
 
-main() {
-    printf '\n[Checking Repology for outdated packages in %s]\n\n' "${1%%/}" >&2
+get_versions() {
+    repo=${repo%%/}
+    printf '\n[Checking Repology for outdated packages in %s]\n\n' "$repo" >&2
 
     for pkg in */; do
         pkg=${pkg%%/}
+        repology_name "${pkg##*/}"
 
-        read -r ver _ 2>/dev/null < "$pkg/version" || {
+        case $remote in
+            -) continue
+        esac
+
+        set -- "$@" -z "$remote.svg" \
+            "https://repology.org/badge/latest-versions/$remote.svg"
+    done
+
+    mkcd "$tmp/${repo##*/}"
+
+    curl -SsZ --parallel-max 16 --remote-name-all "$@" ||
+        die 'fatal: network error'
+
+    for _pkg in "$OLDPWD"/*/; do
+        pkg=${_pkg%%/}
+        pkg=${pkg##*/}
+
+        read -r ver _ 2>/dev/null < "$_pkg/version" || {
             printf '%-30s local version not found\n' "$pkg" >&2
             continue
         }
 
-        [ "$ver" = git ] &&
+        [ "$ver" != git ] || continue
+        repology_name "$pkg"
+        [ -f "$remote.svg" ] || continue
+
+        read -r remote_ver < "$remote.svg" || :
+        remote_ver=${remote_ver%</text>*}
+        remote_ver=${remote_ver##*>}
+
+        case $remote_ver in *", $ver"* | *"$ver,"* | "$ver" | -)
             continue
-
-        repology_version "$pkg" || {
-            printf '%-30s network error\n' "$pkg" >&2
-            continue
-        }
-
-        case $remote_ver in
-            *", $ver"* | *"$ver,"* | "$ver")
-                # Package up-to-date, do nothing.
-            ;;
-
-            '' | ' ')
-                printf '\n%s: empty response\n' "$pkg" >&2
-                printf 'possible causes:\n' >&2
-                printf '    package name differs from repology name,\n' >&2
-                printf '    package not tracked by repology,\n' >&2
-                printf '    network error\n\n' >&2
-            ;;
-
-            '-')
-                # No version scheme, do nothing.
-            ;;
-
-            *)
-                printf '%-30s %s -> %s\n' "$pkg" "$ver" "$remote_ver"
-            ;;
         esac
+
+        printf '%-30s %s -> %s\n' "$pkg" "$ver" "$remote_ver"
     done
 }
 
-for repo do
-    [ "$repo" ] || {
-        printf 'usage: kiss outdated /path/to/repo\n' >&2
-        exit 1
-    }
+main() {
+    set -e
 
-    cd "$repo" 2>/dev/null || {
-        printf 'repository %s is inaccessible\n' "$repo" >&2
-        exit 1
-    }
+    case $1 in '')
+        die 'usage: kiss [ou]tdated /path/to/repo...\n'
+    esac
 
-    main "$repo"
-    cd "$OLDPWD" || exit 1
-done
+    mkdir -p "${tmp:=${XDG_CACHE_HOME:-"$HOME/.cache"}/kiss/repology}"
+
+    for repo do
+        old_pwd=$PWD
+        cd "$repo"
+        get_versions
+        cd "$old_pwd"
+    done
+}
+
+main "$@"
