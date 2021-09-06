@@ -16,7 +16,7 @@ for repo do
 
 for pkg in */; do
     pkg=${pkg%%/}
-    echo $pkg
+    echo "$pkg"
 done | xargs -P"$(nproc)" -I{} sh -c "
 repology_version() {
     # Grab the package's version as known by repology.org by downloading the
@@ -287,5 +287,5 @@ aux() {
 }
 aux {}
 " | sort
-    cd $OLDPWD || exit 1
+    cd "$OLDPWD" || exit 1
 done
