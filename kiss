@@ -454,10 +454,8 @@ pkg_source_git() {
     git remote set-url origin "${2%[#@]*}" 2>/dev/null ||
         git remote add origin "${2%[#@]*}"
 
-    git fetch -t origin "$com" ||
-        git fetch -t
-
-    git -c advice.detachedHead=0 checkout "${com:-FETCH_HEAD}"
+    git fetch --depth=1 origin "$com"
+    git reset --hard FETCH_HEAD
 }
 
 pkg_source_tar() {
