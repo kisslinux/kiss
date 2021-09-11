@@ -1587,7 +1587,7 @@ pkg_update() {
 
     # Update each repository in '$KISS_PATH'.
     for repo do
-        if ok "$(git -C "$repo" remote 2>/dev/null)"; then
+        if git -C "$repo" rev-parse 'HEAD@{upstream}' >/dev/null 2>&1; then
             repo_type=git
 
             # Get the Git repository root directory.
