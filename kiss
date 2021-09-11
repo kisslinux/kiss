@@ -994,6 +994,8 @@ pkg_build() {
         NM="${NM:-nm}" \
         RANLIB="${RANLIB:-ranlib}" \
         DESTDIR="$pkg_dir/$1" \
+        RUSTFLAGS="--remap-path-prefix=$PWD=. $RUSTFLAGS" \
+        GOFLAGS="-trimpath -modcacherw $GOFLAGS" \
         GOPATH="$PWD/go" \
         KISS_ROOT="$KISS_ROOT" \
         \
