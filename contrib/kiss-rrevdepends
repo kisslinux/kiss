@@ -3,13 +3,13 @@
 # kiss-rrevdepends (repo-revdepends)
 # kiss-revdepends, execpt for packages in your $KISS_PATH
 
-for repo in $(echo $KISS_PATH | tr ':' ' ')
+for repo in $(echo "$KISS_PATH" | tr ':' ' ')
 do
-	for pkg in $repo/*
+	for pkg in "$repo"/*
 	do
 		(
 			if grep -sq "$1" "$pkg/depends" ; then
-				echo $pkg
+				echo "$pkg"
 			fi
 		) &
 	done
