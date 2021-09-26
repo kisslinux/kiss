@@ -1,16 +1,41 @@
 #!/bin/sh -e
 # List orphaned packages
 
-cd "$KISS_ROOT/var/db/kiss/installed/"
+n='
+'
 
-for pkg in *; do
-    case $pkg in
-        # Exemptions for orphans which aren't really
-        # orphans. Exclude them from the list.
-        baseinit|baselayout|gcc|e2fsprogs|musl|\
-        make|busybox|bzip2|grub|kiss|git)
-            continue
+cd "$KISS_ROOT/var/db/kiss/installed"
+set -- *
+
+l=$n$(
+    for pkg do shift
+        set -- "$@" -e "$pkg"
+    done
+
+    # Get a list of non-orphans.
+    grep -Fx "$@" -- */depends |
+
+    {
+        # Strip filename.
+        sed s,.\*/depends:,,
+
+        # Exclude packages which are not really orphans.
+        printf '%s\n' baseinit baselayout busybox bzip2 e2fsprogs gcc \
+                      git grub kiss make musl
+    } |
+
+    # Remove duplicates.
+    sort -u
+)$n
+
+# Generate the list of orphans by finding the inverse of the non-orphan list.
+for pkg do shift
+    case $l in (*"$n$pkg$n"*)
+        continue
     esac
 
-    grep -q "^$pkg$" ./*/depends || printf '%s\n' "$pkg"
+    set -- "$@" "$pkg"
 done
+
+printf '%s\n' "$@"
+
