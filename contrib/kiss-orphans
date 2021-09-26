@@ -4,6 +4,7 @@
 cd "$KISS_ROOT/var/db/kiss/installed/"
 
 for pkg in *; do
+    (
     case $pkg in
         # Exemptions for orphans which aren't really
         # orphans. Exclude them from the list.
@@ -13,4 +14,6 @@ for pkg in *; do
     esac
 
     grep -q "^$pkg$" ./*/depends || printf '%s\n' "$pkg"
+    ) &
 done
+wait
