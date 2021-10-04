@@ -5,4 +5,5 @@
 
 cd "$KISS_ROOT/var/db/kiss/installed"
 
-grep "^$1" -- */depends
+grep "^$1\( \|$\)"  -- */depends
+
