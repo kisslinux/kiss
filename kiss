@@ -1107,7 +1107,7 @@ pkg_conflicts() {
     set -f "$sys_db"/*/manifest
 
     # Remove the current package from the manifest list.
-    fnr " $* " " $sys_db/$_pkg/manifest " ""
+    fnr " $* " " $sys_db/$_pkg/manifest " " "
 
     # Intentional, globbing disabled.
     # shellcheck disable=2046,2086
