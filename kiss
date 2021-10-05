@@ -153,15 +153,14 @@ pkg_owner() {
 resolve_path() {
     _rpath=$KISS_ROOT/${1#/}
 
-    # Attempt to resolve symlinks by using 'cd'.
-    # If this fails, fallback to the file's parent
-    # directory.
-    cd -P "${_rpath%/*}" 2>/dev/null || PWD=${_rpath%/*}
+    if cd -P "${_rpath%/*}" 2>/dev/null; then
+        _parent=$PWD
+        cd "$OLDPWD"
+    else
+        _parent=${_rpath%/*}
+    fi
 
-    # Final resolved path.
-    _rpath=${PWD#"$KISS_ROOT"}/${_rpath##*/}
-
-    cd "$OLDPWD"
+    _rpath=${_parent#"$KISS_ROOT"}/${_rpath##*/}
 }
 
 run_hook() {
