@@ -1394,14 +1394,11 @@ pkg_remove() {
     # differently and configuration files are *not* overwritten.
     [ -d "$sys_db/$1" ] || die "'$1' not installed"
 
+    trap_off
+
     # Intended behavior.
     # shellcheck disable=2030,2031
     equ "$KISS_FORCE" 1  || pkg_removable "$1"
-
-    # Block being able to abort the script with 'Ctrl+C' during removal.
-    # Removes all risk of the user aborting a package removal leaving an
-    # incomplete package installed.
-    trap '' INT
 
     # arg1: pre-remove
     # arg2: package name
@@ -1415,10 +1412,7 @@ pkg_remove() {
     log "$1" "Removing package"
     pkg_remove_files < "$sys_db/$1/manifest" 3< "$_tmp_file"
 
-    # Reset 'trap' to its original value. Removal is done so
-    # we no longer need to block 'Ctrl+C'.
-    trap pkg_clean EXIT INT
-
+    trap_on
     log "$1" "Removed successfully"
 }
 
@@ -1491,6 +1485,7 @@ pkg_install() {
         ;;
     esac
 
+    trap_off
     mkcd "$tar_dir/$_pkg"
 
     # The tarball is extracted to a temporary directory where its contents are
@@ -1538,11 +1533,6 @@ pkg_install() {
     tmp_file "$_pkg" manifest-reverse
     sort "$tar_man" > "$_tmp_file"
 
-    # Block being able to abort the script with Ctrl+C during installation.
-    # Removes all risk of the user aborting a package installation leaving
-    # an incomplete package installed.
-    trap '' INT
-
     if
         # Install the package's files by iterating over its manifest.
         pkg_install_files -z "$PWD" < "$_tmp_file" 3< "$_tmp_file_pre_pre" &&
@@ -1557,9 +1547,7 @@ pkg_install() {
         pkg_install_files -e "$PWD" < "$_tmp_file" 3< "$_tmp_file_pre_pre"
 
     then
-        # Reset 'trap' to its original value. Installation is done so we no longer
-        # need to block 'Ctrl+C'.
-        trap pkg_clean EXIT INT
+        trap_on
 
         # arg1: post-install
         # arg2: package name
@@ -1755,6 +1743,30 @@ pkg_help_ext() {
     done >&2
 }
 
+trap_on() {
+    # Catch errors and ensure that build files and directories are cleaned
+    # up before we die. This occurs on 'Ctrl+C' as well as success and error.
+    trap trap_INT  INT
+    trap trap_EXIT EXIT
+}
+
+trap_INT() {
+    run_hook SIGINT
+    exit 1
+}
+
+trap_EXIT() {
+    pkg_clean
+    run_hook SIGEXIT
+}
+
+trap_off() {
+    # Block being able to abort the script with 'Ctrl+C'. Removes all risk of
+    # the user aborting a package install/removal leaving an incomplete package
+    # installed.
+    trap "" INT EXIT
+}
+
 args() {
     # Parse script arguments manually. This is rather easy to do in our case
     # since the first argument is always an "action" and the arguments that
@@ -1818,6 +1830,8 @@ args() {
     # shellcheck disable=2030,2031
     case $action in a|alternatives|i|install|r|remove)
         if ok "$1" && ! am_owner "$KISS_ROOT/"; then
+            trap_off
+
             as_user env \
                 LOGNAME="$user" \
                 HOME="$HOME" \
@@ -1832,6 +1846,8 @@ args() {
                 KISS_PID="$KISS_PID" \
                 _KISS_LVL="$_KISS_LVL" \
                 "$0" "$action" "$@"
+
+            trap_on
             return
         fi
     esac
@@ -1979,10 +1995,7 @@ main() {
     time=$(date +%Y-%m-%d-%H:%M)
 
     create_tmp_dirs
-
-    # Catch errors and ensure that build files and directories are cleaned
-    # up before we die. This occurs on 'Ctrl+C' as well as success and error.
-    trap pkg_clean EXIT INT
+    trap_on
 
     args "$@"
 }
