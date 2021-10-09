@@ -169,7 +169,7 @@ run_hook() {
     IFS=:
 
     for hook in ${KISS_HOOK:-}; do case $hook in *?*)
-        "$hook" "$@" || die "$1 hook failed: '$hook'"
+        IFS=" " . "$hook" || die "$1 hook failed: '$hook'"
     esac done
 
     unset IFS
