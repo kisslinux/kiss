@@ -46,9 +46,9 @@ run() {
 }
 
 time_cmd() {
-    stime=$(date +%s)
+    stime=$(awk 'BEGIN { srand(); print srand() }')
     "$@"
-    etime=$(date +%s)
+    etime=$(awk 'BEGIN { srand(); print srand() }')
     elapsed_sec=$(($etime - $stime))
     elapsed_min=$(($elapsed_sec / 60))
     elapsed_hrs=$(($elapsed_min / 60))
