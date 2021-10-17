@@ -49,11 +49,11 @@ time_cmd() {
     stime=$(awk 'BEGIN { srand(); print srand() }')
     "$@"
     etime=$(awk 'BEGIN { srand(); print srand() }')
-    elapsed_sec=$(($etime - $stime))
-    elapsed_min=$(($elapsed_sec / 60))
-    elapsed_hrs=$(($elapsed_min / 60))
-    elapsed_sec=$(($elapsed_sec % 60))
-    elapsed_min=$(($elapsed_min % 60))
+    elapsed_sec=$((etime - stime))
+    elapsed_min=$((elapsed_sec / 60))
+    elapsed_hrs=$((elapsed_min / 60))
+    elapsed_sec=$((elapsed_sec % 60))
+    elapsed_min=$((elapsed_min % 60))
     printf '%b-> %b%s%b %sh.%sm.%ss\n' "$c1" "$c2" "timer" "$c3" "$elapsed_hrs" "$elapsed_min" "$elapsed_sec"
 }
 
