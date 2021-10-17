@@ -1208,8 +1208,10 @@ pkg_swap() {
 
     fnr "$1$2" '/' '>'
 
-    [ -f "$sys_ch/$_fnr" ] || [ -h "$sys_ch/$_fnr" ] ||
-        die "Alternative '$1 ${2:-null}' doesn't exist"
+    [ -f "$sys_ch/$_fnr" ] || [ -h "$sys_ch/$_fnr" ] || {
+        [ ! -e "$2" ] && die "Alternative '$1 ${2:-null}' doesn't exist"
+        return
+    }
 
     if [ -f "$KISS_ROOT$2" ]; then
         pkg_owner "/${2#/}" ||
