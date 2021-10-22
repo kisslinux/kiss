@@ -479,6 +479,9 @@ pkg_source_tar() {
     # Iterate over all directories in the first level of the
     # tarball's manifest. Each directory is moved up a level.
     while IFS=/ read -r dir _; do case ${dir#.} in *?*)
+        # Skip entries which aren't directories.
+        [ -d "$dir" ] || continue
+
         # Move the parent directory to prevent naming conflicts
         # with the to-be-moved children.
         mv -f "$dir" "$KISS_PID-$dir"
