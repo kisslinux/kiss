@@ -289,7 +289,7 @@ main() {
     set -e
 
     [ "$1" ] ||
-        die 'usage: kiss [ou]tdated /path/to/repo...\n'
+        die 'usage: kiss [ou]tdated /path/to/repo...'
 
     mkdir -p "${tmp:=${XDG_CACHE_HOME:-"$HOME/.cache"}/kiss/repology}"
 
