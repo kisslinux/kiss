@@ -25,10 +25,7 @@ clean() {
         run umount "$1/sys/firmware/efi/efivars" 2>/dev/null
         run umount "$1/sys"
         run umount "$1/tmp"
-    }
-
-    log Cleaning leftover host files; {
-        run rm -f "$1/etc/resolv.conf"
+        run umount "$1/etc/resolv.conf"
     }
 }
 
@@ -62,6 +59,7 @@ main() {
 
     trap 'clean "${1%"${1##*[!/]}"}"' EXIT INT
 
+    touch "$1/etc/resolv.conf"
     log Mounting host filesystems; {
         mmount "$1/dev"     -o bind  /dev
         mmount "$1/dev/pts" -o bind /dev/pts
@@ -71,10 +69,7 @@ main() {
         mmount "$1/sys"     -t sysfs sys
         mmount "$1/sys/firmware/efi/efivars" -t efivarfs efivarfs 2>/dev/null
         mmount "$1/tmp"     -o mode=1777,nosuid,nodev -t tmpfs tmpfs
-    }
-
-    log Copying /etc/resolv.conf from host; {
-        run cp -f /etc/resolv.conf "$1/etc"
+        mmount "$1/etc/resolv.conf" -o bind /etc/resolv.conf
     }
 
     log Entering chroot; {
