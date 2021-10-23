@@ -193,7 +193,7 @@ decompress() {
         *.lz)        lzip -dc ;;
         *.tar)       cat      ;;
         *.tgz|*.gz)  gzip -d  ;;
-        *.xz|*.txz)  xz -dcT0 ;;
+        *.xz|*.txz)  xz -dc ;;
         *.zst)       zstd -dc ;;
     esac < "$1"
 }
@@ -851,7 +851,7 @@ pkg_tar() {
         gz)   gzip -6  ;;
         lzma) lzma -z  ;;
         lz)   lzip -z  ;;
-        xz)   xz -zT0  ;;
+        xz)   xz -z  ;;
         zst)  zstd -z  ;;
     esac > "$_tar_file"
 
