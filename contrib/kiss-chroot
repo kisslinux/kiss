@@ -1,4 +1,4 @@
-#!/bin/sh -e
+#!/bin/sh
 # Enter a kiss chroot
 
 log() {
@@ -16,8 +16,8 @@ run() {
 }
 
 clean() {
-    log Unmounting host filesystems; {
-        run umount "$1/dev/shm"
+    log Unmounting host paths; {
+        run umount "$1/dev/shm" 2>/dev/null
         run umount "$1/dev/pts"
         run umount "$1/dev"
         run umount "$1/proc"
@@ -25,10 +25,7 @@ clean() {
         run umount "$1/sys/firmware/efi/efivars" 2>/dev/null
         run umount "$1/sys"
         run umount "$1/tmp"
-    }
-
-    log Cleaning leftover host files; {
-        run rm -f "$1/etc/resolv.conf"
+        run umount "$1/etc/resolv.conf"
     }
 }
 
@@ -62,19 +59,18 @@ main() {
 
     trap 'clean "${1%"${1##*[!/]}"}"' EXIT INT
 
-    log Mounting host filesystems; {
-        mmount "$1/dev"     -o bind  /dev
+    log Mounting host paths; {
+        mmount "$1/dev"     -o bind /dev
         mmount "$1/dev/pts" -o bind /dev/pts
-        mmount "$1/dev/shm" -t tmpfs shmfs
+        mmount "$1/dev/shm" -t tmpfs shmfs 2>/dev/null
         mmount "$1/proc"    -t proc  proc
         mmount "$1/run"     -t tmpfs tmpfs
         mmount "$1/sys"     -t sysfs sys
         mmount "$1/sys/firmware/efi/efivars" -t efivarfs efivarfs 2>/dev/null
         mmount "$1/tmp"     -o mode=1777,nosuid,nodev -t tmpfs tmpfs
-    }
 
-    log Copying /etc/resolv.conf from host; {
-        run cp -f /etc/resolv.conf "$1/etc"
+        touch  "$1/etc/resolv.conf"
+        mmount "$1/etc/resolv.conf" -o bind /etc/resolv.conf
     }
 
     log Entering chroot; {
@@ -90,7 +86,7 @@ main() {
             CXXFLAGS="${CXXFLAGS:--march=x86-64 -mtune=generic -pipe -O2}" \
             MAKEFLAGS="${MAKEFLAGS:--j$(nproc 2>/dev/null || echo 1)}" \
             /bin/sh -l
-    }
+    } || die chroot failed
 }
 
 main "$1"
