@@ -1729,8 +1729,6 @@ pkg_help_ext() {
         max=$((${#p} > max ? ${#p}+1 : max))
     done
 
-    IFS=\#$IFS
-
     # Print each extension, grab its description from the second line
     # in the file and align the output based on the above max.
     for path do
@@ -1738,7 +1736,7 @@ pkg_help_ext() {
         exec 3< "$path"
 
         # Grab the second line in the extension.
-        { read -r _ && read -r _ cmt; } <&3
+        { read -r _ && IFS=\#$IFS read -r _ cmt; } <&3
 
         printf "%b->%b %-${max}s %s\\n" \
             "$c1" "$c3" "${path#*/kiss-}" "$cmt"
