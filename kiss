@@ -1717,17 +1717,16 @@ pkg_help_ext() {
     #
     # This also removes any duplicates found in '$PATH', picking the
     # first match.
-    for path do p=${path#*/kiss-}
-        case " $seen " in
-            *" $p "*)
-                shift
-            ;;
+    for path do 
+        p=${path#*/kiss-}
 
-            *)
-                seen=" $seen $p "
-                max=$((${#p} > max ? ${#p}+1 : max))
-            ;;
+        case " $seen " in *" $p "*)
+            shift
+            continue
         esac
+
+        seen=" $seen $p "
+        max=$((${#p} > max ? ${#p}+1 : max))
     done
 
     IFS=\#$IFS
