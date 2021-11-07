@@ -129,6 +129,10 @@ EOF
             remote=${remote##lib}
         ;;
 
+        libseat)
+            remote=seatd
+        ;;
+
         links2)
             # TODO [community]: Rename package?
             remote=links
