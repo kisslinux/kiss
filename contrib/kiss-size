@@ -29,9 +29,10 @@ kiss list "${1:-null}" >/dev/null || {
 # Directories in the manifest end in a trailing '/'.
 # Send the file list to 'xargs' to run through 'du',
 # this prevents du from exiting due to too many arguments
-sed -e "s|^|$KISS_ROOT|" -e 's|.*/$||' \
+sed -e "s|^|$KISS_ROOT|" -e '/.*\/$/d' \
     "$KISS_ROOT/var/db/kiss/installed/$1/manifest" \
-    | xargs du -sk -- 2>/dev/null |
+    | tr '\n' '\0' \
+    | xargs -0 du -sk -- 2>/dev/null |
 
 # Iterate over each line and convert the byte output to human
 # readable (MB, KB, GB, etc).
