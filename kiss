@@ -1991,7 +1991,7 @@ main() {
     )"} || die "No download utility found (aria2c, axel, curl, wget, wget2)"
 
     # Store the date and time of script invocation to be used as the name of
-    # the log files the package manager creates uring builds.
+    # the log files the package manager creates during builds.
     time=$(date +%Y-%m-%d-%H:%M)
 
     create_tmp_dirs
