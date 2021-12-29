@@ -7,7 +7,7 @@
     set -- "${PWD##*/}"
 }
 
-kiss search "$@" | uniq -u | while read -r repo; do cd "$repo"
+kiss search "$@" | sort -u | while read -r repo; do cd "$repo"
     m=$(git log -1 version 2>/dev/null) ||:
     m=${m##*Author: }
     m=${m%%>*}
