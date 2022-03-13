@@ -934,7 +934,7 @@ pkg_build_all() {
         # arg2: package name
         # arg3: number in queue
         # arg4: total in queue
-        run_hook queue "$pkg" "$_build_cur" "$#"
+        run_hook queue-status "$pkg" "$_build_cur" "$#"
 
         ! [ -f "$repo_dir/sources" ] || pkg_extract  "$pkg"
 
