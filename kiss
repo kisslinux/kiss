@@ -120,23 +120,24 @@ fnr() {
 am_owner() {
     # Figure out if we need to change users to operate on
     # a given file or directory.
-    inf=$(ls -ld "$1") ||
+    inf=$(ls -ldn "$1") ||
         die "Failed to file information for '$1'"
 
     # Split the ls output into fields.
-    read -r _ _ user _ <<EOF
+    read -r _ _ uid _ <<EOF
 $inf
 EOF
 
-    equ "$LOGNAME/$user" "$user/$LOGNAME"
+    equ "$(id -u)/$uid" "$uid/$(id -u)"
 }
 
 as_user() {
-    printf 'Using '%s' (to become %s)\n' "$cmd_su" "$user"
+    printf 'Using '%s' (to become user with uid %s)\n' "$cmd_su" "$uid"
 
     case ${cmd_su##*/} in
-        su) "$cmd_su" -c "$* <&3" "$user" 3<&0 </dev/tty ;;
-         *) "$cmd_su" -u "$user" -- "$@"
+        doas) "$cmd_su" -u "$uid" -- "$@" ;;
+        sudo) "$cmd_su" -u "#$uid" -- "$@" ;;
+        ssu) "$cmd_su" -nu "$uid" -- "$@" ;;
     esac
 }
 
@@ -1606,15 +1607,15 @@ pkg_update_repo() {
         log "$PWD" " "
 
         am_owner "$PWD" || {
-            printf 'Need "%s" to update\n' "$user"
+            printf 'Need user with uid %s to update\n' "$uid"
             set -- as_user
         }
 
         # arg1: pre-update
         # arg2: need su?
-        # arg3: owner
+        # arg3: owner uid
         # env:  PWD is path to repository
-        run_hook pre-update "$#" "$user"
+        run_hook pre-update "$#" "$uid"
 
         case $repo_type in git)
             pkg_update_git "$@"
@@ -1833,7 +1834,6 @@ args() {
             trap_off
 
             as_user env \
-                LOGNAME="$user" \
                 HOME="$HOME" \
                 XDG_CACHE_HOME="$XDG_CACHE_HOME" \
                 KISS_COMPRESS="$KISS_COMPRESS" \
@@ -1954,16 +1954,14 @@ main() {
     # Defaults for environment variables.
     : "${KISS_COMPRESS:=gz}"
     : "${KISS_PID:=$$}"
-    : "${LOGNAME:?POSIX requires LOGNAME be set}"
 
     # Figure out which 'sudo' command to use based on the user's choice or what
     # is available on the system.
     cmd_su=${KISS_SU:-"$(
         command -v ssu  ||
         command -v sudo ||
-        command -v doas ||
-        command -v su
-    )"} || cmd_su=su
+        command -v doas
+    )"} || die "No superuser utility found"
 
     # Figure out which utility is available to dump elf information.
     cmd_elf=${KISS_ELF:-"$(
