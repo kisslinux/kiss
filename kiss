@@ -1577,7 +1577,7 @@ pkg_update() {
 
     # Update each repository in '$KISS_PATH'.
     for repo do
-        if git -C "$repo" rev-parse 'HEAD@{upstream}' >/dev/null 2>&1; then
+        if git -C "$repo" rev-parse 'HEAD@{upstream}' >/dev/null; then
             repo_type=git
 
             # Get the Git repository root directory.
@@ -1717,7 +1717,7 @@ pkg_help_ext() {
     #
     # This also removes any duplicates found in '$PATH', picking the
     # first match.
-    for path do 
+    for path do
         p=${path#*/kiss-}
 
         case " $seen " in *" $p "*)
