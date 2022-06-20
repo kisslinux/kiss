@@ -496,7 +496,7 @@ pkg_source_tar() {
             -exec sh -c 'mv -f "$0" "$@" .' {} + 2>/dev/null ||
 
         find "$KISS_PID-$dir/." ! -name . -prune \
-            -exec sh -c 'cp -fRp "$0" "$@" .' {} +
+            -exec sh -c 'cp -fRPp "$0" "$@" .' {} +
 
         # Remove the directory now that all files have been
         # transferred out of it. This can't be a simple 'rmdir'
@@ -528,7 +528,7 @@ pkg_extract() {
 
         case $_res in
             git+*)
-                cp -LRf "$_des/." .
+                cp -PRf "$_des/." .
             ;;
 
             *.tar|*.tar.??|*.tar.???|*.tar.????|*.t?z)
@@ -536,7 +536,7 @@ pkg_extract() {
             ;;
 
             *?*)
-                cp -LRf "$_res" .
+                cp -PRf "$_res" .
             ;;
         esac
     done < "$repo_dir/sources" || die "$1" "Failed to extract $_res"
