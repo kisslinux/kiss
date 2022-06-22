@@ -5,5 +5,5 @@
 
 cd "$KISS_ROOT/var/db/kiss/installed"
 
-grep -E "^$1( |$)"  -- */depends
+grep -lE "^$1( |$)"  -- */depends | cut -d/ -f1
 
