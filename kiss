@@ -120,13 +120,8 @@ fnr() {
 am_owner() {
     # Figure out if we need to change users to operate on
     # a given file or directory.
-    inf=$(ls -ld "$1") ||
+    user=$(owner "$1") ||
         die "Failed to file information for '$1'"
-
-    # Split the ls output into fields.
-    read -r _ _ user _ <<EOF
-$inf
-EOF
 
     equ "$LOGNAME/$user" "$user/$LOGNAME"
 }
@@ -1950,6 +1945,9 @@ main() {
     # Never know when you're gonna need one of these.
     newline="
 "
+
+    # Prefer our custom binary tools.
+    export PATH="/usr/lib/kiss/:$PATH"
 
     # Defaults for environment variables.
     : "${KISS_COMPRESS:=gz}"
