@@ -57,7 +57,9 @@ main() {
     [ -d "$1" ]        || die Given path does not exist
     [ "$(id -u)" = 0 ] || die Script needs to be run as root
 
-    trap 'clean "${1%"${1##*[!/]}"}"' EXIT INT
+    # Intended behaviour.
+    # shellcheck disable=SC2064
+    trap "clean ${1%"${1##*[!/]}"}" EXIT INT
 
     log Mounting host paths; {
         mmount "$1/dev"     -o bind /dev
