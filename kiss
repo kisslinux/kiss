@@ -872,7 +872,7 @@ pkg_build_all() {
     # Mark packages passed on the command-line explicit.
     # Also resolve dependencies for all explicit packages.
     for pkg do
-        pkg_depends "$pkg" expl filter
+        equ "$KISS_FORCE" 1 || pkg_depends "$pkg" expl filter
         explicit="$explicit $pkg "
     done
 
