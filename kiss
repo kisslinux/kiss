@@ -1577,6 +1577,7 @@ pkg_update() {
 
     # Update each repository in '$KISS_PATH'.
     for repo do
+        ok "$repo" || continue
         if git -C "$repo" rev-parse 'HEAD@{upstream}' >/dev/null; then
             repo_type=git
 
