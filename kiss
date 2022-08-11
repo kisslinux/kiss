@@ -431,9 +431,10 @@ pkg_source_url() {
 
     # Set the arguments based on found download utility.
     case ${cmd_get##*/} in
-        aria2c|axel) set -- -o   "$@" ;;
-               curl) set -- -fLo "$@" ;;
-         wget|wget2) set -- -O   "$@" ;;
+            aria2c) set -- -d / -o  "$@" ;;
+              axel) set -- -o       "$@" ;;
+              curl) set -- -fLo     "$@" ;;
+        wget|wget2) set -- -O       "$@" ;;
     esac
 
     "$cmd_get" "$@" || {
