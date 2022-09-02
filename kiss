@@ -647,6 +647,23 @@ pkg_strip() {
     esac done < "$pkg_dir/$1/$pkg_db/$1/manifest" || :
 }
 
+prepend() {
+    pre=$3
+    sep=$2
+    cat=''
+
+    # Intentional, globbing disabled.
+    # shellcheck disable=2086
+    { IFS="$sep"; set -- $1; unset IFS; }
+
+    for str do
+        ok "$str" || continue
+        cat="$cat$sep$pre$str"
+    done
+
+    printf '%s' "$cat"
+}
+
 pkg_fix_deps() {
     # Dynamically look for missing runtime dependencies by checking each
     # binary and library with 'ldd'. This catches any extra libraries and or
@@ -670,28 +687,62 @@ pkg_fix_deps() {
         */sbin/?*[!/]|*/bin/?*[!/]|*/lib/?*[!/]|\
         */lib??/?*[!/]|*/lib???/?*[!/]|*/lib????/?*[!/])
 
-        # The readelf mode requires ldd's output to resolve the library
-        # path for a given file. If ldd fails, silently skip the file.
-        ldd=$(ldd -- "$pkg_dir/$repo_name$_file" 2>/dev/null) || continue
+        unset elf
+        unset lib_rpath
 
         # Attempt to get information from readelf. If this fails (or we
         # are in ldd mode), do full ldd mode (which has the downside of
         # listing dependencies of dependencies (and so on)).
-        elf=$("$cmd_elf" -d "$pkg_dir/$repo_name$_file" 2>/dev/null) || elf=$ldd
+        case $cmd_elf in *readelf)
+            elf=$("$cmd_elf" -d "$pkg_dir/$repo_name$_file" 2>/dev/null) ||:
+        esac
+
+        # RPATH/RUNPATH allows the binary to set a relative path for the
+        # dynamic loader that might not be present on the rootfs at the time
+        # of installation. So, ignoring it can cause the dependency detector to
+        # wrongly add packages.
+        # Example: libnss3.so exists in /usr/lib at the time of installation
+        # But the package links to libnss3 in /usr/lib/PKG/libnss3.so, which is
+        # present only in the build dir. So, KISS wrongly adds the installed nss
+        # as a dependency.
+        while read -r _ entry_type value; do
+            # Technically RUNPATH is supposed to have a higher priority
+            # than RPATH but a binary that has both RPATH and RUNPATH set,
+            # each with unique values is probably broken...
+            case $entry_type in '(RPATH)'|'(RUNPATH)')
+                value=${value##*\[}
+                value=${value%%\]*}
+
+                lib_rpath="$value"
+                break
+            esac
+        done <<EOF
+$elf
+EOF
+
+        # The readelf mode requires ldd's output to resolve the library
+        # path for a given file. If ldd fails, silently skip the file.
+        # We set LD_LIBRARY_PATH to the RPATH we found above to allow ldd
+        # to resolve accurate paths.
+        ldd=$(LD_LIBRARY_PATH=$(prepend "$lib_rpath" : "$pkg_dir/$repo_name") ldd -- "$pkg_dir/$repo_name$_file" 2>/dev/null) || continue
+        ok "$elf" || elf=$ldd
 
         # Iterate over the output of readelf or ldd, extract file names,
         # resolve their paths and finally, figure out their owner.
-        while read -r lib; do case $lib in *NEEDED*\[*\]|*'=>'*)
+        while read -r _ entry_type lib; do case $entry_type in '(NEEDED)'|'=>')
             # readelf: 0x0000 (NEEDED) Shared library: [libjson-c.so.5]
             lib=${lib##*\[}
             lib=${lib%%\]*}
 
-            # Resolve library path.
+            # Resolve library path. It is already resolved for ldd in the 'lib' field
             # ldd: libjson-c.so.5 => /lib/libjson-c.so.5 ...
-            case $cmd_elf in
-                *readelf) lib=${ldd#*"	$lib => "} ;;
-                *)        lib=${lib##*=> } ;;
+            case $cmd_elf in *readelf)
+                lib=${ldd#*"  $lib => "}
+                # Remove prefix, else the file will not be owned by any
+                # package in the pkg_owner check below
+                lib=${lib#"$pkg_dir/$repo_name"}
             esac
+
             lib=${lib%% *}
 
             # Skip files owned by libc, libc++ and POSIX.
