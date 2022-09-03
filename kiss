@@ -737,7 +737,7 @@ EOF
             # Resolve library path. It is already resolved for ldd in the 'lib' field
             # ldd: libjson-c.so.5 => /lib/libjson-c.so.5 ...
             case $cmd_elf in *readelf)
-                lib=${ldd#*"  $lib => "}
+                lib=${ldd#*"	$lib => "}
                 # Remove prefix, else the file will not be owned by any
                 # package in the pkg_owner check below
                 lib=${lib#"$pkg_dir/$repo_name"}
