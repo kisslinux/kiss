@@ -281,8 +281,9 @@ get_outdated() {
         repology_name "$pkg"
         repology_version "$remote" || continue
 
-        case $remote_ver in *", $ver"* | *"$ver,"* | "$ver" | - | '')
-            continue
+        case $remote_ver in
+            *", $ver"* | *"$ver,"* | "$ver" | '') continue ;;
+            -) printf '%-30s no remote version found\n' "$pkg" >&2; continue ;;
         esac
 
         printf '%-30s %s -> %s\n' "$pkg" "$ver" "$remote_ver"
