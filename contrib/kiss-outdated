@@ -26,12 +26,25 @@ EOF
     )
 
     case $remote in
+        age)
+            remote=age-encryption
+        ;;
+
         baseinit|baselayout|kiss)
             remote=-
         ;;
 
+
+        bat)
+            remote=bat-cat
+        ;;
+
         clang)
             remote=llvm
+        ;;
+
+        ctags)
+            remote=ctags-unclassified
         ;;
 
         dash)
@@ -46,9 +59,17 @@ EOF
             remote=dsp-audio-processing
         ;;
 
+        dust)
+            remote=du-dust
+        ;;
+
         emacs-nox)
             # TODO [community]: Make default emacs no x11?
             remote=emacs
+        ;;
+
+        go-ipfs)
+            remote=ipfs
         ;;
 
         fd)
@@ -124,13 +145,29 @@ EOF
             remote=fonts:liberation
         ;;
 
+        libjpeg)
+            remote=ijg-libjpeg
+        ;;
+
         libmupdf | libxaw3d)
             # TODO [community]: Rename packages?
             remote=${remote##lib}
         ;;
 
+        libnghttp2)
+            remote=nghttp2
+        ;;
+
+        libportaudio2)
+            remote=portaudio
+        ;;
+
         libseat)
             remote=seatd
+        ;;
+
+        libzmq)
+            remote=zeromq
         ;;
 
         links2)
@@ -140,6 +177,10 @@ EOF
 
         linux-headers)
             remote=linux
+        ;;
+
+        lpeg)
+            remote=lua:lpeg
         ;;
 
         lux)
@@ -157,6 +198,10 @@ EOF
             remote=netsurf
         ;;
 
+        noto-emoji)
+            remote=fonts:noto-emoji
+        ;;
+
         openjpeg2)
             # TODO [community]: Rename package?
             remote=openjpeg
@@ -166,8 +211,20 @@ EOF
             remote=oil-shell
         ;;
 
+        pass)
+            remote=password-store
+        ;;
+
         pinentry-dmenu)
             remote=pinentry-dmenu-cemkeylan
+        ;;
+
+        pybind11)
+            remote=python:pybind11
+        ;;
+
+        python-psutil)
+            remote=python:psutil
         ;;
 
         pyqt5)
@@ -184,7 +241,7 @@ EOF
         ;;
 
         rage)
-            remote=rage-encryption-tool
+            remote=rage-encryption
         ;;
 
         sane)
@@ -199,6 +256,10 @@ EOF
             remote=fusefs:sshfs
         ;;
 
+        slides)
+            remote=slides-presentation-tool
+        ;;
+
         surf)
             remote=surf-browser
         ;;
@@ -211,16 +272,32 @@ EOF
             remote=sway
         ;;
 
+        tea)
+            remote=gitea-tea
+        ;;
+
         terminus-font)
             remote=fonts:terminus
         ;;
 
         tiv)
-            remote=tiv-unclassified
+            remote=tiv-terminalimageviewer
+        ;;
+
+        tree)
+            remote=tree-steve-baker
+        ;;
+
+        ttf-font-awesome)
+            remote=font-awesome6
         ;;
 
         unifont)
             remote=fonts:unifont
+        ;;
+
+        vis)
+            remote=vis-editor
         ;;
 
         webkit2gtk)
