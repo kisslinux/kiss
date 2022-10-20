@@ -120,13 +120,8 @@ fnr() {
 am_owner() {
     # Figure out if we need to change users to operate on
     # a given file or directory.
-    inf=$(ls -ld "$1") ||
+    user=$(owner "$1") ||
         die "Failed to file information for '$1'"
-
-    # Split the ls output into fields.
-    read -r _ _ user _ <<EOF
-$inf
-EOF
 
     equ "$LOGNAME/$user" "$user/$LOGNAME"
 }
@@ -1230,28 +1225,9 @@ pkg_swap() {
 }
 
 file_rwx() {
-    # Convert the output of 'ls' (rwxrwx---) to octal. This is simply
-    # a 1-9 loop with the second digit being the value of the field.
-    #
-    # NOTE: This drops setgid/setuid permissions and does not include
-    # them in the conversion. This is intentional.
-    unset oct o
-
-    rwx=$(ls -ld "$1")
-
-    for c in 14 22 31 44 52 61 74 82 91; do
-        rwx=${rwx#?}
-
-        case $rwx in
-            [rwx]*) o=$((o + ${c#?})) ;;
-             [st]*) o=$((o + 1)) ;;
-        esac
-
-        case $((${c%?} % 3)) in 0)
-            oct=$oct$o
-            o=0
-        esac
-    done
+    # NOTE: This intentionally drops setgid/setuid permissions.
+    oct=$(rwx "$1") ||
+        die "Failed to find information for '$1'"
 }
 
 pkg_install_files() {
@@ -1950,6 +1926,9 @@ main() {
     # Never know when you're gonna need one of these.
     newline="
 "
+
+    # Prefer our custom binary tools.
+    export PATH="/usr/lib/kiss/:$PATH"
 
     # Defaults for environment variables.
     : "${KISS_COMPRESS:=gz}"
